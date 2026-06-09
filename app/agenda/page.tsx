@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { Calendar, Plus, Clock, Trash2, Link2 } from 'lucide-react'
+import { Calendar, Plus, Clock, Trash2, Link2, ChevronLeft, ChevronRight } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
 import DashboardCard from '@/components/DashboardCard'
 import Modal from '@/components/Modal'
@@ -59,6 +59,51 @@ export default function AgendaPage() {
   const todayKey = localKey(new Date())
   const tomorrowKey = localKey(new Date(Date.now() + 86_400_000))
 
+  // Lijst- of maandweergave
+  const [view, setView] = useState<'lijst' | 'maand'>('lijst')
+  const [monthCursor, setMonthCursor] = useState(() => {
+    const d = new Date()
+    return new Date(d.getFullYear(), d.getMonth(), 1)
+  })
+  const [selectedKey, setSelectedKey] = useState(todayKey)
+  const shiftMonth = (delta: number) =>
+    setMonthCursor((c) => new Date(c.getFullYear(), c.getMonth() + delta, 1))
+
+  const eventsByKey = useMemo(() => {
+    const m = new Map<string, AgendaEvent[]>()
+    for (const e of events) {
+      const l = m.get(e.dateKey) ?? []
+      l.push(e)
+      m.set(e.dateKey, l)
+    }
+    return m
+  }, [events])
+
+  const monthGrid = useMemo(() => {
+    const y = monthCursor.getFullYear()
+    const mo = monthCursor.getMonth()
+    const lead = (new Date(y, mo, 1).getDay() + 6) % 7 // maandag = 0
+    const dim = new Date(y, mo + 1, 0).getDate()
+    const cells: { key: string; day: number; inMonth: boolean }[] = []
+    for (let i = lead; i > 0; i--) {
+      const d = new Date(y, mo, 1 - i)
+      cells.push({ key: localKey(d), day: d.getDate(), inMonth: false })
+    }
+    for (let d = 1; d <= dim; d++) {
+      cells.push({ key: localKey(new Date(y, mo, d)), day: d, inMonth: true })
+    }
+    while (cells.length % 7 !== 0) {
+      const [yy, mm, dd] = cells[cells.length - 1].key.split('-').map(Number)
+      const nd = new Date(yy, mm - 1, dd + 1)
+      cells.push({ key: localKey(nd), day: nd.getDate(), inMonth: false })
+    }
+    return cells
+  }, [monthCursor])
+
+  const monthTitle = monthCursor.toLocaleDateString('nl-NL', { month: 'long', year: 'numeric' })
+  const selectedEvents = eventsByKey.get(selectedKey) ?? []
+  const sel = describeKey(selectedKey, todayKey, tomorrowKey)
+
   // Vanuit het "+"-snelmenu geopend met ?nieuw=1 → meteen de modal tonen.
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get('nieuw')) setOpen(true)
@@ -93,7 +138,131 @@ export default function AgendaPage() {
         }
       />
 
-      {isLoading && events.length === 0 ? (
+      {/* Lijst / Maand */}
+      <div className="mb-5 flex w-full max-w-xs rounded-full border border-cardborder bg-white p-1 text-sm font-semibold">
+        <button
+          type="button"
+          onClick={() => setView('lijst')}
+          className={`flex-1 rounded-full px-4 py-2 transition-colors ${
+            view === 'lijst' ? 'bg-brand text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          Lijst
+        </button>
+        <button
+          type="button"
+          onClick={() => setView('maand')}
+          className={`flex-1 rounded-full px-4 py-2 transition-colors ${
+            view === 'maand' ? 'bg-brand text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          Maand
+        </button>
+      </div>
+
+      {view === 'maand' ? (
+        <div className="flex flex-col gap-4">
+          <DashboardCard>
+            <div className="mb-3 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => shiftMonth(-1)}
+                aria-label="Vorige maand"
+                className="grid h-9 w-9 place-items-center rounded-full border border-cardborder text-slate-500 hover:bg-slate-50"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <p className="text-base font-bold capitalize text-slate-800">{monthTitle}</p>
+              <button
+                type="button"
+                onClick={() => shiftMonth(1)}
+                aria-label="Volgende maand"
+                className="grid h-9 w-9 place-items-center rounded-full border border-cardborder text-slate-500 hover:bg-slate-50"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-semibold uppercase text-slate-400">
+              {['ma', 'di', 'wo', 'do', 'vr', 'za', 'zo'].map((d) => (
+                <span key={d} className="py-1">
+                  {d}
+                </span>
+              ))}
+            </div>
+            <div className="grid grid-cols-7 gap-1">
+              {monthGrid.map((cell) => {
+                const dayEvents = eventsByKey.get(cell.key) ?? []
+                const isToday = cell.key === todayKey
+                const selected = cell.key === selectedKey
+                return (
+                  <button
+                    key={cell.key}
+                    type="button"
+                    onClick={() => setSelectedKey(cell.key)}
+                    className={`flex min-h-[3.2rem] flex-col items-center gap-1 rounded-xl px-1 py-1.5 transition-colors ${
+                      selected ? 'bg-brand-light ring-1 ring-brand/30' : 'hover:bg-slate-50'
+                    } ${cell.inMonth ? '' : 'opacity-40'}`}
+                  >
+                    <span
+                      className={`grid h-6 w-6 place-items-center rounded-full text-xs font-semibold ${
+                        isToday ? 'bg-brand text-white' : 'text-slate-700'
+                      }`}
+                    >
+                      {cell.day}
+                    </span>
+                    <span className="flex h-1.5 items-center gap-0.5">
+                      {dayEvents.slice(0, 3).map((e, i) => (
+                        <span
+                          key={i}
+                          className={`h-1.5 w-1.5 rounded-full ${(accentClasses[e.accent] ?? accentClasses.sky).dot}`}
+                        />
+                      ))}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </DashboardCard>
+
+          <DashboardCard title={`${sel.label} · ${sel.day} ${sel.monthShort}`}>
+            {selectedEvents.length === 0 ? (
+              <p className="text-sm text-slate-500">Geen afspraken op deze dag.</p>
+            ) : (
+              <ul className="flex flex-col gap-1">
+                {selectedEvents.map((event) => {
+                  const accent = accentClasses[event.accent] ?? accentClasses.sky
+                  const external = event.source !== 'manual'
+                  return (
+                    <li key={event.id} className="group flex items-center gap-3 rounded-2xl px-2 py-2.5 hover:bg-slate-50">
+                      <span className={`h-10 w-1.5 shrink-0 rounded-full ${accent.bar}`} />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-slate-800">{event.title}</p>
+                        <p className="mt-0.5 flex items-center gap-1.5 text-xs text-slate-500">
+                          <Clock className="h-3.5 w-3.5 shrink-0" />
+                          {event.time || 'Hele dag'}
+                        </p>
+                      </div>
+                      <span className={`pill shrink-0 px-2.5 py-1 text-xs font-semibold ${accent.badge}`}>
+                        {event.who}
+                      </span>
+                      {!external && (
+                        <button
+                          type="button"
+                          onClick={() => removeEvent(event.id)}
+                          aria-label={`${event.title} verwijderen`}
+                          className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-slate-300 opacity-0 transition-all hover:bg-rose-50 hover:text-rose-500 group-hover:opacity-100"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+          </DashboardCard>
+        </div>
+      ) : isLoading && events.length === 0 ? (
         <p className="text-sm text-slate-400">Laden…</p>
       ) : days.length === 0 ? (
         <DashboardCard>
