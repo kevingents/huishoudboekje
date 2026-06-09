@@ -1,11 +1,19 @@
 'use client'
 
 import { useState } from 'react'
-import { Gift, BadgeCheck, Percent, Plus, Trash2, Sparkles, Home } from 'lucide-react'
+import { Gift, BadgeCheck, Percent, Plus, Trash2, Sparkles, Home, Star } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
 import DashboardCard from '@/components/DashboardCard'
 import Modal from '@/components/Modal'
-import { useRewards, useFamilyRewards } from '@/lib/hooks'
+import {
+  useRewards,
+  useFamilyRewards,
+  useRedemptions,
+  useTasks,
+  useFamily,
+  pointsByMember,
+  type FamilyReward,
+} from '@/lib/hooks'
 
 const inputClass =
   'w-full rounded-xl border border-cardborder bg-white px-3.5 py-2.5 text-sm text-slate-700 outline-none transition-colors placeholder:text-slate-400 focus:border-brand/40 focus:ring-2 focus:ring-brand/20'
@@ -13,10 +21,22 @@ const inputClass =
 export default function BeloningenPage() {
   const { rewards: partnerRewards, isLoading } = useRewards()
   const { rewards: ownRewards, addReward, removeReward } = useFamilyRewards()
+  const { redemptions, addRedemption } = useRedemptions()
+  const { tasks } = useTasks()
+  const { members } = useFamily()
+  const balances = pointsByMember(tasks, redemptions)
   const [tab, setTab] = useState<'partners' | 'eigen'>('partners')
 
   const [addOpen, setAddOpen] = useState(false)
   const [form, setForm] = useState({ title: '', description: '', cost: '' })
+
+  // Inwisselen
+  const [redeem, setRedeem] = useState<FamilyReward | null>(null)
+  const doRedeem = async (member: string) => {
+    if (!redeem) return
+    await addRedemption({ member, title: redeem.title, cost: redeem.cost })
+    setRedeem(null)
+  }
 
   const submitOwn = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -119,6 +139,22 @@ export default function BeloningenPage() {
         )
       ) : (
         <>
+          {members.length > 0 && (
+            <DashboardCard title="Punten" icon={Star} iconClassName="text-amber-500" className="mb-5">
+              <div className="flex flex-wrap gap-2">
+                {members.map((m) => (
+                  <span key={m.id} className="inline-flex items-center gap-1.5 rounded-full bg-slate-50 px-3 py-1.5 text-sm">
+                    <span className={`grid h-6 w-6 place-items-center rounded-full bg-gradient-to-br text-[10px] font-bold text-white ${m.color}`}>
+                      {m.initials}
+                    </span>
+                    <span className="font-semibold text-slate-700">{m.name}</span>
+                    <span className="font-bold text-amber-500">{balances[m.name] ?? 0}</span>
+                  </span>
+                ))}
+              </div>
+            </DashboardCard>
+          )}
+
           <DashboardCard
             title="Eigen beloningen"
             icon={Home}
@@ -156,6 +192,15 @@ export default function BeloningenPage() {
                           {r.cost} punten
                         </span>
                       )}
+                      {members.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setRedeem(r)}
+                          className="pill shrink-0 bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-dark"
+                        >
+                          Wissel in
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => removeReward(r.id)}
@@ -176,6 +221,40 @@ export default function BeloningenPage() {
           </p>
         </>
       )}
+
+      <Modal open={!!redeem} onClose={() => setRedeem(null)} title={redeem ? `Inwisselen: ${redeem.title}` : ''}>
+        {redeem && (
+          <div className="flex flex-col gap-3">
+            <p className="text-sm text-slate-500">
+              Wie wisselt <strong>{redeem.cost} punten</strong> in voor &ldquo;{redeem.title}&rdquo;?
+            </p>
+            <div className="flex flex-col gap-2">
+              {members.map((m) => {
+                const bal = balances[m.name] ?? 0
+                const enough = bal >= redeem.cost
+                return (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => doRedeem(m.name)}
+                    disabled={!enough}
+                    className={`flex items-center gap-3 rounded-2xl border p-3 text-left transition-colors ${
+                      enough ? 'border-cardborder bg-white hover:bg-slate-50' : 'border-cardborder bg-slate-50 opacity-60'
+                    }`}
+                  >
+                    <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-to-br text-xs font-bold text-white ${m.color}`}>
+                      {m.initials}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-800">{m.name}</span>
+                    <span className={`text-xs font-bold ${enough ? 'text-amber-500' : 'text-rose-400'}`}>{bal} punten</span>
+                  </button>
+                )
+              })}
+            </div>
+            <p className="text-xs text-slate-400">Alleen gezinsleden met genoeg punten kunnen inwisselen.</p>
+          </div>
+        )}
+      </Modal>
 
       <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Eigen beloning toevoegen">
         <form onSubmit={submitOwn} className="flex flex-col gap-3">

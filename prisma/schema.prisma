@@ -217,6 +217,33 @@ model Card {
   @@index([householdId])
 }
 
+// Gezinsspel: taken toegewezen aan een gezinslid, met punten en status.
+model Task {
+  id          Int      @id @default(autoincrement())
+  householdId Int
+  title       String
+  description String?
+  assignedTo  String? // gezinslid-naam (null = hele gezin)
+  points      Int      @default(0)
+  status      String   @default("todo") // open (wacht op accept) | todo | klaar | geweigerd
+  dueDate     String? // yyyy-mm-dd
+  createdAt   DateTime @default(now())
+
+  @@index([householdId])
+}
+
+// Ingewisselde beloningen (punten eraf) per gezinslid.
+model Redemption {
+  id          Int      @id @default(autoincrement())
+  householdId Int
+  member      String
+  title       String
+  cost        Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  @@index([householdId])
+}
+
 // Belangrijke contacten/adressen (school, opvang, dokter, oma...) per huishouden.
 model Contact {
   id          Int      @id @default(autoincrement())

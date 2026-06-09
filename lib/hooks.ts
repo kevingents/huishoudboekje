@@ -628,3 +628,73 @@ export function useContacts() {
     removeContact: (id: number) => c.remove(id),
   }
 }
+
+/* -------------------------------------------------------------------------- */
+/*  Gezinsspel: taken + ingewisselde beloningen                               */
+/* -------------------------------------------------------------------------- */
+
+export interface Task {
+  id: number
+  title: string
+  description: string | null
+  assignedTo: string | null
+  points: number
+  status: string
+  dueDate: string | null
+}
+
+export function useTasks() {
+  const c = useCollection<Task>('/api/tasks')
+  return {
+    tasks: c.items,
+    isLoading: c.isLoading,
+    addTask: (payload: {
+      title: string
+      description?: string | null
+      assignedTo?: string | null
+      points?: number
+      dueDate?: string | null
+    }) =>
+      c.create(payload as Record<string, unknown>, {
+        title: payload.title,
+        description: payload.description ?? null,
+        assignedTo: payload.assignedTo ?? null,
+        points: payload.points ?? 0,
+        status: payload.assignedTo ? 'open' : 'todo',
+        dueDate: payload.dueDate ?? null,
+      }),
+    setStatus: (id: number, status: string) => c.update(id, { status }),
+    removeTask: (id: number) => c.remove(id),
+  }
+}
+
+export interface Redemption {
+  id: number
+  member: string
+  title: string
+  cost: number
+}
+
+export function useRedemptions() {
+  const c = useCollection<Redemption>('/api/redemptions')
+  return {
+    redemptions: c.items,
+    isLoading: c.isLoading,
+    addRedemption: (payload: { member: string; title: string; cost: number }) =>
+      c.create(payload as Record<string, unknown>, {
+        member: payload.member,
+        title: payload.title,
+        cost: payload.cost,
+      }),
+  }
+}
+
+/** Puntensaldo per gezinslid: verdiend (afgeronde taken) − ingewisseld. */
+export function pointsByMember(tasks: Task[], redemptions: Redemption[]): Record<string, number> {
+  const bal: Record<string, number> = {}
+  for (const t of tasks) {
+    if (t.status === 'klaar' && t.assignedTo) bal[t.assignedTo] = (bal[t.assignedTo] ?? 0) + t.points
+  }
+  for (const r of redemptions) bal[r.member] = (bal[r.member] ?? 0) - r.cost
+  return bal
+}
