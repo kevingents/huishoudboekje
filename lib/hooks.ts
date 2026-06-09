@@ -149,6 +149,11 @@ export function useRecipes() {
     setVote: (recipe: Recipe, value: 1 | -1) =>
       c.update(recipe.id, { vote: recipe.vote === value ? 0 : value }),
     removeRecipe: (id: number) => c.remove(id),
+    generateRecipe: async (wish?: string, ingredients?: string[]) => {
+      const created = await apiPost('/api/recipes/generate', { wish, ingredients })
+      await c.mutate()
+      return created as Recipe
+    },
   }
 }
 

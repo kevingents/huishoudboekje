@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { ChefHat, Clock, Users, Heart, Plus, Trash2, ThumbsUp, ThumbsDown } from 'lucide-react'
+import { ChefHat, Clock, Users, Heart, Plus, Trash2, ThumbsUp, ThumbsDown, Sparkles } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
 import Modal from '@/components/Modal'
 import { useRecipes } from '@/lib/hooks'
@@ -11,10 +11,32 @@ const inputClass =
   'w-full rounded-xl border border-cardborder bg-white px-3.5 py-2.5 text-sm text-slate-700 outline-none transition-colors placeholder:text-slate-400 focus:border-brand/40 focus:ring-2 focus:ring-brand/20'
 
 export default function ReceptenPage() {
-  const { recipes, isLoading, addRecipe, toggleFavorite, removeRecipe, setVote } = useRecipes()
+  const { recipes, isLoading, addRecipe, toggleFavorite, removeRecipe, setVote, generateRecipe } =
+    useRecipes()
   const [activeTag, setActiveTag] = useState('Alles')
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState({ title: '', description: '', time: '', servings: '', tags: '', image: '' })
+
+  // AI-generatie
+  const [genOpen, setGenOpen] = useState(false)
+  const [genWish, setGenWish] = useState('')
+  const [genBusy, setGenBusy] = useState(false)
+  const [genError, setGenError] = useState<string | null>(null)
+
+  const generate = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setGenError(null)
+    setGenBusy(true)
+    try {
+      await generateRecipe(genWish || undefined)
+      setGenWish('')
+      setGenOpen(false)
+    } catch (err) {
+      setGenError(err instanceof Error ? err.message : 'Genereren mislukt.')
+    } finally {
+      setGenBusy(false)
+    }
+  }
 
   const tags = useMemo(() => {
     const all = new Set<string>()
@@ -50,14 +72,24 @@ export default function ReceptenPage() {
         icon={ChefHat}
         iconClassName="bg-amber-100 text-amber-500"
         actions={
-          <button
-            type="button"
-            onClick={() => setOpen(true)}
-            className="pill bg-brand px-4 py-2.5 text-white shadow-sm shadow-brand/20 hover:bg-brand-dark"
-          >
-            <Plus className="h-4 w-4" />
-            Nieuw recept
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={() => setGenOpen(true)}
+              className="pill border border-violet-200 bg-white px-4 py-2.5 text-violet-700 hover:bg-violet-50"
+            >
+              <Sparkles className="h-4 w-4" />
+              Genereer met AI
+            </button>
+            <button
+              type="button"
+              onClick={() => setOpen(true)}
+              className="pill bg-brand px-4 py-2.5 text-white shadow-sm shadow-brand/20 hover:bg-brand-dark"
+            >
+              <Plus className="h-4 w-4" />
+              Nieuw recept
+            </button>
+          </>
         }
       />
 
@@ -250,6 +282,34 @@ export default function ReceptenPage() {
             className="pill mt-2 bg-brand px-4 py-2.5 text-white shadow-sm shadow-brand/20 hover:bg-brand-dark"
           >
             Recept opslaan
+          </button>
+        </form>
+      </Modal>
+
+      <Modal open={genOpen} onClose={() => setGenOpen(false)} title="Recept laten genereren">
+        <form onSubmit={generate} className="flex flex-col gap-3">
+          <p className="text-sm text-slate-500">
+            De AI bedenkt een recept dat past bij wat jullie lekker vinden (op basis van je
+            duimpjes). Geef eventueel een wens mee.
+          </p>
+          <label className="text-xs font-semibold text-slate-500">
+            Wens (optioneel)
+            <input
+              autoFocus
+              value={genWish}
+              onChange={(e) => setGenWish(e.target.value)}
+              placeholder="Bijv. vegetarisch en snel, of met kip"
+              className={`mt-1 ${inputClass}`}
+            />
+          </label>
+          {genError && <p className="text-sm font-medium text-rose-600">{genError}</p>}
+          <button
+            type="submit"
+            disabled={genBusy}
+            className="pill mt-2 bg-violet-500 px-4 py-2.5 text-white shadow-sm shadow-violet-500/30 hover:bg-violet-600 disabled:opacity-50"
+          >
+            <Sparkles className="h-4 w-4" />
+            {genBusy ? 'Bezig met bedenken…' : 'Genereer recept'}
           </button>
         </form>
       </Modal>
