@@ -13,6 +13,8 @@ import type {
   ChatMessage,
   Subscription,
   NotificationItem,
+  SavingsGoal,
+  FixedCost,
 } from './types'
 
 // Negatieve, dalende tijdelijke id's voor optimistische toevoegingen.
@@ -201,6 +203,8 @@ export function useBudget() {
     categories: cats.items,
     transactions: tx.items,
     isLoading: cats.isLoading || tx.isLoading,
+    updateCategory: (id: number, payload: { name?: string; limit?: number; color?: string }) =>
+      cats.update(id, payload),
     addTransaction: async (t: NewTransaction) => {
       await tx.create(
         { ...t },
@@ -212,6 +216,35 @@ export function useBudget() {
       await tx.remove(id)
       await cats.mutate()
     },
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Budgetplanner: spaardoelen + vaste lasten                                 */
+/* -------------------------------------------------------------------------- */
+
+export function useSavings() {
+  const c = useCollection<SavingsGoal>('/api/savings')
+  return {
+    goals: c.items,
+    isLoading: c.isLoading,
+    addGoal: (name: string, target: number) =>
+      c.create({ name, target }, { name, target, saved: 0 }),
+    deposit: (goal: SavingsGoal, amount: number) =>
+      c.update(goal.id, { saved: Math.max(0, goal.saved + amount) }),
+    updateGoal: (id: number, payload: { name?: string; target?: number }) => c.update(id, payload),
+    removeGoal: (id: number) => c.remove(id),
+  }
+}
+
+export function useFixedCosts() {
+  const c = useCollection<FixedCost>('/api/fixed-costs')
+  return {
+    costs: c.items,
+    isLoading: c.isLoading,
+    addCost: (name: string, amount: number, dueDay?: number) =>
+      c.create({ name, amount, dueDay }, { name, amount, dueDay: dueDay ?? null }),
+    removeCost: (id: number) => c.remove(id),
   }
 }
 

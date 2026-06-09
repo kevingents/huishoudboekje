@@ -108,3 +108,17 @@ export interface NotificationItem {
   read: boolean
   createdAt: string
 }
+
+export interface SavingsGoal {
+  id: number
+  name: string
+  target: number
+  saved: number
+}
+
+export interface FixedCost {
+  id: number
+  name: string
+  amount: number
+  dueDay?: number | null
+}

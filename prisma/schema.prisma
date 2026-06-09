@@ -131,3 +131,20 @@ model Notification {
   read      Boolean  @default(false)
   createdAt DateTime @default(now())
 }
+
+model SavingsGoal {
+  id        Int      @id @default(autoincrement())
+  name      String
+  target    Float
+  saved     Float    @default(0)
+  createdAt DateTime @default(now())
+}
+
+model FixedCost {
+  id        Int      @id @default(autoincrement())
+  name      String
+  amount    Float
+  // dag van de maand waarop het wordt afgeschreven (optioneel)
+  dueDay    Int?
+  createdAt DateTime @default(now())
+}
