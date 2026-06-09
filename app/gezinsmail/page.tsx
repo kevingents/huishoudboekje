@@ -16,6 +16,7 @@ import {
   ArrowRight,
   Sparkles,
   Forward,
+  Receipt,
 } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
 import DashboardCard from '@/components/DashboardCard'
@@ -26,6 +27,7 @@ const categoryMeta: Record<
   string,
   { label: string; className: string; icon: typeof Mail; href?: string }
 > = {
+  factuur: { label: 'Factuur', className: 'bg-emerald-100 text-emerald-600', icon: Receipt, href: '/documenten' },
   garantie: { label: 'Garantie', className: 'bg-amber-100 text-amber-600', icon: ShieldCheck, href: '/documenten' },
   document: { label: 'Document', className: 'bg-sky-100 text-sky-600', icon: FileText, href: '/documenten' },
   afspraak: { label: 'Afspraak', className: 'bg-violet-100 text-violet-600', icon: Calendar, href: '/agenda' },

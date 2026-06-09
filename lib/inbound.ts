@@ -121,11 +121,12 @@ export async function listInboundAttachments(emailId: string): Promise<InboundAt
 /* -------------------------------------------------------------------------- */
 
 export interface MailClassification {
-  category: 'garantie' | 'document' | 'afspraak' | 'boodschap' | 'overig'
+  category: 'factuur' | 'garantie' | 'document' | 'afspraak' | 'boodschap' | 'overig'
   documentType: 'garantie' | 'legitimatie' | 'overig' | 'geen'
   title: string
   summary: string
   owner: string
+  amount: number
   expiresAt: string
   eventDate: string
   eventTime: string
@@ -136,11 +137,12 @@ const MAIL_SCHEMA = {
   type: 'object',
   additionalProperties: false,
   properties: {
-    category: { type: 'string', enum: ['garantie', 'document', 'afspraak', 'boodschap', 'overig'] },
+    category: { type: 'string', enum: ['factuur', 'garantie', 'document', 'afspraak', 'boodschap', 'overig'] },
     documentType: { type: 'string', enum: ['garantie', 'legitimatie', 'overig', 'geen'] },
     title: { type: 'string' },
     summary: { type: 'string' },
     owner: { type: 'string' },
+    amount: { type: 'number', description: 'Totaalbedrag bij een factuur, anders 0.' },
     expiresAt: { type: 'string' },
     eventDate: { type: 'string' },
     eventTime: { type: 'string' },
@@ -152,6 +154,7 @@ const MAIL_SCHEMA = {
     'title',
     'summary',
     'owner',
+    'amount',
     'expiresAt',
     'eventDate',
     'eventTime',
@@ -166,6 +169,7 @@ function fallbackClassification(subject: string): MailClassification {
     title: subject || 'Doorgestuurde mail',
     summary: 'Ontvangen — nog niet geclassificeerd (AI niet gekoppeld).',
     owner: '',
+    amount: 0,
     expiresAt: '',
     eventDate: '',
     eventTime: '',
@@ -192,6 +196,9 @@ export async function classifyMail(input: {
     '(factuur, garantiebewijs, officieel document, afspraakbevestiging of boodschappenlijst) en ' +
     'bepaalt de categorie en haalt de belangrijkste gegevens eruit. Antwoord in het Nederlands.\n\n' +
     'Regels:\n' +
+    '- category "factuur": een rekening/factuur van een bedrijf (telecom zoals KPN, energie, water, ' +
+    'verzekering, webshop, abonnement). Vul amount = het totaalbedrag en expiresAt = de uiterste ' +
+    'betaaldatum als die zichtbaar is.\n' +
     '- category "garantie": aankoopbon/garantiebewijs van een product. Zet bij documentType "garantie" ' +
     'en bij expiresAt de einddatum van de garantie als die te bepalen is (anders leeg).\n' +
     '- category "document": officieel document (paspoort, rijbewijs, verzekeringspolis, diploma). ' +
@@ -201,7 +208,7 @@ export async function classifyMail(input: {
     '- category "overig": iets anders.\n' +
     '- documentType "geen" als het geen document of garantie is.\n' +
     '- owner: het gezinslid waar het bij hoort als dat duidelijk is, anders leeg.\n' +
-    '- Gebruik lege strings voor onbekende velden; verzin geen datums.\n' +
+    '- Gebruik lege strings voor onbekende velden, amount 0 als er geen bedrag is; verzin geen datums.\n' +
     `- Vandaag is ${input.today}. Bekende gezinsleden: ${input.members.join(', ') || '(onbekend)'}.`
 
   try {
@@ -231,6 +238,7 @@ export async function classifyMail(input: {
       title: String(parsed.title || fb.title),
       summary: String(parsed.summary || ''),
       owner: String(parsed.owner || ''),
+      amount: Number(parsed.amount) || 0,
       expiresAt: String(parsed.expiresAt || ''),
       eventDate: String(parsed.eventDate || ''),
       eventTime: String(parsed.eventTime || ''),

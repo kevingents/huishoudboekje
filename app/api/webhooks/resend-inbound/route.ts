@@ -107,13 +107,17 @@ export async function POST(req: Request) {
   let filedId: number | null = null
   let actionMsg = ''
   try {
-    if (cls.category === 'garantie' || cls.category === 'document') {
+    if (cls.category === 'garantie' || cls.category === 'document' || cls.category === 'factuur') {
       const docType =
         cls.category === 'garantie'
           ? 'garantie'
-          : cls.documentType === 'legitimatie'
-            ? 'legitimatie'
-            : 'overig'
+          : cls.category === 'factuur'
+            ? 'factuur'
+            : cls.documentType === 'legitimatie'
+              ? 'legitimatie'
+              : 'overig'
+      const amountText = cls.category === 'factuur' && cls.amount ? `Bedrag: €${cls.amount.toFixed(2)}` : ''
+      const notes = [cls.summary, amountText].filter(Boolean).join(' · ') || null
       const doc = await prisma.document.create({
         data: {
           householdId,
@@ -121,13 +125,16 @@ export async function POST(req: Request) {
           type: docType,
           owner: cls.owner || null,
           expiresAt: cls.expiresAt || null,
-          notes: cls.summary || null,
+          notes,
           imageUrl: imageAttachment?.download_url ?? null,
         },
       })
       filedType = 'document'
       filedId = doc.id
-      actionMsg = `Opgeslagen bij Documenten (${docType})`
+      actionMsg =
+        cls.category === 'factuur'
+          ? `Opgeslagen bij Documenten (factuur${cls.amount ? `, €${cls.amount.toFixed(2)}` : ''})`
+          : `Opgeslagen bij Documenten (${docType})`
     } else if (cls.category === 'afspraak' && cls.eventDate) {
       const parts = describeDate(cls.eventDate)
       const ev = await prisma.agendaEvent.create({
