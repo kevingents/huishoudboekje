@@ -1,12 +1,13 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Settings, Bell, Wallet, Users, LogOut, UserCircle, Sparkles } from 'lucide-react'
+import { Settings, Bell, Wallet, Users, LogOut, UserCircle, Sparkles, Smartphone, Download, Share, Check } from 'lucide-react'
 import Link from 'next/link'
 import PageHeader from '@/components/PageHeader'
 import DashboardCard from '@/components/DashboardCard'
 import IntegrationsSection from '@/components/IntegrationsSection'
 import { useSettings, useFamily, useAuth } from '@/lib/hooks'
+import { usePwaInstall } from '@/lib/usePwaInstall'
 import { mergePrefs } from '@/lib/notifications'
 
 const AI_DATA = [
@@ -21,6 +22,7 @@ export default function InstellingenPage() {
   const { settings, setSetting } = useSettings()
   const { members } = useFamily()
   const { user, logout } = useAuth()
+  const pwa = usePwaInstall()
 
   const prefs = mergePrefs(settings.notifications)
   const savedTarget = typeof settings.budgetTarget === 'number' ? settings.budgetTarget : 500
@@ -191,6 +193,44 @@ export default function InstellingenPage() {
           >
             Gezinsleden beheren
           </Link>
+        </DashboardCard>
+
+        {/* App installeren */}
+        <DashboardCard title="App installeren" icon={Smartphone} iconClassName="text-sky-500">
+          {pwa.isStandalone ? (
+            <p className="flex items-center gap-2 text-sm font-medium text-emerald-600">
+              <Check className="h-4 w-4" /> Fam is geïnstalleerd op dit apparaat.
+            </p>
+          ) : pwa.canInstall ? (
+            <>
+              <p className="text-sm text-slate-500">
+                Zet Fam als app op je beginscherm — snel en zonder appstore.
+              </p>
+              <button
+                type="button"
+                onClick={() => pwa.install()}
+                className="pill mt-4 bg-brand px-4 py-2.5 text-white shadow-sm shadow-brand/20 hover:bg-brand-dark sm:w-auto"
+              >
+                <Download className="h-4 w-4" />
+                Nu installeren
+              </button>
+            </>
+          ) : pwa.isIosChrome ? (
+            <p className="text-sm text-slate-500">
+              Open Fam in <strong>Safari</strong> op je iPhone en kies dan het deel-icoon →{' '}
+              &lsquo;Zet op beginscherm&rsquo;. In Chrome op iOS kan installeren helaas niet.
+            </p>
+          ) : pwa.isIos ? (
+            <p className="text-sm text-slate-500">
+              Tik onderin op het deel-icoon <Share className="inline h-4 w-4 text-sky-500" /> en kies{' '}
+              &lsquo;Zet op beginscherm&rsquo;.
+            </p>
+          ) : (
+            <p className="text-sm text-slate-500">
+              Gebruik het menu van je browser (&lsquo;Installeren&rsquo; of &lsquo;Toevoegen aan
+              beginscherm&rsquo;) om Fam als app te installeren.
+            </p>
+          )}
         </DashboardCard>
 
         {/* Account */}

@@ -2,13 +2,14 @@
    terug op een deterministische, nette procedurele variant. Wordt veilig
    gerenderd als <img> (data-URL), dus SVG-scripts draaien sowieso niet. */
 
+// Zachte, merk-aligned paletten [hoofd, donker, licht].
 const PALETTES: [string, string, string][] = [
-  ['#35B558', '#1f7a3d', '#d1fae5'],
-  ['#3b82f6', '#1e40af', '#dbeafe'],
-  ['#8b5cf6', '#6d28d9', '#ede9fe'],
-  ['#f59e0b', '#b45309', '#fef3c7'],
-  ['#ef4444', '#991b1b', '#fee2e2'],
-  ['#0ea5e9', '#0369a1', '#e0f2fe'],
+  ['#35B558', '#2C9A4A', '#E9F7EE'], // brand-groen
+  ['#3B82F6', '#2563EB', '#DBEAFE'],
+  ['#8B5CF6', '#7C3AED', '#EDE9FE'],
+  ['#F59E0B', '#D97706', '#FEF3C7'],
+  ['#EC4899', '#DB2777', '#FCE7F3'],
+  ['#0EA5E9', '#0284C7', '#E0F2FE'],
 ]
 
 function hash(s: string): number {
@@ -17,31 +18,31 @@ function hash(s: string): number {
   return Math.abs(h)
 }
 
+// Eenvoudige, vriendelijke symbolen, gecentreerd rond (100,108).
 const CHARGES: Record<number, string> = {
-  // ster
-  0: '<path d="M100 92 l7 16 17 2 -13 12 4 18 -15 -9 -15 9 4 -18 -13 -12 17 -2 z" fill="#ffffff"/>',
-  // hart
-  1: '<path d="M100 132 C92 116 70 119 78 134 C84 146 100 154 100 154 C100 154 116 146 122 134 C130 119 108 116 100 132 Z" fill="#ffffff"/>',
-  // blad
-  2: '<path d="M100 96 C120 110 120 140 100 152 C80 140 80 110 100 96 Z" fill="#ffffff"/>',
-  // huis
-  3: '<path d="M100 96 L124 116 H112 V146 H88 V116 H76 Z" fill="#ffffff"/>',
+  0: '<path d="M100 84 l7.5 17 18.5 1.7 -14 12.4 4.3 18.3 -16.3 -9.7 -16.3 9.7 4.3 -18.3 -14 -12.4 18.5 -1.7 z" fill="#ffffff"/>', // ster
+  1: '<path d="M100 130 C90 110 64 114 74 132 C81 145 100 156 100 156 C100 156 119 145 126 132 C136 114 110 110 100 130 Z" fill="#ffffff"/>', // hart
+  2: '<path d="M100 82 C124 100 124 134 100 150 C76 134 76 100 100 82 Z" fill="#ffffff"/>', // blad
+  3: '<path d="M100 84 L128 108 H116 V142 H84 V108 H72 Z" fill="#ffffff"/>', // huis
 }
 
-/** Deterministische, veilige procedurele wapenschild-SVG. */
+/** Deterministische, veilige procedurele wapenschild-SVG in de app-stijl. */
 export function proceduralCrest(description: string, initial: string): string {
   const h = hash(description || 'fam')
   const [main, dark, light] = PALETTES[h % PALETTES.length]
   const charge = CHARGES[h % 4]
   const letter = (initial || 'F').slice(0, 1).toUpperCase()
+  // Zacht, afgerond wapenschild met witte rand en naam-pill onderaan.
+  const shield = 'M100 16 C138 16 166 28 166 28 L166 110 C166 168 134 200 100 224 C66 200 34 168 34 110 L34 28 C34 28 62 16 100 16 Z'
   return `<svg viewBox="0 0 200 240" xmlns="http://www.w3.org/2000/svg">
   <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
     <stop offset="0" stop-color="${main}"/><stop offset="1" stop-color="${dark}"/>
   </linearGradient></defs>
-  <path d="M30 22 H170 V120 C170 182 100 222 100 222 C100 222 30 182 30 120 Z" fill="url(#g)" stroke="${dark}" stroke-width="7"/>
-  <path d="M37 28 H163 V70 H37 Z" fill="${light}" opacity="0.35"/>
+  <path d="${shield}" fill="url(#g)" stroke="#ffffff" stroke-width="7" stroke-linejoin="round"/>
+  <path d="M100 30 C132 30 154 39 154 39 L154 70 L46 70 L46 39 C46 39 68 30 100 30 Z" fill="${light}" opacity="0.45"/>
   ${charge}
-  <text x="100" y="200" text-anchor="middle" font-family="Georgia, serif" font-size="34" font-weight="bold" fill="${light}">${letter}</text>
+  <rect x="58" y="176" width="84" height="32" rx="16" fill="#ffffff" opacity="0.95"/>
+  <text x="100" y="198" text-anchor="middle" font-family="Inter, ui-sans-serif, sans-serif" font-size="20" font-weight="800" fill="${dark}">${letter}</text>
 </svg>`
 }
 

@@ -14,12 +14,15 @@ async function aiCrest(description: string): Promise<string | null> {
       model: process.env.ANTHROPIC_MODEL || 'claude-opus-4-8',
       max_tokens: 2000,
       system:
-        'Je ontwerpt een familiewapen (coat of arms) als nette, platte SVG. Output UITSLUITEND geldige ' +
-        'SVG-code, geen uitleg, geen markdown-hekken. Eisen: precies één <svg> met viewBox="0 0 200 240"; ' +
-        'gebruik alleen <path>, <circle>, <rect>, <polygon>, <ellipse>, <line>, <g>, <text>, <defs>, ' +
-        '<linearGradient>, <stop>. GEEN <script>, <image>, <foreignObject>, geen externe URLs, geen ' +
-        'event-handlers (on...). Gebruik een wapenschild-vorm met 2 tot 4 harmonieuze kleuren en eenvoudige ' +
-        'symbolen die bij de beschrijving passen. Maximaal ongeveer 1500 tekens.',
+        'Je ontwerpt een familiewapen als moderne, platte, vriendelijke SVG die past bij een gezins-app. ' +
+        'Output UITSLUITEND geldige SVG-code, geen uitleg, geen markdown-hekken. Eisen: precies één <svg> met ' +
+        'viewBox="0 0 200 240"; gebruik alleen <path>, <circle>, <rect>, <polygon>, <ellipse>, <line>, <g>, ' +
+        '<text>, <defs>, <linearGradient>, <stop>. GEEN <script>, <image>, <foreignObject>, geen externe URLs, ' +
+        'geen event-handlers (on...). Stijl: een zacht AFGEROND wapenschild met afgeronde hoeken, een dunne ' +
+        'WITTE rand, een subtiel verticaal kleurverloop en 2 tot 3 harmonieuze, zachte kleuren (bij voorkeur ' +
+        'met groen #35B558 als basis, tenzij de beschrijving iets anders suggereert). Eenvoudige, schattige ' +
+        'symbolen die bij de beschrijving passen; veel witruimte; geen drukke details. Modern en minimalistisch, ' +
+        'niet klassiek-heraldisch. Maximaal ongeveer 1500 tekens.',
       messages: [{ role: 'user', content: `Ontwerp een familiewapen dat past bij dit gezin: ${description}` }],
     })
     const text = res.content

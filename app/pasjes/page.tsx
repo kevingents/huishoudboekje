@@ -8,6 +8,7 @@ import ModuleGate from '@/components/ModuleGate'
 import Modal from '@/components/Modal'
 import Barcode from '@/components/Barcode'
 import { useCards, type Card } from '@/lib/hooks'
+import { brandLogo } from '@/lib/brands'
 
 const inputClass =
   'w-full rounded-xl border border-cardborder bg-white px-3.5 py-2.5 text-sm text-slate-700 outline-none transition-colors placeholder:text-slate-400 focus:border-brand/40 focus:ring-2 focus:ring-brand/20'
@@ -151,17 +152,25 @@ function PasjesContent() {
         </DashboardCard>
       ) : (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-          {cards.map((card) => (
-            <button
-              key={card.id}
-              type="button"
-              onClick={() => setActive(card)}
-              className={`flex h-28 flex-col justify-between rounded-card bg-gradient-to-br ${card.color} p-4 text-left text-white shadow-card transition-transform hover:scale-[1.02]`}
-            >
-              <CreditCard className="h-6 w-6 opacity-90" strokeWidth={2} />
-              <span className="line-clamp-2 text-sm font-bold leading-tight">{card.name}</span>
-            </button>
-          ))}
+          {cards.map((card) => {
+            const logo = brandLogo(card.name)
+            return (
+              <button
+                key={card.id}
+                type="button"
+                onClick={() => setActive(card)}
+                className={`flex h-28 flex-col justify-between rounded-card bg-gradient-to-br ${card.color} p-4 text-left text-white shadow-card transition-transform hover:scale-[1.02]`}
+              >
+                {logo ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={logo} alt="" className="h-8 w-8 rounded-lg bg-white object-contain p-1 shadow-sm" />
+                ) : (
+                  <CreditCard className="h-6 w-6 opacity-90" strokeWidth={2} />
+                )}
+                <span className="line-clamp-2 text-sm font-bold leading-tight">{card.name}</span>
+              </button>
+            )
+          })}
 
           {/* Toevoeg-tegel */}
           <button

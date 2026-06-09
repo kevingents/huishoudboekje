@@ -1,13 +1,13 @@
 'use client'
 
-import { useState } from 'react'
-import { Users, Cake, UserPlus, Pencil, Trash2, Mail, Copy, Check, Shield, Sparkles } from 'lucide-react'
+import { useRef, useState } from 'react'
+import { Users, Cake, UserPlus, Pencil, Trash2, Mail, Copy, Check, Shield, Sparkles, Camera } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
 import DashboardCard from '@/components/DashboardCard'
 import Modal from '@/components/Modal'
 import Crest from '@/components/Crest'
 import { useFamily, useHousehold, useSettings } from '@/lib/hooks'
-import { apiPost } from '@/lib/api'
+import { apiPost, apiPatch } from '@/lib/api'
 import type { FamilyMember } from '@/lib/types'
 
 const inputClass =
@@ -29,9 +29,48 @@ function emailFailNote(reason?: string): string {
 
 export default function GezinPage() {
   const { members, isLoading, addMember, updateMember, removeMember } = useFamily()
-  const { household } = useHousehold()
-  const { settings, mutate: mutateSettings } = useSettings()
+  const { household, mutate: mutateHousehold } = useHousehold()
+  const { settings, setSetting, mutate: mutateSettings } = useSettings()
   const crest = typeof settings.familyCrest === 'string' ? settings.familyCrest : null
+  const familyPhoto = typeof settings.familyPhoto === 'string' ? settings.familyPhoto : null
+
+  // Gezinsfoto + gezinsnaam
+  const photoRef = useRef<HTMLInputElement>(null)
+  const [nameOpen, setNameOpen] = useState(false)
+  const [nameDraft, setNameDraft] = useState('')
+
+  const onPickPhoto = async (file: File | undefined) => {
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      const img = new Image()
+      img.onload = () => {
+        const max = 600
+        const scale = Math.min(1, max / Math.max(img.width, img.height))
+        const canvas = document.createElement('canvas')
+        canvas.width = Math.round(img.width * scale)
+        canvas.height = Math.round(img.height * scale)
+        const ctx = canvas.getContext('2d')
+        if (!ctx) return
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+        setSetting('familyPhoto', canvas.toDataURL('image/jpeg', 0.7))
+      }
+      img.src = reader.result as string
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const openName = () => {
+    setNameDraft(household?.name ?? '')
+    setNameOpen(true)
+  }
+  const saveName = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!nameDraft.trim()) return
+    await apiPatch('/api/household', { name: nameDraft.trim() })
+    await mutateHousehold()
+    setNameOpen(false)
+  }
 
   // Familiewapen genereren
   const [crestOpen, setCrestOpen] = useState(false)
@@ -175,6 +214,49 @@ export default function GezinPage() {
           </button>
         }
       />
+
+      {/* Ons gezin: foto + naam */}
+      <DashboardCard className="mb-5">
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
+            onClick={() => photoRef.current?.click()}
+            className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-slate-100"
+            aria-label="Gezinsfoto wijzigen"
+          >
+            {familyPhoto ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={familyPhoto} alt="Gezinsfoto" className="h-full w-full object-cover" />
+            ) : (
+              <span className="grid h-full w-full place-items-center text-slate-400">
+                <Users className="h-7 w-7" />
+              </span>
+            )}
+            <span className="absolute inset-x-0 bottom-0 grid place-items-center bg-slate-900/40 py-0.5 text-white">
+              <Camera className="h-3.5 w-3.5" />
+            </span>
+          </button>
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Gezinsnaam</p>
+            <p className="truncate text-lg font-extrabold text-slate-800">{household?.name ?? 'Ons gezin'}</p>
+          </div>
+          <button
+            type="button"
+            onClick={openName}
+            className="pill shrink-0 border border-cardborder bg-white px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+            Naam
+          </button>
+        </div>
+        <input
+          ref={photoRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => onPickPhoto(e.target.files?.[0])}
+        />
+      </DashboardCard>
 
       {/* Familiewapen */}
       <DashboardCard
@@ -420,6 +502,24 @@ export default function GezinPage() {
           >
             <Sparkles className="h-4 w-4" />
             {crestBusy ? 'Bezig met tekenen…' : 'Genereer wapen'}
+          </button>
+        </form>
+      </Modal>
+
+      <Modal open={nameOpen} onClose={() => setNameOpen(false)} title="Gezinsnaam wijzigen">
+        <form onSubmit={saveName} className="flex flex-col gap-3">
+          <input
+            autoFocus
+            value={nameDraft}
+            onChange={(e) => setNameDraft(e.target.value)}
+            placeholder="Bijv. Het Willigenburg Gezin"
+            className={inputClass}
+          />
+          <button
+            type="submit"
+            className="pill bg-brand px-4 py-2.5 text-white shadow-sm shadow-brand/20 hover:bg-brand-dark"
+          >
+            Opslaan
           </button>
         </form>
       </Modal>

@@ -1,73 +1,20 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { Download, Share, X, Plus } from 'lucide-react'
-
-/** Het beforeinstallprompt-event (alleen Chrome/Android/desktop). */
-interface BeforeInstallPromptEvent extends Event {
-  prompt: () => Promise<void>
-  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
-}
-
-const DISMISS_KEY = 'hhb-install-dismissed'
+import { Download, Share, X, Plus, Compass } from 'lucide-react'
+import { usePwaInstall } from '@/lib/usePwaInstall'
 
 /**
- * Toont een "voeg toe aan beginscherm"-banner. Android/Chrome krijgt een echte
- * installeer-knop (via beforeinstallprompt); iOS Safari heeft geen install-API,
- * dus daar tonen we de stappen (deel-icoon → "Zet op beginscherm").
+ * "Voeg toe aan beginscherm"-banner. Android/Chrome krijgt een echte
+ * installeer-knop; iOS Safari de stappen; iOS Chrome de tip om in Safari te
+ * openen (Chrome op iOS kan geen PWA installeren). Sluiten = 2 weken weg.
  */
 export default function InstallPrompt() {
-  const [mode, setMode] = useState<'none' | 'android' | 'ios'>('none')
-  const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null)
+  const { mounted, isStandalone, isIosSafari, isIosChrome, canInstall, install, dismiss, dismissedRecently } =
+    usePwaInstall()
 
-  useEffect(() => {
-    const nav = navigator as Navigator & { standalone?: boolean }
-    const standalone =
-      window.matchMedia('(display-mode: standalone)').matches || nav.standalone === true
-    if (standalone) return
-    if (localStorage.getItem(DISMISS_KEY)) return
-
-    const onBeforeInstall = (e: Event) => {
-      e.preventDefault()
-      setDeferred(e as BeforeInstallPromptEvent)
-      setMode('android')
-    }
-    const onInstalled = () => {
-      localStorage.setItem(DISMISS_KEY, '1')
-      setMode('none')
-    }
-    window.addEventListener('beforeinstallprompt', onBeforeInstall)
-    window.addEventListener('appinstalled', onInstalled)
-
-    // iOS Safari: geen beforeinstallprompt — toon na een korte tel de instructie.
-    const ua = navigator.userAgent
-    const isIOS = /iphone|ipad|ipod/i.test(ua)
-    const isSafari = /safari/i.test(ua) && !/crios|fxios|edgios/i.test(ua)
-    let timer: ReturnType<typeof setTimeout> | undefined
-    if (isIOS && isSafari) {
-      timer = setTimeout(() => setMode((m) => (m === 'none' ? 'ios' : m)), 1500)
-    }
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', onBeforeInstall)
-      window.removeEventListener('appinstalled', onInstalled)
-      if (timer) clearTimeout(timer)
-    }
-  }, [])
-
-  const dismiss = () => {
-    localStorage.setItem(DISMISS_KEY, '1')
-    setMode('none')
-  }
-
-  const install = async () => {
-    if (!deferred) return
-    await deferred.prompt()
-    await deferred.userChoice
-    setMode('none')
-  }
-
-  if (mode === 'none') return null
+  if (!mounted || isStandalone || dismissedRecently) return null
+  const show = canInstall || isIosSafari || isIosChrome
+  if (!show) return null
 
   return (
     <div className="fixed inset-x-0 bottom-[84px] z-[55] px-4 lg:bottom-6 lg:left-auto lg:right-6 lg:px-0">
@@ -76,7 +23,7 @@ export default function InstallPrompt() {
           F
         </span>
 
-        {mode === 'android' ? (
+        {canInstall ? (
           <>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-bold text-slate-800">App installeren</p>
@@ -91,6 +38,15 @@ export default function InstallPrompt() {
               Installeren
             </button>
           </>
+        ) : isIosChrome ? (
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-bold text-slate-800">Open in Safari om te installeren</p>
+            <p className="text-xs leading-relaxed text-slate-500">
+              In Chrome op iPhone kan dit niet. Open fam in{' '}
+              <Compass className="-mt-0.5 inline h-3.5 w-3.5 text-sky-500" /> Safari en kies daarna
+              &lsquo;Zet op beginscherm&rsquo;.
+            </p>
+          </div>
         ) : (
           <div className="min-w-0 flex-1">
             <p className="text-sm font-bold text-slate-800">Op je beginscherm zetten</p>
