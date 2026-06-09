@@ -16,11 +16,14 @@ npm run db:seed          # vult de database met startdata
 npm run dev
 ```
 
-Open vervolgens [http://localhost:3000](http://localhost:3000).
+Open vervolgens [http://localhost:3000](http://localhost:3000). Bij de eerste keer maak je
+via **/registreren** een account aan (naam, e-mail, wachtwoord) — meteen met je gezinsleden.
+De app is afgeschermd: zonder inloggen kom je op de inlogpagina.
 
 > Alle gegevens worden bewaard in een lokale SQLite-database (`prisma/dev.db`) en blijven
 > behouden na verversen. Voor productie/multi-device: zet de Prisma-provider op
-> `postgresql` en wijs `DATABASE_URL` naar een gehoste Postgres.
+> `postgresql` en wijs `DATABASE_URL` naar een gehoste Postgres. Zet in productie een
+> sterke `AUTH_SECRET` (zie `.env.example`).
 
 ## Koppelingen
 
