@@ -16,6 +16,7 @@ import {
   FileText,
   Phone,
   ListTodo,
+  Mail,
   type LucideIcon,
 } from 'lucide-react'
 import type { ChatMessage } from './types'
@@ -43,6 +44,7 @@ export const sidebarNav: NavItem[] = [
   { label: 'Pasjes', icon: CreditCard, href: '/pasjes' },
   { label: 'Documenten', icon: FileText, href: '/documenten' },
   { label: 'Contacten', icon: Phone, href: '/contacten' },
+  { label: 'Gezinsmail', icon: Mail, href: '/gezinsmail' },
   { label: 'Beloningen', icon: Gift, href: '/beloningen' },
   { label: 'AI Assistent', icon: Sparkles, href: '/ai-assistent' },
   { label: 'Instellingen', icon: Settings, href: '/instellingen' },
@@ -55,7 +57,7 @@ export const mobileMenuGroups: { title: string; hrefs: string[] }[] = [
   { title: 'Dagelijks', hrefs: ['/agenda', '/boodschappen', '/gezin'] },
   { title: 'Koken', hrefs: ['/recepten', '/koelkast'] },
   { title: 'Geldzaken', hrefs: ['/budget', '/modules'] },
-  { title: 'Bewaren', hrefs: ['/pasjes', '/documenten', '/contacten'] },
+  { title: 'Bewaren', hrefs: ['/pasjes', '/documenten', '/contacten', '/gezinsmail'] },
   { title: 'Gezinsspel', hrefs: ['/taken', '/beloningen'] },
   { title: 'Extra', hrefs: ['/ai-assistent'] },
   { title: 'Account', hrefs: ['/instellingen'] },

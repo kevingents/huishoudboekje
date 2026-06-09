@@ -762,6 +762,49 @@ export function useRedemptions() {
   }
 }
 
+/* -------------------------------------------------------------------------- */
+/*  Gezinsmail (premium)                                                      */
+/* -------------------------------------------------------------------------- */
+
+export interface MailItem {
+  id: number
+  emailId: string | null
+  fromAddr: string
+  fromName: string | null
+  subject: string
+  snippet: string | null
+  status: string // nieuw | verwerkt | genegeerd
+  category: string | null
+  summary: string | null
+  filedType: string | null // document | agenda | shopping
+  filedId: number | null
+  attachmentUrl: string | null
+  attachmentName: string | null
+  createdAt: string
+}
+
+export function useMail() {
+  const { data, isLoading, mutate } = useSWR<{ address: string; items: MailItem[] }>(
+    '/api/mail',
+    fetcher,
+    { refreshInterval: 60_000 },
+  )
+  return {
+    address: data?.address ?? '',
+    items: data?.items ?? [],
+    isLoading,
+    setStatus: async (id: number, status: string) => {
+      await apiPatch(`/api/mail/${id}`, { status })
+      await mutate()
+    },
+    remove: async (id: number) => {
+      await apiDelete(`/api/mail/${id}`)
+      await mutate()
+    },
+    refresh: () => mutate(),
+  }
+}
+
 /** Puntensaldo per gezinslid: verdiend (afgeronde taken) − ingewisseld. */
 export function pointsByMember(tasks: Task[], redemptions: Redemption[]): Record<string, number> {
   const bal: Record<string, number> = {}

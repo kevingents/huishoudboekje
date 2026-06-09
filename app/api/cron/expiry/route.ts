@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db'
 import { notify } from '@/lib/notify'
+import { syncHouseholdIcal } from '@/lib/icalSync'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -39,5 +40,21 @@ export async function GET(req: Request) {
     notified++
   }
 
-  return Response.json({ ok: true, checked: docs.length, notified })
+  // Dagelijks de gekoppelde agenda's (Google/Outlook/Apple/Parro via iCal)
+  // verversen, zodat nieuwe en terugkerende afspraken vanzelf binnenkomen.
+  const icalHouseholds = await prisma.integration.findMany({
+    where: { key: 'ical', status: 'connected' },
+    select: { householdId: true },
+  })
+  let synced = 0
+  for (const { householdId } of icalHouseholds) {
+    try {
+      await syncHouseholdIcal(householdId)
+      synced++
+    } catch {
+      /* sync best-effort */
+    }
+  }
+
+  return Response.json({ ok: true, checked: docs.length, notified, icalSynced: synced })
 }

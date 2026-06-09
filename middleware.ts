@@ -13,11 +13,11 @@ const PUBLIC_PAGES = [
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
 
-  // Publieke API's: auth (registreren/inloggen/uitloggen/me) en de Mollie-webhook
-  // (die komt van Mollie zonder sessie-cookie).
+  // Publieke API's: auth (registreren/inloggen/uitloggen/me) en de webhooks
+  // (Mollie + Resend Inbound komen zonder sessie-cookie; ze verifiëren zelf).
   if (
     pathname.startsWith('/api/auth') ||
-    pathname === '/api/webhooks/mollie' ||
+    pathname.startsWith('/api/webhooks') ||
     pathname.startsWith('/api/cron')
   ) {
     return NextResponse.next()

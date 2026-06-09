@@ -18,6 +18,7 @@ model Household {
   name                String
   tier                String   @default("basis") // basis | plus | compleet
   coParentHouseholdId Int? // gekoppeld co-ouder-huishouden (gescheiden ouders)
+  inboundToken        String?  @unique // gezinsmail: lokaal deel van het inbound-adres
   createdAt           DateTime @default(now())
 }
 
@@ -299,6 +300,29 @@ model Document {
   expiresAt   String? // verloopdatum yyyy-mm-dd
   notes       String?
   createdAt   DateTime @default(now())
+
+  @@index([householdId])
+}
+
+// Gezinsmail (premium): doorgestuurde mails (facturen, garanties, afspraken) die
+// via Resend Inbound binnenkomen, door de AI worden geclassificeerd en automatisch
+// op de juiste plek worden gezet. Eén record per ontvangen mail = de inbox.
+model MailItem {
+  id             Int      @id @default(autoincrement())
+  householdId    Int
+  emailId        String? // Resend email_id (voor ophalen body/bijlagen)
+  fromAddr       String
+  fromName       String?
+  subject        String
+  snippet        String? // korte preview van de inhoud
+  status         String   @default("nieuw") // nieuw | verwerkt | genegeerd
+  category       String? // garantie | document | afspraak | boodschap | overig
+  summary        String? // AI-samenvatting: wat is dit / wat is gedaan
+  filedType      String? // document | agenda | shopping | null
+  filedId        Int? // id van het automatisch gemaakte record
+  attachmentUrl  String? // download-URL van de (eerste) bijlage
+  attachmentName String? // bestandsnaam van de bijlage
+  createdAt      DateTime @default(now())
 
   @@index([householdId])
 }

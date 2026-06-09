@@ -33,6 +33,7 @@ export const MODULES: ModuleInfo[] = [
   { key: 'pasjes', name: 'Pasjes', description: 'Bewaar klantenkaarten via foto of barcode en deel ze met je gezin.', minTier: 'plus' },
   { key: 'koelkast', name: 'Koelkast-scan', description: 'Maak een foto, de AI ziet wat je kunt koken.', minTier: 'compleet' },
   { key: 'gezinsspel', name: 'Gezinsspel', description: 'Taakjes, punten en beloningen voor het gezin.', minTier: 'compleet' },
+  { key: 'gezinsmail', name: 'Gezinsmail', description: 'Stuur facturen, garanties en afspraken door; de AI zet ze automatisch op de juiste plek.', minTier: 'compleet' },
 ]
 
 export function normalizeTier(tier: string | undefined | null): Tier {

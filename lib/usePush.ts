@@ -37,7 +37,8 @@ export function usePush() {
       const reg = await navigator.serviceWorker.ready
       const sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(vapid),
+        // cast: Uint8Array is een geldige BufferSource (TS 5.9 typt Uint8Array generiek).
+        applicationServerKey: urlBase64ToUint8Array(vapid) as BufferSource,
       })
       await fetch('/api/push/subscribe', {
         method: 'POST',
