@@ -496,3 +496,33 @@ export function useRewards() {
   const { data, isLoading } = useSWR<Reward[]>('/api/rewards', fetcher)
   return { rewards: data ?? [], isLoading }
 }
+
+/* -------------------------------------------------------------------------- */
+/*  Pasjes (gedeelde klantenkaarten, premium)                                 */
+/* -------------------------------------------------------------------------- */
+
+export interface Card {
+  id: number
+  name: string
+  code: string | null
+  format: string
+  imageUrl: string | null
+  color: string
+}
+
+export function useCards() {
+  const c = useCollection<Card>('/api/cards')
+  return {
+    cards: c.items,
+    isLoading: c.isLoading,
+    addCard: (payload: { name: string; code?: string | null; imageUrl?: string | null; color?: string }) =>
+      c.create(payload as Record<string, unknown>, {
+        name: payload.name,
+        code: payload.code ?? null,
+        format: 'CODE128',
+        imageUrl: payload.imageUrl ?? null,
+        color: payload.color ?? 'from-sky-400 to-blue-500',
+      }),
+    removeCard: (id: number) => c.remove(id),
+  }
+}

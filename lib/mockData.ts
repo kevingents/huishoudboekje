@@ -12,6 +12,7 @@ import {
   Package,
   Camera,
   Gift,
+  CreditCard,
   type LucideIcon,
 } from 'lucide-react'
 import type { ChatMessage } from './types'
@@ -35,6 +36,7 @@ export const sidebarNav: NavItem[] = [
   { label: 'Budget', icon: BarChart3, href: '/budget' },
   { label: 'Modules', icon: Package, href: '/modules' },
   { label: 'Gezin', icon: Users, href: '/gezin' },
+  { label: 'Pasjes', icon: CreditCard, href: '/pasjes' },
   { label: 'Beloningen', icon: Gift, href: '/beloningen' },
   { label: 'AI Assistent', icon: Sparkles, href: '/ai-assistent' },
   { label: 'Instellingen', icon: Settings, href: '/instellingen' },

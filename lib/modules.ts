@@ -30,6 +30,7 @@ export interface ModuleInfo {
 export const MODULES: ModuleInfo[] = [
   { key: 'ai', name: 'AI Assistent', description: 'Chat met de gezins-AI en laat recepten genereren.', minTier: 'plus' },
   { key: 'budgetplanner', name: 'Budgetplanner', description: 'Spaardoelen, vaste lasten en maandprognose.', minTier: 'plus' },
+  { key: 'pasjes', name: 'Pasjes', description: 'Bewaar klantenkaarten via foto of barcode en deel ze met je gezin.', minTier: 'plus' },
   { key: 'koelkast', name: 'Koelkast-scan', description: 'Maak een foto, de AI ziet wat je kunt koken.', minTier: 'compleet' },
   { key: 'gezinsspel', name: 'Gezinsspel', description: 'Taakjes, punten en beloningen voor het gezin.', minTier: 'compleet' },
 ]

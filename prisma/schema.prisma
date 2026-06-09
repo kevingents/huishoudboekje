@@ -202,6 +202,21 @@ model FixedCost {
   @@index([householdId])
 }
 
+// Gedeelde klantenkaarten/pasjes (premium). Gedeeld binnen het huishouden via
+// householdId. Foto (imageUrl) en/of barcode-nummer (code).
+model Card {
+  id          Int      @id @default(autoincrement())
+  householdId Int
+  name        String // "Bibliotheek", "Kruidvat"
+  code        String? // barcode-/pasnummer
+  format      String   @default("CODE128")
+  imageUrl    String? // foto van het pasje (data-URL of externe URL)
+  color       String   @default("from-sky-400 to-blue-500")
+  createdAt   DateTime @default(now())
+
+  @@index([householdId])
+}
+
 // Platform-brede, adverteerder-gesponsorde beloningen voor het gezinsspel.
 // GEEN householdId: dit is een globale catalogus, beheerd in /beheer en
 // zichtbaar voor alle gezinnen. Koppelt later aan een Task (veld rewardId).
