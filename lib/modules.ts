@@ -55,3 +55,35 @@ export function modulesForTier(tier: string | undefined | null) {
 export function tierInfo(tier: string | undefined | null): TierInfo {
   return TIERS.find((t) => t.key === normalizeTier(tier)) ?? TIERS[0]
 }
+
+/** Jaarkorting bij een jaarabonnement. */
+export const YEARLY_DISCOUNT = 0.1
+
+/** Jaarprijs (12 maanden − 10% korting), afgerond op centen. */
+export function yearlyPrice(monthly: number): number {
+  return Math.round(monthly * 12 * (1 - YEARLY_DISCOUNT) * 100) / 100
+}
+
+/** Wat je krijgt per pakket (voor de marketing- en modules-pagina). */
+export const TIER_FEATURES: Record<Tier, string[]> = {
+  basis: [
+    'Agenda met Google-, Outlook-, Apple- & Parro-koppeling',
+    'Boodschappenlijst voor het hele gezin',
+    'Recepten & weekmenu',
+    'Documenten & garantiebewijzen met verloop-reminders',
+    'Belangrijke contacten en adressen',
+    'Live weer',
+  ],
+  plus: [
+    'Alles uit Basis',
+    'AI-assistent (chat & recepten)',
+    'Budgetplanner met spaardoelen',
+    'Gedeelde pasjes (klantenkaarten & barcodes)',
+  ],
+  compleet: [
+    'Alles uit Plus',
+    'Koelkast-scan: foto → wat kun je koken',
+    'Gezinsspel: taken, punten & beloningen',
+    'Gezinsmail: mail facturen & garanties, AI sorteert ze automatisch',
+  ],
+}

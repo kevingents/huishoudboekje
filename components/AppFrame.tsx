@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation'
 import type { ReactNode } from 'react'
 import Sidebar from './Sidebar'
 import MobileNav from './MobileNav'
+import SwipeBack from './SwipeBack'
 
 const AUTH_ROUTES = [
   '/inloggen',
@@ -35,6 +36,7 @@ export default function AppFrame({ children }: { children: ReactNode }) {
 
   return (
     <div className="h-[100dvh] bg-canvas lg:p-6">
+      <SwipeBack />
       <div className="mx-auto flex h-full max-w-[1440px] overflow-hidden bg-white shadow-card lg:rounded-[28px]">
         <Sidebar />
         <main className="scrollbar-thin flex-1 overflow-y-auto px-4 pb-28 pt-6 sm:px-6 lg:px-8 lg:pb-8">

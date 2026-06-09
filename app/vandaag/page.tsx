@@ -7,9 +7,7 @@ import {
   UtensilsCrossed,
   Clock,
   Users,
-  Milk,
   ChevronRight,
-  Baby,
   Plus,
   Sparkles,
   CreditCard,
@@ -33,21 +31,19 @@ import { resolveWeatherIcon } from '@/lib/icons'
 import { rankRecipes } from '@/lib/recommend'
 import { readCoParenting, coParentNow } from '@/lib/coparent'
 
-import { stockAlert, diaperStock, aiSuggestion } from '@/lib/mockData'
+import { aiSuggestion } from '@/lib/mockData'
 
 const ALL_WIDGETS: { key: string; label: string; span: 1 | 2 }[] = [
   { key: 'recept', label: 'Recept van vandaag', span: 1 },
-  { key: 'voorraad', label: 'Voorraad-seintje', span: 1 },
   { key: 'weer', label: 'Weer', span: 1 },
   { key: 'agenda', label: 'Komende afspraken', span: 1 },
   { key: 'budget', label: 'Budget', span: 1 },
-  { key: 'luiers', label: 'Luiervoorraad', span: 1 },
   { key: 'ai', label: 'AI-suggestie', span: 1 },
   { key: 'pasjes', label: 'Pasjes', span: 1 },
   { key: 'aanbiedingen', label: 'Aanbiedingen', span: 1 },
   { key: 'boodschappen', label: 'Boodschappenlijst', span: 2 },
 ]
-const DEFAULT_WIDGETS = ['recept', 'voorraad', 'weer', 'agenda', 'budget', 'ai', 'boodschappen']
+const DEFAULT_WIDGETS = ['recept', 'weer', 'agenda', 'budget', 'ai', 'boodschappen']
 const labelOf = (key: string) => ALL_WIDGETS.find((w) => w.key === key)?.label ?? key
 
 export default function Vandaag() {
@@ -130,21 +126,6 @@ export default function Vandaag() {
             </Link>
           </DashboardCard>
         )
-      case 'voorraad':
-        return (
-          <DashboardCard key={key} bg="bg-indigo-50/70" bordered={false} className="ring-1 ring-indigo-100">
-            <Link href="/boodschappen" className="flex w-full items-center gap-4 text-left">
-              <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white text-indigo-500 shadow-sm">
-                <Milk className="h-6 w-6" strokeWidth={2.2} />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-base font-bold text-slate-800">{stockAlert.title}</span>
-                <span className="block text-sm text-slate-500">{stockAlert.subtitle}</span>
-              </span>
-              <ChevronRight className="h-5 w-5 shrink-0 text-slate-400" />
-            </Link>
-          </DashboardCard>
-        )
       case 'budget':
         return <BudgetCard key={key} />
       case 'weer':
@@ -168,30 +149,6 @@ export default function Vandaag() {
         )
       case 'agenda':
         return <AgendaCard key={key} />
-      case 'luiers':
-        return (
-          <DashboardCard key={key}>
-            <div className="flex items-center gap-4">
-              <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-orange-100 text-stock">
-                <Baby className="h-7 w-7" strokeWidth={2.1} />
-              </span>
-              <div>
-                <p className="text-base font-bold text-slate-800">{diaperStock.title}</p>
-                <p className="text-sm font-semibold text-stock">nog {diaperStock.daysLeft} dagen</p>
-              </div>
-            </div>
-            <div className="mt-4 h-2.5 w-full overflow-hidden rounded-full bg-orange-100">
-              <div className="h-full rounded-full bg-stock transition-all" style={{ width: `${diaperStock.percent}%` }} />
-            </div>
-            <Link
-              href="/boodschappen"
-              className="pill mt-4 w-full border border-orange-200 bg-orange-50 px-4 py-2.5 text-stock hover:bg-orange-100 sm:w-auto"
-            >
-              <Plus className="h-4 w-4" />
-              Toevoegen aan boodschappen
-            </Link>
-          </DashboardCard>
-        )
       case 'ai':
         return (
           <DashboardCard

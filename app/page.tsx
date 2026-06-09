@@ -15,7 +15,7 @@ import {
   ArrowRight,
   ShieldCheck,
 } from 'lucide-react'
-import { TIERS } from '@/lib/modules'
+import PricingSection from '@/components/PricingSection'
 
 export const metadata: Metadata = {
   title: 'Fam — Eén rustig overzicht voor het hele gezin',
@@ -179,64 +179,7 @@ export default function Landing() {
       </section>
 
       {/* Pricing */}
-      <section id="pakketten" className="bg-canvas py-16 sm:py-20">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-3xl font-extrabold sm:text-4xl">Een pakket dat met jullie meegroeit</h2>
-            <p className="mt-3 text-slate-500">Begin gratis, breid uit wanneer je wilt. Altijd maandelijks opzegbaar.</p>
-          </div>
-          <div className="mx-auto mt-10 grid max-w-4xl gap-5 sm:grid-cols-3">
-            {TIERS.map((t) => {
-              const popular = t.key === 'plus'
-              return (
-                <div
-                  key={t.key}
-                  className={`relative flex flex-col rounded-card bg-white p-6 shadow-card ${
-                    popular ? 'ring-2 ring-brand' : 'ring-1 ring-cardborder'
-                  }`}
-                >
-                  {popular && (
-                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-brand px-3 py-1 text-[11px] font-bold text-white shadow-sm">
-                      Populair
-                    </span>
-                  )}
-                  <h3 className="text-lg font-extrabold text-slate-800">{t.name}</h3>
-                  <div className="mt-2 flex items-end gap-1">
-                    {t.price === 0 ? (
-                      <span className="text-3xl font-extrabold">Gratis</span>
-                    ) : (
-                      <>
-                        <span className="text-3xl font-extrabold">€{t.price.toFixed(2).replace('.', ',')}</span>
-                        <span className="pb-1 text-sm text-slate-400">/ mnd</span>
-                      </>
-                    )}
-                  </div>
-                  {t.price > 0 && (
-                    <p className="mt-2 inline-flex w-fit items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-600">
-                      1e maand gratis
-                    </p>
-                  )}
-                  <p className="mt-3 flex-1 text-sm text-slate-500">{t.blurb}</p>
-                  <Link
-                    href="/registreren"
-                    className={`pill mt-5 w-full justify-center px-4 py-2.5 text-sm font-semibold ${
-                      popular
-                        ? 'bg-brand text-white shadow-sm shadow-brand/20 hover:bg-brand-dark'
-                        : 'border border-cardborder text-slate-700 hover:bg-slate-50'
-                    }`}
-                  >
-                    {t.price === 0 ? 'Gratis beginnen' : `Kies ${t.name}`}
-                  </Link>
-                </div>
-              )
-            })}
-          </div>
-          <p className="mx-auto mt-6 max-w-2xl text-center text-xs text-slate-400">
-            De 1e maand is gratis op Plus en Compleet. Je kunt op elk moment up- of downgraden en
-            betaalt nooit voor functies die je niet gebruikt. Betalingen lopen veilig via Mollie.
-          </p>
-        </div>
-      </section>
+      <PricingSection />
 
       {/* Install / PWA */}
       <section id="installeren" className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-16 sm:px-6 lg:grid-cols-2">
