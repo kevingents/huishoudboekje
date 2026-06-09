@@ -18,7 +18,8 @@ import BudgetCard from '@/components/BudgetCard'
 import AgendaCard from '@/components/AgendaCard'
 import ShoppingList from '@/components/ShoppingList'
 import NotificationBell from '@/components/NotificationBell'
-import { useFamily, useRecipes, useWeather, useAuth } from '@/lib/hooks'
+import Crest from '@/components/Crest'
+import { useFamily, useRecipes, useWeather, useAuth, useSettings } from '@/lib/hooks'
 import { resolveWeatherIcon } from '@/lib/icons'
 import { rankRecipes } from '@/lib/recommend'
 
@@ -29,6 +30,8 @@ export default function Vandaag() {
   const { recipes } = useRecipes()
   const { weather } = useWeather()
   const { user } = useAuth()
+  const { settings } = useSettings()
+  const crest = typeof settings.familyCrest === 'string' ? settings.familyCrest : null
   const WeatherIcon = resolveWeatherIcon(weather?.icon ?? 'Cloud')
   const recipe = rankRecipes(recipes)[0]
   const greetingName = user?.name.split(' ')[0] ?? family.greetingName
@@ -54,6 +57,11 @@ export default function Vandaag() {
         </div>
 
         <div className="flex items-center gap-3 sm:gap-4">
+          {crest && (
+            <Link href="/gezin" aria-label="Familiewapen">
+              <Crest svg={crest} className="h-11 w-9 object-contain drop-shadow-sm" />
+            </Link>
+          )}
           <Link href="/gezin" className="flex -space-x-3" aria-label="Naar het gezin">
             {members.map((member) => (
               <span

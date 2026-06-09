@@ -17,6 +17,10 @@ import {
   Repeat,
   Bell,
   Lock,
+  CreditCard,
+  Gift,
+  ListTodo,
+  TrendingUp,
   type LucideIcon,
 } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
@@ -33,6 +37,18 @@ interface AdminStats {
   integrations: Record<string, number>
   signups: { date: string; count: number }[]
   recentHouseholds: { id: number; name: string; tier: string; createdAt: string }[]
+  demo: {
+    activeFamilies: number
+    tasksCompleted: number
+    tasksOpen: number
+    cardsShared: number
+    rewardsClaimed: number
+    popularCards: { name: string; count: number }[]
+  }
+}
+
+function nf(value: number) {
+  return value.toLocaleString('nl-NL')
 }
 
 function euro(value: number) {
@@ -60,6 +76,8 @@ const usageMeta: { key: string; label: string; icon: LucideIcon }[] = [
   { key: 'savingsGoals', label: 'Spaardoelen', icon: PiggyBank },
   { key: 'fixedCosts', label: 'Vaste lasten', icon: Repeat },
   { key: 'notifications', label: 'Meldingen', icon: Bell },
+  { key: 'cards', label: 'Pasjes', icon: CreditCard },
+  { key: 'rewards', label: 'Beloningen', icon: Gift },
 ]
 
 const integrationLabels: Record<string, string> = {
@@ -126,6 +144,62 @@ export default function BeheerPage() {
               accent="bg-amber-100 text-amber-600"
             />
           </div>
+
+          {/* Platform in cijfers (illustratief) */}
+          <DashboardCard
+            title="Platform in cijfers"
+            icon={TrendingUp}
+            iconClassName="text-brand"
+            headerRight={
+              <span className="pill bg-amber-100 px-2.5 py-1 text-[11px] font-semibold text-amber-600">
+                Voorbeeldcijfers
+              </span>
+            }
+          >
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {[
+                { label: 'Actieve gezinnen', value: data.demo.activeFamilies, icon: Users, accent: 'bg-emerald-100 text-emerald-600' },
+                { label: 'Taken voltooid', value: data.demo.tasksCompleted, icon: ListTodo, accent: 'bg-violet-100 text-violet-600' },
+                { label: 'Pasjes gedeeld', value: data.demo.cardsShared, icon: CreditCard, accent: 'bg-sky-100 text-sky-600' },
+                { label: 'Beloningen ingewisseld', value: data.demo.rewardsClaimed, icon: Gift, accent: 'bg-pink-100 text-pink-600' },
+              ].map((s) => {
+                const Icon = s.icon
+                return (
+                  <div key={s.label} className="rounded-2xl bg-slate-50 p-3">
+                    <span className={`grid h-8 w-8 place-items-center rounded-lg ${s.accent}`}>
+                      <Icon className="h-4 w-4" strokeWidth={2.2} />
+                    </span>
+                    <p className="mt-2 text-lg font-extrabold text-slate-800">{nf(s.value)}</p>
+                    <p className="text-xs text-slate-500">{s.label}</p>
+                  </div>
+                )
+              })}
+            </div>
+
+            <p className="mb-2 mt-5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+              Populairste gedeelde pasjes
+            </p>
+            <ul className="flex flex-col gap-2.5">
+              {data.demo.popularCards.map((c) => {
+                const max = data.demo.popularCards[0]?.count || 1
+                const pct = Math.round((c.count / max) * 100)
+                return (
+                  <li key={c.name}>
+                    <div className="mb-1 flex items-center justify-between text-sm">
+                      <span className="font-semibold text-slate-700">{c.name}</span>
+                      <span className="text-slate-500">{nf(c.count)}</span>
+                    </div>
+                    <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
+                      <div className="h-full rounded-full bg-sky-400 transition-all" style={{ width: `${pct}%` }} />
+                    </div>
+                  </li>
+                )
+              })}
+            </ul>
+            <p className="mt-3 text-xs text-slate-400">
+              Illustratieve cijfers — vervangen door echte data zodra er live verkeer is.
+            </p>
+          </DashboardCard>
 
           <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
             {/* Pakket-verdeling */}

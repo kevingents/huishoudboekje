@@ -1,11 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { Users, Cake, UserPlus, Pencil, Trash2, Mail, Copy, Check } from 'lucide-react'
+import { Users, Cake, UserPlus, Pencil, Trash2, Mail, Copy, Check, Shield, Sparkles } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
 import DashboardCard from '@/components/DashboardCard'
 import Modal from '@/components/Modal'
-import { useFamily, useHousehold } from '@/lib/hooks'
+import Crest from '@/components/Crest'
+import { useFamily, useHousehold, useSettings } from '@/lib/hooks'
 import { apiPost } from '@/lib/api'
 import type { FamilyMember } from '@/lib/types'
 
@@ -29,6 +30,38 @@ function emailFailNote(reason?: string): string {
 export default function GezinPage() {
   const { members, isLoading, addMember, updateMember, removeMember } = useFamily()
   const { household } = useHousehold()
+  const { settings, setSetting } = useSettings()
+  const crest = typeof settings.familyCrest === 'string' ? settings.familyCrest : null
+
+  // Familiewapen genereren
+  const [crestOpen, setCrestOpen] = useState(false)
+  const [crestDesc, setCrestDesc] = useState('')
+  const [crestBusy, setCrestBusy] = useState(false)
+  const [crestError, setCrestError] = useState<string | null>(null)
+
+  const openCrest = () => {
+    setCrestDesc(typeof settings.familyCrestDescription === 'string' ? settings.familyCrestDescription : '')
+    setCrestError(null)
+    setCrestOpen(true)
+  }
+
+  const generateCrest = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!crestDesc.trim()) return
+    setCrestBusy(true)
+    setCrestError(null)
+    try {
+      const res = (await apiPost('/api/household/crest', { description: crestDesc })) as { svg: string }
+      await setSetting('familyCrest', res.svg)
+      await setSetting('familyCrestDescription', crestDesc)
+      setCrestOpen(false)
+    } catch (err) {
+      setCrestError(err instanceof Error ? err.message : 'Genereren mislukt.')
+    } finally {
+      setCrestBusy(false)
+    }
+  }
+
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<FamilyMember | null>(null)
   const [form, setForm] = useState(empty)
@@ -142,6 +175,39 @@ export default function GezinPage() {
           </button>
         }
       />
+
+      {/* Familiewapen */}
+      <DashboardCard
+        bg="bg-gradient-to-br from-brand-light to-white"
+        bordered={false}
+        className="mb-5 ring-1 ring-brand/15"
+      >
+        <div className="flex items-center gap-4">
+          {crest ? (
+            <Crest svg={crest} className="h-20 w-16 shrink-0 object-contain drop-shadow-sm" />
+          ) : (
+            <span className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-white text-brand shadow-sm">
+              <Shield className="h-8 w-8" strokeWidth={2} />
+            </span>
+          )}
+          <div className="min-w-0 flex-1">
+            <p className="text-base font-bold text-slate-800">Familiewapen</p>
+            <p className="text-sm text-slate-500">
+              {crest
+                ? 'Jullie eigen wapen — verschijnt door de hele app.'
+                : 'Maak een uniek wapen op basis van hoe jullie gezin is.'}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={openCrest}
+            className="pill shrink-0 bg-brand px-4 py-2.5 text-white shadow-sm shadow-brand/20 hover:bg-brand-dark"
+          >
+            <Sparkles className="h-4 w-4" />
+            {crest ? 'Opnieuw' : 'Genereren'}
+          </button>
+        </div>
+      </DashboardCard>
 
       {isLoading && members.length === 0 ? (
         <p className="text-sm text-slate-400">Laden…</p>
@@ -330,6 +396,32 @@ export default function GezinPage() {
             </button>
           </form>
         )}
+      </Modal>
+
+      <Modal open={crestOpen} onClose={() => setCrestOpen(false)} title="Familiewapen genereren">
+        <form onSubmit={generateCrest} className="flex flex-col gap-3">
+          <p className="text-sm text-slate-500">
+            Beschrijf in een paar woorden hoe jullie gezin is. De AI maakt er een uniek wapen van dat
+            door de hele app verschijnt.
+          </p>
+          <textarea
+            autoFocus
+            rows={3}
+            value={crestDesc}
+            onChange={(e) => setCrestDesc(e.target.value)}
+            placeholder="Bijv. avontuurlijk, dol op de zee, twee katten, houden van muziek"
+            className={inputClass}
+          />
+          {crestError && <p className="text-sm font-medium text-rose-600">{crestError}</p>}
+          <button
+            type="submit"
+            disabled={crestBusy}
+            className="pill mt-1 bg-brand px-4 py-2.5 text-white shadow-sm shadow-brand/20 hover:bg-brand-dark disabled:opacity-50"
+          >
+            <Sparkles className="h-4 w-4" />
+            {crestBusy ? 'Bezig met tekenen…' : 'Genereer wapen'}
+          </button>
+        </form>
       </Modal>
     </>
   )

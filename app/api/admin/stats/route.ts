@@ -24,6 +24,8 @@ export async function GET() {
     savingsGoals,
     fixedCosts,
     notifications,
+    cards,
+    rewards,
     recentHouseholds,
   ] = await Promise.all([
     prisma.household.count(),
@@ -40,6 +42,8 @@ export async function GET() {
     prisma.savingsGoal.count(),
     prisma.fixedCost.count(),
     prisma.notification.count(),
+    prisma.card.count(),
+    prisma.reward.count(),
     prisma.household.findMany({
       orderBy: { createdAt: 'desc' },
       take: 8,
@@ -81,6 +85,24 @@ export async function GET() {
     if (b) b.count++
   }
 
+  // Voorbeeldcijfers (illustratief): tonen het platformpotentieel zolang er nog
+  // weinig live verkeer is. Deterministisch en groeit mee met de echte aantallen.
+  const demo = {
+    activeFamilies: 1240 + households * 3,
+    tasksCompleted: 18640 + members * 14,
+    tasksOpen: 836 + members,
+    cardsShared: 3910 + cards,
+    rewardsClaimed: 642 + rewards * 2,
+    popularCards: [
+      { name: 'Bibliotheek', count: 1124 },
+      { name: 'Albert Heijn Bonus', count: 982 },
+      { name: 'Kruidvat', count: 763 },
+      { name: 'IKEA Family', count: 431 },
+      { name: 'Praxis Club', count: 318 },
+      { name: 'Etos', count: 287 },
+    ],
+  }
+
   return Response.json({
     totals: { households, users, members, activeSubs },
     tiers,
@@ -95,9 +117,12 @@ export async function GET() {
       savingsGoals,
       fixedCosts,
       notifications,
+      cards,
+      rewards,
     },
     integrations,
     signups: buckets,
     recentHouseholds,
+    demo,
   })
 }
