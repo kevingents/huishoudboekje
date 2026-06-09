@@ -592,3 +592,39 @@ export function useDocuments() {
     removeDocument: (id: number) => c.remove(id),
   }
 }
+
+/* -------------------------------------------------------------------------- */
+/*  Belangrijke contacten                                                     */
+/* -------------------------------------------------------------------------- */
+
+export interface Contact {
+  id: number
+  name: string
+  category: string
+  phone: string | null
+  address: string | null
+  notes: string | null
+}
+
+export function useContacts() {
+  const c = useCollection<Contact>('/api/contacts')
+  return {
+    contacts: c.items,
+    isLoading: c.isLoading,
+    addContact: (payload: {
+      name: string
+      category: string
+      phone?: string | null
+      address?: string | null
+      notes?: string | null
+    }) =>
+      c.create(payload as Record<string, unknown>, {
+        name: payload.name,
+        category: payload.category,
+        phone: payload.phone ?? null,
+        address: payload.address ?? null,
+        notes: payload.notes ?? null,
+      }),
+    removeContact: (id: number) => c.remove(id),
+  }
+}

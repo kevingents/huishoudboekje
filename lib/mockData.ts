@@ -14,6 +14,7 @@ import {
   Gift,
   CreditCard,
   FileText,
+  Phone,
   type LucideIcon,
 } from 'lucide-react'
 import type { ChatMessage } from './types'
@@ -39,6 +40,7 @@ export const sidebarNav: NavItem[] = [
   { label: 'Gezin', icon: Users, href: '/gezin' },
   { label: 'Pasjes', icon: CreditCard, href: '/pasjes' },
   { label: 'Documenten', icon: FileText, href: '/documenten' },
+  { label: 'Contacten', icon: Phone, href: '/contacten' },
   { label: 'Beloningen', icon: Gift, href: '/beloningen' },
   { label: 'AI Assistent', icon: Sparkles, href: '/ai-assistent' },
   { label: 'Instellingen', icon: Settings, href: '/instellingen' },
@@ -51,7 +53,7 @@ export const mobileMenuGroups: { title: string; hrefs: string[] }[] = [
   { title: 'Dagelijks', hrefs: ['/agenda', '/boodschappen', '/gezin'] },
   { title: 'Koken', hrefs: ['/recepten', '/koelkast'] },
   { title: 'Geldzaken', hrefs: ['/budget', '/modules'] },
-  { title: 'Bewaren', hrefs: ['/pasjes', '/documenten'] },
+  { title: 'Bewaren', hrefs: ['/pasjes', '/documenten', '/contacten'] },
   { title: 'Extra', hrefs: ['/ai-assistent', '/beloningen'] },
   { title: 'Account', hrefs: ['/instellingen'] },
 ]

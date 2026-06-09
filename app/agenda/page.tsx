@@ -52,6 +52,7 @@ export default function AgendaPage() {
   const { members } = useFamily()
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState({ date: '', title: '', time: '', who: 'Gezin', accent: 'sky' })
+  const [customWho, setCustomWho] = useState('')
 
   const days = useMemo(() => groupByDate(events), [events])
   const todayKey = localKey(new Date())
@@ -65,8 +66,10 @@ export default function AgendaPage() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.title.trim() || !form.date) return
-    await addEvent(form)
+    const who = form.who === '__anders' ? customWho.trim() || 'Gezin' : form.who
+    await addEvent({ ...form, who })
     setForm({ date: '', title: '', time: '', who: 'Gezin', accent: 'sky' })
+    setCustomWho('')
     setOpen(false)
   }
 
@@ -212,7 +215,16 @@ export default function AgendaPage() {
                   {m.name}
                 </option>
               ))}
+              <option value="__anders">Iemand anders (bijv. oma)…</option>
             </select>
+            {form.who === '__anders' && (
+              <input
+                value={customWho}
+                onChange={(e) => setCustomWho(e.target.value)}
+                placeholder="Naam, bijv. Oma"
+                className={`mt-2 ${inputClass}`}
+              />
+            )}
           </label>
           <div className="text-xs font-semibold text-slate-500">
             Kleur

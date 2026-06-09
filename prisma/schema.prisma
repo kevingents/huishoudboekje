@@ -217,6 +217,20 @@ model Card {
   @@index([householdId])
 }
 
+// Belangrijke contacten/adressen (school, opvang, dokter, oma...) per huishouden.
+model Contact {
+  id          Int      @id @default(autoincrement())
+  householdId Int
+  name        String // "School De Regenboog", "Oma", "Tandarts"
+  category    String   @default("overig") // school | opvang | zorg | familie | overig
+  phone       String?
+  address     String?
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  @@index([householdId])
+}
+
 // Eigen beloningen van het gezin (household-scoped), naast de partner-catalogus.
 model FamilyReward {
   id          Int      @id @default(autoincrement())

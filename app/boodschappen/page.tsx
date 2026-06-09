@@ -5,6 +5,7 @@ import { ShoppingCart, Plus, Check, Trash2 } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
 import DashboardCard from '@/components/DashboardCard'
 import { useShopping } from '@/lib/hooks'
+import { estimatePrice, euro } from '@/lib/prices'
 import type { ShoppingItem } from '@/lib/types'
 
 export default function BoodschappenPage() {
@@ -22,6 +23,7 @@ export default function BoodschappenPage() {
 
   const checkedCount = items.filter((item) => item.checked).length
   const progress = items.length ? Math.round((checkedCount / items.length) * 100) : 0
+  const estTotal = items.filter((item) => !item.checked).reduce((sum, item) => sum + estimatePrice(item.label), 0)
 
   const grouped = useMemo(() => {
     const groups = new Map<string, ShoppingItem[]>()
@@ -72,6 +74,13 @@ export default function BoodschappenPage() {
             style={{ width: `${progress}%` }}
           />
         </div>
+
+        {estTotal > 0 && (
+          <p className="mt-3 text-sm text-slate-500">
+            Nog te halen: <span className="font-bold text-slate-800">± €{euro(estTotal)}</span>
+            <span className="text-xs text-slate-400"> · schatting</span>
+          </p>
+        )}
 
         <form
           onSubmit={(event) => {
@@ -135,6 +144,12 @@ export default function BoodschappenPage() {
                       </span>
                       {item.qty && <span className="block text-xs text-slate-400">{item.qty}</span>}
                     </span>
+
+                    {!item.checked && (
+                      <span className="shrink-0 text-xs font-medium text-slate-400">
+                        ± €{euro(estimatePrice(item.label))}
+                      </span>
+                    )}
 
                     <button
                       type="button"
