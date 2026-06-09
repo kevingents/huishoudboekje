@@ -1,13 +1,13 @@
 // Prisma schema voor Huishoudboekje (multi-tenant).
 // Elk huishouden (Household) is een aparte tenant; alle data hangt aan een
-// householdId. Dev: SQLite. Voor deploy/multi-device: provider op "postgresql".
+// householdId. Database: PostgreSQL (lokaal én op Vercel) via DATABASE_URL.
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
