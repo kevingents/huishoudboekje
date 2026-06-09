@@ -31,6 +31,11 @@ model User {
   role         String   @default("member") // owner | member | child
   memberId     Int? // gekoppeld FamilyMember (welk gezinslid is deze login)
   termsAcceptedAt DateTime? // moment van akkoord met voorwaarden + privacybeleid
+  // Profielgegevens die de gebruiker zelf beheert.
+  avatarUrl    String? // profielfoto (data-URL of externe URL)
+  phone        String?
+  address      String?
+  birthday     String? // geboortedatum (yyyy-mm-dd of vrije tekst)
   createdAt    DateTime @default(now())
 
   @@index([householdId])
@@ -209,6 +214,19 @@ model FixedCost {
   amount      Float
   // dag van de maand waarop het wordt afgeschreven (optioneel)
   dueDay      Int?
+  createdAt   DateTime @default(now())
+
+  @@index([householdId])
+}
+
+// Inkomsten van het huishouden (loon, toeslagen, uitkeringen, alimentatie...).
+model Income {
+  id          Int      @id @default(autoincrement())
+  householdId Int
+  label       String // "Loon Sanne", "Kinderbijslag", "Zorgtoeslag"
+  amount      Float
+  category    String   @default("loon") // loon | toeslag | uitkering | overig
+  interval    String   @default("1 month") // 1 month | 12 months (voor jaarlijkse posten)
   createdAt   DateTime @default(now())
 
   @@index([householdId])

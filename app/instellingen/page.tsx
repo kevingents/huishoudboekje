@@ -7,6 +7,7 @@ import PageHeader from '@/components/PageHeader'
 import DashboardCard from '@/components/DashboardCard'
 import IntegrationsSection from '@/components/IntegrationsSection'
 import CoParentCard from '@/components/CoParentCard'
+import ProfileCard from '@/components/ProfileCard'
 import { useA11y, type FontScale } from '@/components/A11yProvider'
 import { useSettings, useFamily, useAuth } from '@/lib/hooks'
 import { apiDelete } from '@/lib/api'
@@ -79,6 +80,9 @@ export default function InstellingenPage() {
       />
 
       <div className="flex flex-col gap-5">
+        {/* Mijn profiel */}
+        <ProfileCard />
+
         {/* Notifications */}
         <DashboardCard title="Notificaties" icon={Bell} iconClassName="text-amber-500">
           <div className="mb-1 flex items-center gap-3 pb-1">

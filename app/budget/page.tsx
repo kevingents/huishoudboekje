@@ -8,7 +8,8 @@ import Modal from '@/components/Modal'
 import ModuleGate from '@/components/ModuleGate'
 import SavingsGoalsCard from '@/components/SavingsGoalsCard'
 import FixedCostsCard from '@/components/FixedCostsCard'
-import { useBudget, useSettings, useFixedCosts, useSubscriptions, useHousehold } from '@/lib/hooks'
+import IncomeCard from '@/components/IncomeCard'
+import { useBudget, useSettings, useFixedCosts, useSubscriptions, useHousehold, useIncome } from '@/lib/hooks'
 import { apiPost } from '@/lib/api'
 import { resolveIcon } from '@/lib/icons'
 import { monthlyEquivalent } from '@/lib/budget'
@@ -77,6 +78,7 @@ export default function BudgetPage() {
   const { settings } = useSettings()
   const { costs } = useFixedCosts()
   const { subscriptions } = useSubscriptions()
+  const { incomes } = useIncome()
   const { can } = useHousehold()
   const target = typeof settings.budgetTarget === 'number' ? settings.budgetTarget : 500
 
@@ -151,6 +153,8 @@ export default function BudgetPage() {
     .filter((s) => s.status === 'active')
     .reduce((sum, s) => sum + monthlyEquivalent(s.amount, s.interval), 0)
   const forecastTotal = fixedTotal + subsMonthly + totalLimit
+  const incomeMonthly = incomes.reduce((sum, i) => sum + monthlyEquivalent(i.amount, i.interval), 0)
+  const netto = incomeMonthly - forecastTotal
 
   const radius = 54
   const circumference = 2 * Math.PI * radius
@@ -271,32 +275,38 @@ export default function BudgetPage() {
         <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
         {/* Maandprognose (full width) */}
         <DashboardCard title="Maandprognose" icon={LineChart} iconClassName="text-violet-500" className="lg:col-span-2">
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
             {[
-              { label: 'Vaste lasten', value: fixedTotal },
-              { label: 'Abonnementen', value: subsMonthly },
-              { label: 'Variabel budget', value: totalLimit },
-              { label: 'Totaal p/m', value: forecastTotal, accent: true },
-            ].map((item) => (
-              <div
-                key={item.label}
-                className={['rounded-2xl p-3', item.accent ? 'bg-brand-light' : 'bg-slate-50'].join(' ')}
-              >
-                <p className="text-xs text-slate-500">{item.label}</p>
-                <p className={['text-lg font-extrabold', item.accent ? 'text-brand' : 'text-slate-800'].join(' ')}>
-                  €{euro(item.value)}
-                </p>
-              </div>
-            ))}
+              { label: 'Inkomsten', value: incomeMonthly, tone: 'pos' as const },
+              { label: 'Vaste lasten', value: fixedTotal, tone: 'default' as const },
+              { label: 'Abonnementen', value: subsMonthly, tone: 'default' as const },
+              { label: 'Variabel budget', value: totalLimit, tone: 'default' as const },
+              { label: 'Uitgaven p/m', value: forecastTotal, tone: 'default' as const },
+              { label: 'Netto over', value: netto, tone: netto >= 0 ? ('pos' as const) : ('neg' as const) },
+            ].map((item) => {
+              const box =
+                item.tone === 'pos' ? 'bg-emerald-50' : item.tone === 'neg' ? 'bg-rose-50' : 'bg-slate-50'
+              const txt =
+                item.tone === 'pos' ? 'text-emerald-600' : item.tone === 'neg' ? 'text-rose-600' : 'text-slate-800'
+              return (
+                <div key={item.label} className={`rounded-2xl p-3 ${box}`}>
+                  <p className="text-xs text-slate-500">{item.label}</p>
+                  <p className={`text-lg font-extrabold ${txt}`}>
+                    {item.value < 0 ? '−' : ''}€{euro(Math.abs(item.value))}
+                  </p>
+                </div>
+              )
+            })}
           </div>
           <p className="mt-3 text-xs text-slate-400">
-            Verwachte maanduitgaven: vaste lasten + abonnementen (maandequivalent) + je categoriebudgetten.
+            Netto = inkomsten − (vaste lasten + abonnementen + je categoriebudgetten).
           </p>
         </DashboardCard>
 
-        {/* Spaardoelen + vaste lasten */}
-        <SavingsGoalsCard />
+        {/* Inkomsten, vaste lasten, spaardoelen */}
+        <IncomeCard />
         <FixedCostsCard />
+        <SavingsGoalsCard />
         </div>
         </ModuleGate>
         </div>

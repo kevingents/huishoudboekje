@@ -1,6 +1,6 @@
 'use client'
 
-import useSWR from 'swr'
+import useSWR, { mutate as globalMutate } from 'swr'
 import { fetcher, apiPost, apiPatch, apiPut, apiDelete } from './api'
 import { hasModule, normalizeTier, type Tier } from './modules'
 import type {
@@ -266,6 +266,30 @@ export function useFixedCosts() {
   }
 }
 
+export interface Income {
+  id: number
+  label: string
+  amount: number
+  category: string
+  interval: string
+}
+
+export function useIncome() {
+  const c = useCollection<Income>('/api/income')
+  return {
+    incomes: c.items,
+    isLoading: c.isLoading,
+    addIncome: (payload: { label: string; amount: number; category?: string; interval?: string }) =>
+      c.create(payload as Record<string, unknown>, {
+        label: payload.label,
+        amount: payload.amount,
+        category: payload.category ?? 'loon',
+        interval: payload.interval ?? '1 month',
+      }),
+    removeIncome: (id: number) => c.remove(id),
+  }
+}
+
 /* -------------------------------------------------------------------------- */
 /*  Instellingen                                                              */
 /* -------------------------------------------------------------------------- */
@@ -362,6 +386,35 @@ export function useHousehold() {
     /** Heeft het huishouden deze module in zijn pakket? */
     can: (moduleKey: string) => hasModule(tier, moduleKey),
     mutate,
+  }
+}
+
+export interface Profile {
+  id: number
+  name: string
+  email: string
+  avatarUrl: string | null
+  phone: string | null
+  address: string | null
+  birthday: string | null
+  role: string
+}
+
+export function useProfile() {
+  const { data, isLoading, mutate } = useSWR<Profile>('/api/account/profile', fetcher)
+  return {
+    profile: data ?? null,
+    isLoading,
+    updateProfile: async (
+      payload: Partial<Pick<Profile, 'name' | 'email' | 'avatarUrl' | 'phone' | 'address' | 'birthday'>>,
+    ) => {
+      const updated = (await apiPatch('/api/account/profile', payload as Record<string, unknown>)) as Profile
+      await mutate(updated, { revalidate: false })
+      await globalMutate('/api/auth/me') // naam/e-mail/avatar in de rest van de app verversen
+      return updated
+    },
+    changePassword: (currentPassword: string, newPassword: string) =>
+      apiPost('/api/account/password', { currentPassword, newPassword }),
   }
 }
 
