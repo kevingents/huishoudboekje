@@ -138,6 +138,9 @@ export default function DayBudgetCard() {
             <span>
               deze periode: €{round(result.spentInPeriod)} van €{round(spendablePerMonth)}
             </span>
+            <button type="button" onClick={openSettings} className="font-semibold text-brand hover:underline">
+              salaris op de {salaryDay}e · wijzig
+            </button>
           </div>
 
           <div className="mt-4 flex">

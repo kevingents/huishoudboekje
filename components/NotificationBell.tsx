@@ -51,8 +51,8 @@ export default function NotificationBell() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full z-50 mt-2 w-80 max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-card border border-cardborder bg-white shadow-soft">
-          <div className="flex items-center justify-between border-b border-cardborder px-4 py-3">
+        <div className="absolute right-0 top-full z-50 mt-2 flex max-h-[72dvh] w-80 max-w-[calc(100vw-1.5rem)] flex-col overflow-hidden rounded-card border border-cardborder bg-white shadow-soft">
+          <div className="flex shrink-0 items-center justify-between border-b border-cardborder px-4 py-3">
             <p className="text-sm font-bold text-slate-800">Meldingen</p>
             {unread > 0 && (
               <button
@@ -66,7 +66,7 @@ export default function NotificationBell() {
             )}
           </div>
 
-          <div className="max-h-96 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto">
             {items.length === 0 ? (
               <div className="flex flex-col items-center gap-2 px-4 py-10 text-center">
                 <BellOff className="h-6 w-6 text-slate-300" />

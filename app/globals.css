@@ -23,6 +23,17 @@
   }
 }
 
+/* Voorkom dat iOS automatisch inzoomt bij het tikken in een veld (gebeurt bij
+   font < 16px). We blokkeren pinch-zoom niet meer, dus geven we velden op mobiel
+   minstens 16px — schaalt nog mee met de toegankelijkheids-lettergrootte. */
+@media (max-width: 640px) {
+  input:not([type='checkbox']):not([type='radio']):not([type='range']),
+  select,
+  textarea {
+    font-size: max(16px, 1rem) !important;
+  }
+}
+
 /* Toegankelijkheid: hoog contrast — versterkt gedempte tekst en randen. */
 html.hc body {
   color: #0f172a;
