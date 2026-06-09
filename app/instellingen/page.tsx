@@ -6,6 +6,7 @@ import Link from 'next/link'
 import PageHeader from '@/components/PageHeader'
 import DashboardCard from '@/components/DashboardCard'
 import IntegrationsSection from '@/components/IntegrationsSection'
+import CoParentCard from '@/components/CoParentCard'
 import { useSettings, useFamily, useAuth } from '@/lib/hooks'
 import { usePwaInstall } from '@/lib/usePwaInstall'
 import { usePush } from '@/lib/usePush'
@@ -231,6 +232,9 @@ export default function InstellingenPage() {
             Gezinsleden beheren
           </Link>
         </DashboardCard>
+
+        {/* Co-ouderschap */}
+        <CoParentCard />
 
         {/* App installeren */}
         <DashboardCard title="App installeren" icon={Smartphone} iconClassName="text-sky-500">

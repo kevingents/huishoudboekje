@@ -17,6 +17,7 @@ import {
   ArrowUp,
   ArrowDown,
   EyeOff,
+  CalendarRange,
 } from 'lucide-react'
 
 import DashboardCard from '@/components/DashboardCard'
@@ -30,6 +31,7 @@ import Modal from '@/components/Modal'
 import { useFamily, useRecipes, useWeather, useAuth, useSettings } from '@/lib/hooks'
 import { resolveWeatherIcon } from '@/lib/icons'
 import { rankRecipes } from '@/lib/recommend'
+import { readCoParenting, coParentNow } from '@/lib/coparent'
 
 import { family, today, stockAlert, diaperStock, aiSuggestion } from '@/lib/mockData'
 
@@ -56,6 +58,7 @@ export default function Vandaag() {
   const { settings, setSetting } = useSettings()
 
   const crest = typeof settings.familyCrest === 'string' ? settings.familyCrest : null
+  const coParent = coParentNow(readCoParenting(settings.coParenting), new Date())
   const WeatherIcon = resolveWeatherIcon(weather?.icon ?? 'Cloud')
   const recipe = rankRecipes(recipes)[0]
   const greetingName = user?.name.split(' ')[0] ?? family.greetingName
@@ -272,6 +275,17 @@ export default function Vandaag() {
           <NotificationBell />
         </div>
       </header>
+
+      {coParent && (
+        <div className="mb-5 flex items-center gap-3 rounded-card bg-gradient-to-br from-violet-50 to-white px-5 py-3 ring-1 ring-violet-100">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-violet-100 text-violet-500">
+            <CalendarRange className="h-5 w-5" strokeWidth={2.1} />
+          </span>
+          <p className="text-sm text-slate-700">
+            Deze week zijn de kinderen bij <span className="font-bold">{coParent.parent}</span>.
+          </p>
+        </div>
+      )}
 
       {order.length === 0 ? (
         <DashboardCard>
