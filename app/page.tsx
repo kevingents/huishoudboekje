@@ -20,6 +20,7 @@ import ShoppingList from '@/components/ShoppingList'
 import NotificationBell from '@/components/NotificationBell'
 import { useFamily, useRecipes, useWeather, useAuth } from '@/lib/hooks'
 import { resolveWeatherIcon } from '@/lib/icons'
+import { rankRecipes } from '@/lib/recommend'
 
 import { family, today, stockAlert, diaperStock, aiSuggestion } from '@/lib/mockData'
 
@@ -29,7 +30,7 @@ export default function Home() {
   const { weather } = useWeather()
   const { user } = useAuth()
   const WeatherIcon = resolveWeatherIcon(weather?.icon ?? 'Cloud')
-  const recipe = recipes[0]
+  const recipe = rankRecipes(recipes)[0]
   const greetingName = user?.name.split(' ')[0] ?? family.greetingName
 
   return (

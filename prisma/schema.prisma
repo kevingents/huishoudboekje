@@ -65,6 +65,8 @@ model Recipe {
   tags        String   @default("")
   description String
   favorite    Boolean  @default(false)
+  // -1 = duim omlaag, 0 = neutraal, 1 = duim omhoog (voor aanbevelingen)
+  vote        Int      @default(0)
   createdAt   DateTime @default(now())
 }
 

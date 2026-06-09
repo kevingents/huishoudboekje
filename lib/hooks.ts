@@ -142,9 +142,12 @@ export function useRecipes() {
     addRecipe: (r: NewRecipe) =>
       c.create(
         { ...r },
-        { title: r.title, description: r.description ?? '', time: r.time ?? '', servings: r.servings ?? '', tags: r.tags ?? [], image: r.image ?? '', favorite: false },
+        { title: r.title, description: r.description ?? '', time: r.time ?? '', servings: r.servings ?? '', tags: r.tags ?? [], image: r.image ?? '', favorite: false, vote: 0 },
       ),
     toggleFavorite: (recipe: Recipe) => c.update(recipe.id, { favorite: !recipe.favorite }),
+    // Duim toggelen: nogmaals dezelfde duim zet 'm weer op neutraal.
+    setVote: (recipe: Recipe, value: 1 | -1) =>
+      c.update(recipe.id, { vote: recipe.vote === value ? 0 : value }),
     removeRecipe: (id: number) => c.remove(id),
   }
 }

@@ -10,6 +10,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   }
   if (body.tags !== undefined) data.tags = tagsToString(body.tags)
   if (body.favorite !== undefined) data.favorite = Boolean(body.favorite)
+  if (body.vote !== undefined) data.vote = Math.sign(Number(body.vote))
   const recipe = await prisma.recipe.update({ where: { id }, data })
   return Response.json(serializeRecipe(recipe))
 }

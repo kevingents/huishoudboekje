@@ -40,6 +40,8 @@ export interface Recipe {
   tags: string[]
   description: string
   favorite: boolean
+  /** -1 = duim omlaag, 0 = neutraal, 1 = duim omhoog. */
+  vote: number
 }
 
 export interface BudgetCategory {

@@ -1,16 +1,17 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { ChefHat, Clock, Users, Heart, Plus, Trash2 } from 'lucide-react'
+import { ChefHat, Clock, Users, Heart, Plus, Trash2, ThumbsUp, ThumbsDown } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
 import Modal from '@/components/Modal'
 import { useRecipes } from '@/lib/hooks'
+import { rankRecipes } from '@/lib/recommend'
 
 const inputClass =
   'w-full rounded-xl border border-cardborder bg-white px-3.5 py-2.5 text-sm text-slate-700 outline-none transition-colors placeholder:text-slate-400 focus:border-brand/40 focus:ring-2 focus:ring-brand/20'
 
 export default function ReceptenPage() {
-  const { recipes, isLoading, addRecipe, toggleFavorite, removeRecipe } = useRecipes()
+  const { recipes, isLoading, addRecipe, toggleFavorite, removeRecipe, setVote } = useRecipes()
   const [activeTag, setActiveTag] = useState('Alles')
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState({ title: '', description: '', time: '', servings: '', tags: '', image: '' })
@@ -22,7 +23,7 @@ export default function ReceptenPage() {
   }, [recipes])
 
   const visible = useMemo(
-    () => (activeTag === 'Alles' ? recipes : recipes.filter((r) => r.tags.includes(activeTag))),
+    () => rankRecipes(activeTag === 'Alles' ? recipes : recipes.filter((r) => r.tags.includes(activeTag))),
     [activeTag, recipes],
   )
 
@@ -148,6 +149,38 @@ export default function ReceptenPage() {
                     ))}
                   </div>
                 )}
+
+                <div className="mt-4 flex items-center gap-2 border-t border-cardborder pt-3">
+                  <span className="mr-auto text-xs text-slate-400">Vind je dit lekker?</span>
+                  <button
+                    type="button"
+                    onClick={() => setVote(recipe, 1)}
+                    aria-label="Duim omhoog"
+                    aria-pressed={recipe.vote === 1}
+                    className={[
+                      'grid h-9 w-9 place-items-center rounded-full border transition-colors',
+                      recipe.vote === 1
+                        ? 'border-brand bg-brand-light text-brand'
+                        : 'border-cardborder bg-white text-slate-400 hover:text-brand',
+                    ].join(' ')}
+                  >
+                    <ThumbsUp className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setVote(recipe, -1)}
+                    aria-label="Duim omlaag"
+                    aria-pressed={recipe.vote === -1}
+                    className={[
+                      'grid h-9 w-9 place-items-center rounded-full border transition-colors',
+                      recipe.vote === -1
+                        ? 'border-rose-300 bg-rose-50 text-rose-500'
+                        : 'border-cardborder bg-white text-slate-400 hover:text-rose-500',
+                    ].join(' ')}
+                  >
+                    <ThumbsDown className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
             </article>
           ))}
