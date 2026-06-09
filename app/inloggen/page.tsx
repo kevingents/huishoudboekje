@@ -51,7 +51,12 @@ export default function InloggenPage() {
             />
           </label>
           <label className="text-xs font-semibold text-slate-500">
-            Wachtwoord
+            <span className="flex items-center justify-between">
+              Wachtwoord
+              <Link href="/wachtwoord-vergeten" className="font-semibold text-brand hover:underline">
+                Vergeten?
+              </Link>
+            </span>
             <input
               type="password"
               value={form.password}

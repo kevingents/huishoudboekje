@@ -5,7 +5,13 @@ import type { ReactNode } from 'react'
 import Sidebar from './Sidebar'
 import MobileNav from './MobileNav'
 
-const AUTH_ROUTES = ['/inloggen', '/registreren', '/uitnodiging']
+const AUTH_ROUTES = [
+  '/inloggen',
+  '/registreren',
+  '/uitnodiging',
+  '/wachtwoord-vergeten',
+  '/wachtwoord-herstellen',
+]
 
 /**
  * Rendert de gedeelde app-frame (sidebar + scrollbare main + mobiele nav),

@@ -15,6 +15,21 @@ function initialsFrom(name: string): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
 }
 
+// Nette weergave van een naam: eerste letter per woord groot, Nederlandse
+// tussenvoegsels (van, de, der…) blijven klein. Alleen voor weergave (e-mail).
+const TUSSENVOEGSELS = new Set(['van', 'de', 'der', 'den', 'het', 'ten', 'ter', 'te', 'op', "'t"])
+function titleCaseName(name: string): string {
+  return name
+    .trim()
+    .split(/\s+/)
+    .map((word, i) =>
+      i > 0 && TUSSENVOEGSELS.has(word.toLowerCase())
+        ? word.toLowerCase()
+        : word.charAt(0).toUpperCase() + word.slice(1),
+    )
+    .join(' ')
+}
+
 const GRADIENTS = [
   'from-sky-400 to-blue-500',
   'from-amber-400 to-orange-500',
@@ -77,12 +92,16 @@ export async function POST(req: Request) {
   }
 
   // Transactionele welkomstmail (no-op zonder RESEND_API_KEY).
+  const origin = process.env.NEXT_PUBLIC_BASE_URL || new URL(req.url).origin
   await sendEmail({
     to: email,
     subject: 'Welkom bij Huishoudboekje',
     html: emailLayout(
-      `Welkom, ${name}!`,
-      '<p>Je gezinsdashboard staat klaar. Log in en zet je agenda, boodschappen, budget en koppelingen naar wens.</p>',
+      `Welkom, ${titleCaseName(name)}!`,
+      `<p>Leuk dat je er bent! Jullie gezinsdashboard <strong>${household.name}</strong> staat klaar.</p>
+       <p>Hierin regelen jullie samen de gezinsagenda, boodschappenlijst, recepten en het budget — en je koppelt eenvoudig je Google-, Outlook- of Parro-agenda.</p>
+       <p>Klik hieronder om meteen te beginnen:</p>`,
+      { label: 'Open je dashboard', url: origin },
     ),
   })
 

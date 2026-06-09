@@ -15,7 +15,7 @@ const statusMeta: Record<string, { label: string; className: string }> = {
 
 const hints: Record<string, string> = {
   weather: 'Live weer via Open-Meteo. Geen sleutel nodig.',
-  ical: 'Koppel je Parro-, Google- of Outlook-agenda via een iCal-URL.',
+  ical: 'Koppel je Google-, Outlook-, Apple- of Parro-agenda via een iCal-URL.',
   ai: 'Echte AI-antwoorden via Claude. Vul ANTHROPIC_API_KEY in (.env.local).',
   mollie: 'Terugkerende betalingen. Vul MOLLIE_API_KEY in (.env.local). Een test-key kan.',
   supermarkt: 'Automatisch bestellen bij de supermarkt — nog niet beschikbaar.',
@@ -105,6 +105,19 @@ function IcalConfig({
 
   return (
     <div className="mt-3 rounded-2xl bg-slate-50 p-3">
+      <div className="mb-2.5 rounded-xl bg-sky-50 px-3 py-2 text-[11px] leading-relaxed text-slate-600 ring-1 ring-sky-100">
+        <p className="font-semibold text-slate-700">Waar vind ik mijn iCal-URL?</p>
+        <p className="mt-0.5">
+          <span className="font-semibold">Google Agenda:</span> agenda-instellingen → kopieer het{' '}
+          <span className="font-semibold">Geheime adres in iCal-indeling</span>. Het openbare adres
+          werkt alleen als je agenda openbaar staat — gebruik dus het geheime adres.
+        </p>
+        <p className="mt-0.5">
+          <span className="font-semibold">Outlook / Apple / Parro:</span> kopieer de gedeelde
+          ICS-link en plak die hieronder.
+        </p>
+      </div>
+
       {urls.length > 0 && (
         <ul className="mb-2 flex flex-col gap-1.5">
           {urls.map((url) => (

@@ -31,14 +31,44 @@ export async function sendEmail(opts: {
   }
 }
 
-/** Eenvoudige, gestileerde mail-wrapper in de huisstijl. */
-export function emailLayout(heading: string, bodyHtml: string): string {
-  return `<div style="font-family:Inter,Arial,sans-serif;background:#F6F8FA;padding:24px">
-    <div style="max-width:520px;margin:0 auto;background:#fff;border:1px solid #E8EDF2;border-radius:16px;padding:24px">
-      <div style="display:inline-grid;place-items:center;width:40px;height:40px;border-radius:12px;background:#35B558;color:#fff;font-weight:800;font-size:18px">h</div>
-      <h1 style="font-size:18px;color:#1f2937;margin:16px 0 8px">${heading}</h1>
-      <div style="font-size:14px;color:#475569;line-height:1.6">${bodyHtml}</div>
-      <p style="font-size:12px;color:#94a3b8;margin-top:24px">Huishoudboekje · gezinsdashboard</p>
-    </div>
-  </div>`
+export interface EmailCta {
+  label: string
+  url: string
+}
+
+/**
+ * Gestileerde, e-mailclient-veilige mail-wrapper (tabel-gebaseerd, inline-styles
+ * zodat Gmail/Outlook het correct tonen). Met een gekleurde header-band, het
+ * logo + woordmerk, de inhoud en een optionele call-to-action-knop.
+ */
+export function emailLayout(heading: string, bodyHtml: string, cta?: EmailCta): string {
+  const button = cta
+    ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:26px 0 6px">
+         <tr><td style="background:#35B558;border-radius:9999px;box-shadow:0 2px 6px rgba(53,181,88,0.35)">
+           <a href="${cta.url}" style="display:inline-block;padding:13px 28px;color:#ffffff;font-weight:700;font-size:14px;text-decoration:none">${cta.label}</a>
+         </td></tr>
+       </table>`
+    : ''
+
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F6F8FA;padding:28px 0;font-family:Inter,-apple-system,'Segoe UI',Arial,sans-serif">
+    <tr><td align="center">
+      <table role="presentation" width="520" cellpadding="0" cellspacing="0" style="max-width:520px;width:100%;background:#ffffff;border:1px solid #E8EDF2;border-radius:18px;overflow:hidden">
+        <tr><td style="background:#35B558;padding:26px 28px;text-align:center">
+          <table role="presentation" cellpadding="0" cellspacing="0" align="center"><tr>
+            <td style="background:rgba(255,255,255,0.18);border-radius:11px;width:42px;height:42px;text-align:center;vertical-align:middle;color:#ffffff;font-weight:800;font-size:21px">h</td>
+            <td style="padding-left:12px;color:#ffffff;font-weight:800;font-size:18px;letter-spacing:-0.01em">Huishoudboekje</td>
+          </tr></table>
+        </td></tr>
+        <tr><td style="padding:28px 28px 8px">
+          <h1 style="font-size:20px;color:#1f2937;margin:0 0 12px;font-weight:800">${heading}</h1>
+          <div style="font-size:15px;color:#475569;line-height:1.65">${bodyHtml}</div>
+          ${button}
+        </td></tr>
+        <tr><td style="padding:18px 28px 26px">
+          <hr style="border:none;border-top:1px solid #EEF2F6;margin:0 0 14px">
+          <p style="font-size:12px;color:#94a3b8;margin:0;line-height:1.5">Huishoudboekje — jullie gezinsdashboard voor agenda, boodschappen, budget en meer.</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>`
 }

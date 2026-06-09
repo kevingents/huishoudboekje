@@ -5,17 +5,18 @@ import { Users, Cake, UserPlus, Pencil, Trash2, Mail, Copy, Check } from 'lucide
 import PageHeader from '@/components/PageHeader'
 import DashboardCard from '@/components/DashboardCard'
 import Modal from '@/components/Modal'
-import { useFamily } from '@/lib/hooks'
+import { useFamily, useHousehold } from '@/lib/hooks'
 import { apiPost } from '@/lib/api'
 import type { FamilyMember } from '@/lib/types'
 
 const inputClass =
   'w-full rounded-xl border border-cardborder bg-white px-3.5 py-2.5 text-sm text-slate-700 outline-none transition-colors placeholder:text-slate-400 focus:border-brand/40 focus:ring-2 focus:ring-brand/20'
 
-const empty = { name: '', role: '', birthday: '' }
+const empty = { name: '', role: '', birthday: '', email: '' }
 
 export default function GezinPage() {
   const { members, isLoading, addMember, updateMember, removeMember } = useFamily()
+  const { household } = useHousehold()
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<FamilyMember | null>(null)
   const [form, setForm] = useState(empty)
@@ -23,21 +24,48 @@ export default function GezinPage() {
   const startAdd = () => {
     setEditing(null)
     setForm(empty)
+    setInviteFor(null)
+    setInviteResult(null)
+    setInviteError(null)
     setOpen(true)
   }
 
   const startEdit = (member: FamilyMember) => {
     setEditing(member)
-    setForm({ name: member.name, role: member.role ?? '', birthday: member.birthday ?? '' })
+    setForm({ name: member.name, role: member.role ?? '', birthday: member.birthday ?? '', email: '' })
     setOpen(true)
   }
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.name.trim()) return
-    if (editing) await updateMember(editing.id, form)
-    else await addMember(form)
+    const member = { name: form.name, role: form.role, birthday: form.birthday }
+    if (editing) {
+      await updateMember(editing.id, member)
+      setOpen(false)
+      return
+    }
+    await addMember(member)
     setOpen(false)
+
+    // Optioneel meteen een uitnodiging sturen als er een e-mailadres is ingevuld.
+    const email = form.email.trim()
+    if (!email) return
+    const placeholder = { id: -1, name: form.name } as FamilyMember
+    setInviteEmail(email)
+    setInviteError(null)
+    setInviteResult(null)
+    try {
+      const res = (await apiPost('/api/family/invite', { email, name: form.name })) as {
+        link: string
+        emailed: boolean
+      }
+      setInviteResult(res)
+    } catch (err) {
+      setInviteError(err instanceof Error ? err.message : 'Uitnodigen mislukt.')
+    } finally {
+      setInviteFor(placeholder)
+    }
   }
 
   // Uitnodigen
@@ -88,7 +116,7 @@ export default function GezinPage() {
     <>
       <PageHeader
         title="Gezin"
-        subtitle="Het Jansen Gezin"
+        subtitle={household?.name ?? 'Jullie gezin'}
         icon={Users}
         iconClassName="bg-emerald-100 text-emerald-500"
         actions={
@@ -211,11 +239,27 @@ export default function GezinPage() {
               className={`mt-1 ${inputClass}`}
             />
           </label>
+          {!editing && (
+            <label className="text-xs font-semibold text-slate-500">
+              E-mailadres <span className="font-normal text-slate-400">— optioneel</span>
+              <input
+                type="email"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                placeholder="naam@voorbeeld.nl"
+                className={`mt-1 ${inputClass}`}
+              />
+              <span className="mt-1 flex items-center gap-1.5 text-[11px] font-normal text-slate-400">
+                <Mail className="h-3 w-3" />
+                Vul in om dit lid meteen een uitnodiging te sturen om zelf in te loggen.
+              </span>
+            </label>
+          )}
           <button
             type="submit"
             className="pill mt-2 bg-brand px-4 py-2.5 text-white shadow-sm shadow-brand/20 hover:bg-brand-dark"
           >
-            {editing ? 'Wijzigingen opslaan' : 'Lid opslaan'}
+            {editing ? 'Wijzigingen opslaan' : form.email.trim() ? 'Opslaan & uitnodigen' : 'Lid opslaan'}
           </button>
         </form>
       </Modal>
