@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { prisma } from '@/lib/db'
-import { requireHousehold } from '@/lib/guard'
+import { requireHousehold, requireModule } from '@/lib/guard'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -20,7 +20,7 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const hid = await requireHousehold()
+  const hid = await requireModule('ai')
   if (hid instanceof Response) return hid
   const body = await req.json()
   const text = String(body?.text ?? '').trim()

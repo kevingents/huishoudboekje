@@ -4,6 +4,7 @@ import { useRef, useState } from 'react'
 import { Camera, Upload, Sparkles, Plus, UtensilsCrossed, Check } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
 import DashboardCard from '@/components/DashboardCard'
+import ModuleGate from '@/components/ModuleGate'
 import { apiPost } from '@/lib/api'
 import { useShopping } from '@/lib/hooks'
 
@@ -92,6 +93,7 @@ export default function KoelkastPage() {
         iconClassName="bg-sky-100 text-sky-500"
       />
 
+      <ModuleGate module="koelkast">
       <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
         {/* Upload + preview */}
         <DashboardCard>
@@ -196,6 +198,7 @@ export default function KoelkastPage() {
           )}
         </div>
       </div>
+      </ModuleGate>
     </>
   )
 }

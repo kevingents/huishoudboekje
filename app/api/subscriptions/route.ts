@@ -41,7 +41,7 @@ export async function POST(req: Request) {
       amount: { currency: 'EUR', value: amount.toFixed(2) },
       description: `Eerste betaling — ${name}`,
       sequenceType: SequenceType.first,
-      redirectUrl: `${origin}/abonnementen`,
+      redirectUrl: `${origin}/modules`,
       ...(isPublic(origin) ? { webhookUrl: `${origin}/api/webhooks/mollie` } : {}),
     })
 

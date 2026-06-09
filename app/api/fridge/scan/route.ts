@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
+import { requireModule } from '@/lib/guard'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -33,6 +34,9 @@ function parseDataUrl(dataUrl: string): { media: MediaType; data: string } | nul
 }
 
 export async function POST(req: Request) {
+  const hid = await requireModule('koelkast')
+  if (hid instanceof Response) return hid
+
   if (!process.env.ANTHROPIC_API_KEY) {
     return Response.json(
       { error: 'Koppel eerst de AI-assistent (ANTHROPIC_API_KEY) om foto’s te analyseren.' },

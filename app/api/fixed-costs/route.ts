@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/db'
-import { requireHousehold } from '@/lib/guard'
+import { requireHousehold, requireModule } from '@/lib/guard'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,7 +11,7 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const hid = await requireHousehold()
+  const hid = await requireModule('budgetplanner')
   if (hid instanceof Response) return hid
   const body = await req.json()
   if (!body?.name || body?.amount === undefined) {

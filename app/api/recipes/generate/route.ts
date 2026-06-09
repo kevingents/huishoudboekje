@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { prisma } from '@/lib/db'
 import { serializeRecipe, tagsToString } from '@/lib/serialize'
-import { requireHousehold } from '@/lib/guard'
+import { requireModule } from '@/lib/guard'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -23,7 +23,7 @@ const RECIPE_SCHEMA = {
 } as const
 
 export async function POST(req: Request) {
-  const hid = await requireHousehold()
+  const hid = await requireModule('ai')
   if (hid instanceof Response) return hid
 
   if (!process.env.ANTHROPIC_API_KEY) {

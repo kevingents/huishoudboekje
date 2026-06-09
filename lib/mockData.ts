@@ -9,7 +9,7 @@ import {
   Settings,
   LayoutGrid,
   Wallet,
-  CreditCard,
+  Package,
   Camera,
   type LucideIcon,
 } from 'lucide-react'
@@ -32,7 +32,7 @@ export const sidebarNav: NavItem[] = [
   { label: 'Recepten', icon: ChefHat, href: '/recepten' },
   { label: 'Koelkast', icon: Camera, href: '/koelkast' },
   { label: 'Budget', icon: BarChart3, href: '/budget' },
-  { label: 'Abonnementen', icon: CreditCard, href: '/abonnementen' },
+  { label: 'Modules', icon: Package, href: '/modules' },
   { label: 'Gezin', icon: Users, href: '/gezin' },
   { label: 'AI Assistent', icon: Sparkles, href: '/ai-assistent' },
   { label: 'Instellingen', icon: Settings, href: '/instellingen' },

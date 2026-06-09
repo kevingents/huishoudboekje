@@ -1,8 +1,8 @@
 import { prisma } from '@/lib/db'
-import { requireHousehold, notFound } from '@/lib/guard'
+import { requireModule, notFound } from '@/lib/guard'
 
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
-  const hid = await requireHousehold()
+  const hid = await requireModule('budgetplanner')
   if (hid instanceof Response) return hid
   const id = Number(params.id)
   const body = await req.json()
@@ -17,7 +17,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 }
 
 export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
-  const hid = await requireHousehold()
+  const hid = await requireModule('budgetplanner')
   if (hid instanceof Response) return hid
   await prisma.fixedCost.deleteMany({ where: { id: Number(params.id), householdId: hid } })
   return new Response(null, { status: 204 })

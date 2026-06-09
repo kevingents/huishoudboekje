@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Sparkles, Send, Wand2 } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
+import ModuleGate from '@/components/ModuleGate'
 import { useAiChat } from '@/lib/hooks'
 import { aiPrompts } from '@/lib/mockData'
 
@@ -32,6 +33,7 @@ export default function AiAssistentPage() {
         iconClassName="bg-violet-100 text-violet-500"
       />
 
+      <ModuleGate module="ai">
       {/* Conversation */}
       <div className="rounded-card border border-cardborder bg-ai/60 p-5 shadow-card sm:p-6">
         <div className="flex flex-col gap-4">
@@ -119,6 +121,7 @@ export default function AiAssistentPage() {
           <Send className="h-5 w-5" strokeWidth={2.2} />
         </button>
       </form>
+      </ModuleGate>
     </>
   )
 }

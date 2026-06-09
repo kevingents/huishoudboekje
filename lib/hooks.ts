@@ -2,6 +2,7 @@
 
 import useSWR from 'swr'
 import { fetcher, apiPost, apiPatch, apiPut, apiDelete } from './api'
+import { hasModule, normalizeTier, type Tier } from './modules'
 import type {
   ShoppingItem,
   AgendaEvent,
@@ -278,6 +279,8 @@ export interface AuthUser {
   id: number
   name: string
   email: string
+  role?: string
+  householdId?: number
 }
 
 export function useAuth() {
@@ -290,6 +293,32 @@ export function useAuth() {
       await mutate({ user: null }, { revalidate: false })
       window.location.href = '/inloggen'
     },
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Huishouden + pakket (tier/modules)                                        */
+/* -------------------------------------------------------------------------- */
+
+export interface HouseholdInfo {
+  id: number
+  name: string
+  tier: Tier
+}
+
+export function useHousehold() {
+  const { data, isLoading, mutate } = useSWR<{ id: number; name: string; tier: string }>(
+    '/api/household',
+    fetcher,
+  )
+  const tier = normalizeTier(data?.tier)
+  return {
+    household: data ? { id: data.id, name: data.name, tier } : null,
+    tier,
+    isLoading,
+    /** Heeft het huishouden deze module in zijn pakket? */
+    can: (moduleKey: string) => hasModule(tier, moduleKey),
+    mutate,
   }
 }
 

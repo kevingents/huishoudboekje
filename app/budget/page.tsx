@@ -5,6 +5,7 @@ import { BarChart3, TrendingUp, Plus, Trash2, Pencil, LineChart } from 'lucide-r
 import PageHeader from '@/components/PageHeader'
 import DashboardCard from '@/components/DashboardCard'
 import Modal from '@/components/Modal'
+import ModuleGate from '@/components/ModuleGate'
 import SavingsGoalsCard from '@/components/SavingsGoalsCard'
 import FixedCostsCard from '@/components/FixedCostsCard'
 import { useBudget, useSettings, useFixedCosts, useSubscriptions } from '@/lib/hooks'
@@ -175,6 +176,10 @@ export default function BudgetPage() {
           </ul>
         </DashboardCard>
 
+        {/* Budgetplanner-module: prognose, spaardoelen, vaste lasten */}
+        <div className="lg:col-span-2">
+        <ModuleGate module="budgetplanner">
+        <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
         {/* Maandprognose (full width) */}
         <DashboardCard title="Maandprognose" icon={LineChart} iconClassName="text-violet-500" className="lg:col-span-2">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -203,6 +208,9 @@ export default function BudgetPage() {
         {/* Spaardoelen + vaste lasten */}
         <SavingsGoalsCard />
         <FixedCostsCard />
+        </div>
+        </ModuleGate>
+        </div>
 
         {/* Recent transactions (full width) */}
         <DashboardCard title="Recente uitgaven" className="lg:col-span-2">

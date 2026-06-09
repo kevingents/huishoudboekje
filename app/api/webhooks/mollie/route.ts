@@ -1,11 +1,13 @@
 import { prisma } from '@/lib/db'
 import { getMollie, baseUrl, isPublic } from '@/lib/mollie'
+import { normalizeTier } from '@/lib/modules'
 
 export const dynamic = 'force-dynamic'
 
 /**
  * Mollie roept deze webhook aan met een payment-id. Bij een betaalde eerste
- * betaling (mandaat verkregen) maken we het terugkerende abonnement aan.
+ * betaling activeren we het pakket (tier) van het huishouden en maken we het
+ * terugkerende abonnement aan.
  */
 export async function POST(req: Request) {
   const form = await req.formData()
@@ -18,8 +20,16 @@ export async function POST(req: Request) {
   try {
     const payment = await mollie.payments.get(paymentId)
     const customerId = (payment as { customerId?: string }).customerId
+    const metadata = ((payment as { metadata?: Record<string, unknown> }).metadata ?? {}) as Record<string, unknown>
 
     if (String(payment.sequenceType) === 'first' && String(payment.status) === 'paid' && customerId) {
+      // Pakket-upgrade: activeer de tier van het huishouden uit de metadata.
+      const householdId = Number(metadata.householdId)
+      const tier = metadata.tier ? normalizeTier(String(metadata.tier)) : null
+      if (householdId && tier) {
+        await prisma.household.update({ where: { id: householdId }, data: { tier } }).catch(() => {})
+      }
+
       const sub = await prisma.subscription.findFirst({
         where: { mollieCustomerId: customerId, mollieSubscriptionId: null },
       })
