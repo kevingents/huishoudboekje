@@ -1,13 +1,13 @@
+'use client'
+
 import Link from 'next/link'
 import {
   Sun,
-  Bell,
   UtensilsCrossed,
   Clock,
   Users,
   Milk,
   ChevronRight,
-  CloudRain,
   Baby,
   Plus,
   Sparkles,
@@ -17,19 +17,22 @@ import DashboardCard from '@/components/DashboardCard'
 import BudgetCard from '@/components/BudgetCard'
 import AgendaCard from '@/components/AgendaCard'
 import ShoppingList from '@/components/ShoppingList'
+import NotificationBell from '@/components/NotificationBell'
+import { useFamily, useRecipes, useWeather, useAuth } from '@/lib/hooks'
+import { resolveWeatherIcon } from '@/lib/icons'
+import { rankRecipes } from '@/lib/recommend'
 
-import {
-  family,
-  today,
-  notificationCount,
-  recipe,
-  stockAlert,
-  weather,
-  diaperStock,
-  aiSuggestion,
-} from '@/lib/mockData'
+import { family, today, stockAlert, diaperStock, aiSuggestion } from '@/lib/mockData'
 
 export default function Home() {
+  const { members } = useFamily()
+  const { recipes } = useRecipes()
+  const { weather } = useWeather()
+  const { user } = useAuth()
+  const WeatherIcon = resolveWeatherIcon(weather?.icon ?? 'Cloud')
+  const recipe = rankRecipes(recipes)[0]
+  const greetingName = user?.name.split(' ')[0] ?? family.greetingName
+
   return (
     <>
       {/* ------------------------------------------------------------------ */}
@@ -42,7 +45,7 @@ export default function Home() {
           </span>
           <div>
             <h1 className="text-xl font-extrabold text-slate-800 sm:text-2xl">
-              Goedemorgen, {family.greetingName}!
+              Goedemorgen, {greetingName}!
             </h1>
             <p className="text-sm text-slate-500">
               {today.weekday} {today.date}
@@ -52,9 +55,9 @@ export default function Home() {
 
         <div className="flex items-center gap-3 sm:gap-4">
           <Link href="/gezin" className="flex -space-x-3" aria-label="Naar het gezin">
-            {family.members.map((member) => (
+            {members.map((member) => (
               <span
-                key={member.name}
+                key={member.id}
                 title={member.name}
                 className={`grid h-10 w-10 place-items-center rounded-full border-2 border-white bg-gradient-to-br text-xs font-bold text-white shadow-sm ${member.color}`}
               >
@@ -63,16 +66,7 @@ export default function Home() {
             ))}
           </Link>
 
-          <button
-            type="button"
-            aria-label="Notificaties"
-            className="relative grid h-11 w-11 place-items-center rounded-full border border-cardborder bg-white text-slate-600 transition-colors hover:bg-slate-50"
-          >
-            <Bell className="h-5 w-5" strokeWidth={2.2} />
-            <span className="absolute -right-0.5 -top-0.5 grid h-5 w-5 place-items-center rounded-full bg-red-500 text-[10px] font-bold text-white ring-2 ring-white">
-              {notificationCount}
-            </span>
-          </button>
+          <NotificationBell />
         </div>
       </header>
 
@@ -83,27 +77,33 @@ export default function Home() {
         {/* Recipe of the day */}
         <DashboardCard title="Vandaag eten we dit" icon={UtensilsCrossed}>
           <div className="relative mb-4 aspect-[16/10] overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-100 to-amber-100">
-            <img
-              src={recipe.image}
-              alt={recipe.title}
-              loading="lazy"
-              className="h-full w-full object-cover"
-            />
+            {recipe && (
+              <img
+                src={recipe.image}
+                alt={recipe.title}
+                loading="lazy"
+                className="h-full w-full object-cover"
+              />
+            )}
           </div>
-          <h3 className="text-lg font-bold text-slate-800">{recipe.title}</h3>
-          <div className="mt-2 flex items-center gap-4 text-sm text-slate-500">
-            <span className="inline-flex items-center gap-1.5">
-              <Clock className="h-4 w-4" /> {recipe.time}
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <Users className="h-4 w-4" /> {recipe.servings}
-            </span>
-          </div>
+          <h3 className="text-lg font-bold text-slate-800">
+            {recipe ? recipe.title : 'Nog geen recept gekozen'}
+          </h3>
+          {recipe && (
+            <div className="mt-2 flex items-center gap-4 text-sm text-slate-500">
+              <span className="inline-flex items-center gap-1.5">
+                <Clock className="h-4 w-4" /> {recipe.time}
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <Users className="h-4 w-4" /> {recipe.servings}
+              </span>
+            </div>
+          )}
           <Link
             href="/recepten"
             className="pill mt-4 bg-brand-light px-4 py-2.5 text-brand hover:bg-emerald-100"
           >
-            Bekijk recept
+            Bekijk recepten
           </Link>
         </DashboardCard>
 
@@ -126,35 +126,43 @@ export default function Home() {
           <BudgetCard />
         </div>
 
-        {/* Weather */}
+        {/* Weather (live via Open-Meteo) */}
         <DashboardCard bg="bg-weather" bordered={false}>
           <div className="flex items-start gap-4">
             <span className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-white/70 text-sky-500">
-              <CloudRain className="h-9 w-9" strokeWidth={2} />
+              <WeatherIcon className="h-9 w-9" strokeWidth={2} />
             </span>
             <div>
-              <p className="text-sm font-medium text-slate-500">{weather.day}</p>
-              <p className="text-2xl font-extrabold text-slate-800">{weather.condition}</p>
+              <p className="text-sm font-medium text-slate-500">
+                {weather ? `${weather.day} · ${weather.location}` : 'Weer laden…'}
+              </p>
+              <p className="text-2xl font-extrabold text-slate-800">
+                {weather ? `${weather.condition}, ${weather.temp}°` : '—'}
+              </p>
               <p className="text-sm text-slate-500">
-                {weather.low}° / {weather.high}°
+                {weather ? `${weather.low}° / ${weather.high}°` : ''}
               </p>
             </div>
           </div>
-          <p className="mt-4 font-semibold text-slate-700">{weather.question}</p>
-          <div className="mt-3 flex flex-wrap gap-3">
-            <button
-              type="button"
-              className="pill border border-sky-200 bg-white px-5 py-2.5 text-slate-700 hover:bg-sky-50"
-            >
-              Afgelasten
-            </button>
-            <button
-              type="button"
-              className="pill bg-sky-500 px-5 py-2.5 text-white shadow-sm shadow-sky-500/30 hover:bg-sky-600"
-            >
-              Training gaat door
-            </button>
-          </div>
+          {weather?.wet && (
+            <>
+              <p className="mt-4 font-semibold text-slate-700">Voetbaltraining afgelast?</p>
+              <div className="mt-3 flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  className="pill border border-sky-200 bg-white px-5 py-2.5 text-slate-700 hover:bg-sky-50"
+                >
+                  Afgelasten
+                </button>
+                <button
+                  type="button"
+                  className="pill bg-sky-500 px-5 py-2.5 text-white shadow-sm shadow-sky-500/30 hover:bg-sky-600"
+                >
+                  Training gaat door
+                </button>
+              </div>
+            </>
+          )}
         </DashboardCard>
 
         {/* Upcoming appointments */}

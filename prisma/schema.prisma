@@ -1,0 +1,150 @@
+// Prisma schema voor Huishoudboekje.
+// Dev: SQLite (draait direct). Voor deploy/multi-device: zet provider op
+// "postgresql" en DATABASE_URL naar een gehoste Postgres (Neon/Supabase) —
+// de modellen en code blijven gelijk.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  name         String
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+}
+
+model FamilyMember {
+  id        Int      @id @default(autoincrement())
+  name      String
+  initials  String
+  color     String
+  role      String?
+  birthday  String?
+  createdAt DateTime @default(now())
+}
+
+model AgendaEvent {
+  id         Int      @id @default(autoincrement())
+  dateKey    String
+  day        String
+  month      String
+  weekday    String
+  title      String
+  time       String
+  who        String
+  accent     String   @default("sky")
+  // "manual" (in de app gemaakt) of "ical" (gesynct uit een agenda/Parro-feed)
+  source     String   @default("manual")
+  externalId String?  @unique
+  createdAt  DateTime @default(now())
+}
+
+model ShoppingItem {
+  id        Int      @id @default(autoincrement())
+  label     String
+  checked   Boolean  @default(false)
+  category  String   @default("Overig")
+  qty       String?
+  createdAt DateTime @default(now())
+}
+
+model Recipe {
+  id          Int      @id @default(autoincrement())
+  title       String
+  image       String
+  time        String
+  servings    String
+  // komma-gescheiden tags (SQLite-vriendelijk; wordt Json bij Postgres-migratie)
+  tags        String   @default("")
+  description String
+  favorite    Boolean  @default(false)
+  // -1 = duim omlaag, 0 = neutraal, 1 = duim omhoog (voor aanbevelingen)
+  vote        Int      @default(0)
+  createdAt   DateTime @default(now())
+}
+
+model BudgetCategory {
+  id    Int    @id @default(autoincrement())
+  name  String
+  // lucide-iconnaam, in de UI teruggemapt naar het component
+  icon  String @default("ShoppingCart")
+  spent Float  @default(0)
+  limit Float  @default(0)
+  color String @default("emerald")
+}
+
+model Transaction {
+  id        Int      @id @default(autoincrement())
+  label     String
+  category  String
+  amount    Float
+  date      String
+  createdAt DateTime @default(now())
+}
+
+model ChatMessage {
+  id        Int      @id @default(autoincrement())
+  role      String // "assistant" | "user"
+  text      String
+  createdAt DateTime @default(now())
+}
+
+// Vrije sleutel/waarde-config, bewerkbaar via het Instellingen-menu.
+// value = JSON-tekst (budget-target, weer-locatie, toggles, iCal-URL's, ...).
+model Setting {
+  key   String @id
+  value String
+}
+
+// Eén record per koppeling (weather | ical | ai | mollie | supermarkt).
+model Integration {
+  key       String   @id
+  name      String
+  status    String   @default("disconnected") // connected | disconnected | coming_soon
+  config    String   @default("{}") // JSON-tekst
+  updatedAt DateTime @updatedAt
+}
+
+model Subscription {
+  id                   Int      @id @default(autoincrement())
+  name                 String
+  amount               Float
+  interval             String // bijv. "1 month"
+  status               String   @default("pending") // pending | active | canceled
+  mollieCustomerId     String?
+  mollieSubscriptionId String?
+  createdAt            DateTime @default(now())
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  type      String   @default("system") // stock | agenda | budget | ai | system
+  title     String
+  body      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model SavingsGoal {
+  id        Int      @id @default(autoincrement())
+  name      String
+  target    Float
+  saved     Float    @default(0)
+  createdAt DateTime @default(now())
+}
+
+model FixedCost {
+  id        Int      @id @default(autoincrement())
+  name      String
+  amount    Float
+  // dag van de maand waarop het wordt afgeschreven (optioneel)
+  dueDay    Int?
+  createdAt DateTime @default(now())
+}

@@ -1,14 +1,20 @@
+'use client'
+
+import Link from 'next/link'
 import { Wallet, ChevronRight } from 'lucide-react'
 import DashboardCard from './DashboardCard'
-import { budget } from '@/lib/mockData'
+import { useBudget } from '@/lib/hooks'
 
 export default function BudgetCard() {
-  const { spent, total, remaining } = budget
+  const { categories } = useBudget()
+  const spent = Math.round(categories.reduce((sum, c) => sum + c.spent, 0))
+  const total = Math.round(categories.reduce((sum, c) => sum + c.limit, 0))
+  const remaining = total - spent
 
   // Circular progress maths.
   const radius = 54
   const circumference = 2 * Math.PI * radius
-  const progress = Math.min(spent / total, 1)
+  const progress = total ? Math.min(spent / total, 1) : 0
   const offset = circumference * (1 - progress)
 
   return (
@@ -47,10 +53,13 @@ export default function BudgetCard() {
       </div>
 
       <div className="mt-5 flex">
-        <button className="pill w-full border border-cardborder bg-white px-4 py-2.5 text-slate-700 hover:border-brand/40 hover:bg-brand-light hover:text-brand sm:ml-auto sm:w-auto">
+        <Link
+          href="/budget"
+          className="pill w-full border border-cardborder bg-white px-4 py-2.5 text-slate-700 hover:border-brand/40 hover:bg-brand-light hover:text-brand sm:ml-auto sm:w-auto"
+        >
           Bekijk uitgaven
           <ChevronRight className="h-4 w-4" />
-        </button>
+        </Link>
       </div>
     </DashboardCard>
   )

@@ -1,27 +1,25 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
 import { Check, ShoppingCart, ArrowRight } from 'lucide-react'
 import DashboardCard from './DashboardCard'
-import { shoppingList } from '@/lib/mockData'
+import { useShopping } from '@/lib/hooks'
 
 export default function ShoppingList({ className = '' }: { className?: string }) {
-  const [items, setItems] = useState(shoppingList)
-
-  const toggle = (id: number) =>
-    setItems((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, checked: !item.checked } : item)),
-    )
+  const { items, isLoading, toggleItem } = useShopping()
 
   return (
     <DashboardCard title="Boodschappenlijstje" icon={ShoppingCart} className={className}>
       <div className="flex flex-wrap items-center gap-2.5">
+        {isLoading && items.length === 0 && (
+          <p className="text-sm text-slate-400">Laden…</p>
+        )}
+
         {items.map((item) => (
           <button
             key={item.id}
             type="button"
-            onClick={() => toggle(item.id)}
+            onClick={() => toggleItem(item)}
             className={[
               'pill border px-3.5 py-2',
               item.checked
