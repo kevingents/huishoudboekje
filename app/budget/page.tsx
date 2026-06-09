@@ -1,12 +1,16 @@
 'use client'
 
 import { useState } from 'react'
-import { BarChart3, TrendingUp, Plus, Trash2 } from 'lucide-react'
+import { BarChart3, TrendingUp, Plus, Trash2, Pencil, LineChart } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
 import DashboardCard from '@/components/DashboardCard'
 import Modal from '@/components/Modal'
-import { useBudget, useSettings } from '@/lib/hooks'
+import SavingsGoalsCard from '@/components/SavingsGoalsCard'
+import FixedCostsCard from '@/components/FixedCostsCard'
+import { useBudget, useSettings, useFixedCosts, useSubscriptions } from '@/lib/hooks'
 import { resolveIcon } from '@/lib/icons'
+import { monthlyEquivalent } from '@/lib/budget'
+import type { BudgetCategory } from '@/lib/types'
 
 const colorClasses: Record<string, { bar: string; iconBg: string; iconText: string }> = {
   emerald: { bar: 'bg-emerald-500', iconBg: 'bg-emerald-100', iconText: 'text-emerald-600' },
@@ -23,16 +27,40 @@ function euro(value: number) {
 }
 
 export default function BudgetPage() {
-  const { categories, transactions, isLoading, addTransaction, removeTransaction } = useBudget()
+  const { categories, transactions, isLoading, addTransaction, removeTransaction, updateCategory } =
+    useBudget()
   const { settings } = useSettings()
+  const { costs } = useFixedCosts()
+  const { subscriptions } = useSubscriptions()
   const target = typeof settings.budgetTarget === 'number' ? settings.budgetTarget : 500
 
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState({ label: '', category: '', amount: '' })
 
+  // Categorie-limiet bewerken
+  const [editCat, setEditCat] = useState<BudgetCategory | null>(null)
+  const [limitDraft, setLimitDraft] = useState('')
+  const openEdit = (cat: BudgetCategory) => {
+    setEditCat(cat)
+    setLimitDraft(String(Math.round(cat.limit)))
+  }
+  const saveLimit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const lim = Number(limitDraft.replace(',', '.'))
+    if (editCat && lim >= 0) await updateCategory(editCat.id, { limit: lim })
+    setEditCat(null)
+  }
+
   const totalSpent = Math.round(categories.reduce((sum, c) => sum + c.spent, 0))
   const totalLimit = Math.round(categories.reduce((sum, c) => sum + c.limit, 0))
   const remaining = totalLimit - totalSpent
+
+  // Maandprognose: vaste lasten + abonnementen (maandequivalent) + variabel budget
+  const fixedTotal = costs.reduce((sum, c) => sum + c.amount, 0)
+  const subsMonthly = subscriptions
+    .filter((s) => s.status === 'active')
+    .reduce((sum, s) => sum + monthlyEquivalent(s.amount, s.interval), 0)
+  const forecastTotal = fixedTotal + subsMonthly + totalLimit
 
   const radius = 54
   const circumference = 2 * Math.PI * radius
@@ -117,7 +145,7 @@ export default function BudgetPage() {
               const pct = cat.limit ? Math.min(Math.round((cat.spent / cat.limit) * 100), 100) : 0
               const Icon = resolveIcon(cat.icon)
               return (
-                <li key={cat.id}>
+                <li key={cat.id} className="group">
                   <div className="mb-1.5 flex items-center gap-2.5">
                     <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg ${colors.iconBg} ${colors.iconText}`}>
                       <Icon className="h-4 w-4" strokeWidth={2.2} />
@@ -126,6 +154,14 @@ export default function BudgetPage() {
                     <span className="text-sm text-slate-500">
                       €{Math.round(cat.spent)} <span className="text-slate-400">/ €{Math.round(cat.limit)}</span>
                     </span>
+                    <button
+                      type="button"
+                      onClick={() => openEdit(cat)}
+                      aria-label={`Limiet ${cat.name} aanpassen`}
+                      className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-slate-300 opacity-0 transition-all hover:bg-slate-100 hover:text-slate-600 group-hover:opacity-100"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
                   </div>
                   <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
                     <div
@@ -138,6 +174,35 @@ export default function BudgetPage() {
             })}
           </ul>
         </DashboardCard>
+
+        {/* Maandprognose (full width) */}
+        <DashboardCard title="Maandprognose" icon={LineChart} iconClassName="text-violet-500" className="lg:col-span-2">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {[
+              { label: 'Vaste lasten', value: fixedTotal },
+              { label: 'Abonnementen', value: subsMonthly },
+              { label: 'Variabel budget', value: totalLimit },
+              { label: 'Totaal p/m', value: forecastTotal, accent: true },
+            ].map((item) => (
+              <div
+                key={item.label}
+                className={['rounded-2xl p-3', item.accent ? 'bg-brand-light' : 'bg-slate-50'].join(' ')}
+              >
+                <p className="text-xs text-slate-500">{item.label}</p>
+                <p className={['text-lg font-extrabold', item.accent ? 'text-brand' : 'text-slate-800'].join(' ')}>
+                  €{euro(item.value)}
+                </p>
+              </div>
+            ))}
+          </div>
+          <p className="mt-3 text-xs text-slate-400">
+            Verwachte maanduitgaven: vaste lasten + abonnementen (maandequivalent) + je categoriebudgetten.
+          </p>
+        </DashboardCard>
+
+        {/* Spaardoelen + vaste lasten */}
+        <SavingsGoalsCard />
+        <FixedCostsCard />
 
         {/* Recent transactions (full width) */}
         <DashboardCard title="Recente uitgaven" className="lg:col-span-2">
@@ -220,6 +285,27 @@ export default function BudgetPage() {
             className="pill mt-2 bg-brand px-4 py-2.5 text-white shadow-sm shadow-brand/20 hover:bg-brand-dark"
           >
             Uitgave opslaan
+          </button>
+        </form>
+      </Modal>
+
+      <Modal open={!!editCat} onClose={() => setEditCat(null)} title={editCat ? `Limiet ${editCat.name}` : ''}>
+        <form onSubmit={saveLimit} className="flex flex-col gap-3">
+          <label className="text-xs font-semibold text-slate-500">
+            Maandlimiet (€)
+            <input
+              autoFocus
+              inputMode="decimal"
+              value={limitDraft}
+              onChange={(e) => setLimitDraft(e.target.value)}
+              className={`mt-1 ${inputClass}`}
+            />
+          </label>
+          <button
+            type="submit"
+            className="pill mt-2 bg-brand px-4 py-2.5 text-white shadow-sm shadow-brand/20 hover:bg-brand-dark"
+          >
+            Limiet opslaan
           </button>
         </form>
       </Modal>
