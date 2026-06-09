@@ -33,7 +33,7 @@ export default function WachtwoordHerstellenPage() {
     setBusy(true)
     try {
       await apiPost('/api/auth/reset-password', { token, password: form.password })
-      window.location.href = '/'
+      window.location.href = '/vandaag'
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Herstellen mislukt.')
       setBusy(false)

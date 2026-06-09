@@ -32,7 +32,7 @@ export default function UitnodigingPage() {
     setBusy(true)
     try {
       await apiPost('/api/auth/accept-invite', { token, ...form })
-      window.location.href = '/'
+      window.location.href = '/vandaag'
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Aanmelden mislukt.')
       setBusy(false)
