@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import AppFrame from '@/components/AppFrame'
 import PWARegister from '@/components/PWARegister'
+import InstallPrompt from '@/components/InstallPrompt'
 
 export const metadata: Metadata = {
   title: 'Huishoudboekje — Gezinsdashboard',
@@ -35,6 +36,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="font-sans">
         <PWARegister />
         <AppFrame>{children}</AppFrame>
+        <InstallPrompt />
       </body>
     </html>
   )

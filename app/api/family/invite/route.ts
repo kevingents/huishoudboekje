@@ -48,5 +48,5 @@ export async function POST(req: Request) {
     ),
   })
 
-  return NextResponse.json({ link, emailed: sent.sent })
+  return NextResponse.json({ link, emailed: sent.sent, reason: sent.reason })
 }

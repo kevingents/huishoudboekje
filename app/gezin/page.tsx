@@ -14,6 +14,18 @@ const inputClass =
 
 const empty = { name: '', role: '', birthday: '', email: '' }
 
+/** Nette uitleg waarom de e-mail niet verstuurd kon worden. */
+function emailFailNote(reason?: string): string {
+  switch (reason) {
+    case 'no_api_key':
+      return 'E-mail is nog niet ingesteld — deel de onderstaande link zelf met dit gezinslid.'
+    case 'resend_403':
+      return 'De test-afzender mag alleen naar je eigen adres mailen. Deel de link zelf, of verifieer een eigen domein in Resend om gezinsleden direct te mailen.'
+    default:
+      return 'E-mail kon niet worden verstuurd — deel de onderstaande link zelf.'
+  }
+}
+
 export default function GezinPage() {
   const { members, isLoading, addMember, updateMember, removeMember } = useFamily()
   const { household } = useHousehold()
@@ -73,7 +85,7 @@ export default function GezinPage() {
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteBusy, setInviteBusy] = useState(false)
   const [inviteError, setInviteError] = useState<string | null>(null)
-  const [inviteResult, setInviteResult] = useState<{ link: string; emailed: boolean } | null>(null)
+  const [inviteResult, setInviteResult] = useState<{ link: string; emailed: boolean; reason?: string } | null>(null)
   const [copied, setCopied] = useState(false)
 
   const startInvite = (member: FamilyMember) => {
@@ -93,7 +105,7 @@ export default function GezinPage() {
       const res = (await apiPost('/api/family/invite', {
         email: inviteEmail,
         name: inviteFor.name,
-      })) as { link: string; emailed: boolean }
+      })) as { link: string; emailed: boolean; reason?: string }
       setInviteResult(res)
     } catch (err) {
       setInviteError(err instanceof Error ? err.message : 'Uitnodigen mislukt.')
@@ -270,7 +282,7 @@ export default function GezinPage() {
             <p className="text-sm text-slate-600">
               {inviteResult.emailed
                 ? `Uitnodiging verstuurd naar ${inviteEmail}.`
-                : 'Uitnodiging klaar — deel deze link (e-mail is niet gekoppeld):'}
+                : emailFailNote(inviteResult.reason)}
             </p>
             <div className="flex items-center gap-2 rounded-xl bg-slate-50 p-2">
               <span className="min-w-0 flex-1 truncate text-xs text-slate-600">{inviteResult.link}</span>
