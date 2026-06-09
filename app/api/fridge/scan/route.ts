@@ -21,8 +21,21 @@ const SCAN_SCHEMA = {
         required: ['title', 'description'],
       },
     },
+    missing: {
+      type: 'array',
+      description: 'Veelgebruikte producten die op lijken te raken of ontbreken en die je zou willen bijkopen.',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          item: { type: 'string', description: 'Productnaam, kort, enkelvoud (NL).' },
+          note: { type: 'string', description: 'Korte reden, bv. "bijna op" of "niet gezien".' },
+        },
+        required: ['item', 'note'],
+      },
+    },
   },
-  required: ['ingredients', 'suggestions'],
+  required: ['ingredients', 'suggestions', 'missing'],
 } as const
 
 type MediaType = 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif'
@@ -49,6 +62,11 @@ export async function POST(req: Request) {
   if (!image) {
     return Response.json({ error: 'Geen geldige afbeelding ontvangen.' }, { status: 400 })
   }
+  // Wat al op de boodschappenlijst staat (zodat de AI dat niet opnieuw voorstelt).
+  const have: string[] = Array.isArray(body?.have) ? body.have.map((s: unknown) => String(s)) : []
+  const haveText = have.length
+    ? `Deze producten staan al op de boodschappenlijst, stel die NIET opnieuw voor: ${have.join(', ')}.`
+    : 'De boodschappenlijst is leeg.'
 
   try {
     const client = new Anthropic()
@@ -58,13 +76,19 @@ export async function POST(req: Request) {
       system:
         'Je bekijkt een foto van een koelkast of voorraadkast. Noem de zichtbare, eetbare ' +
         'ingrediënten in het Nederlands (kort, enkelvoud) en stel 2 tot 4 gerechten voor die je ' +
-        'met die ingrediënten kunt maken.',
+        'met die ingrediënten kunt maken. Noem daarnaast in "missing" veelgebruikte basisproducten ' +
+        '(zoals melk, eieren, boter, brood, kaas, groente) die op lijken te raken (laatste restje, ' +
+        'bijna leeg) of die je niet ziet en die een gezin normaal in huis heeft. Sla producten over ' +
+        'die al op de boodschappenlijst staan.',
       messages: [
         {
           role: 'user',
           content: [
             { type: 'image', source: { type: 'base64', media_type: image.media, data: image.data } },
-            { type: 'text', text: 'Wat zie je en wat kan ik hiermee koken?' },
+            {
+              type: 'text',
+              text: `Wat zie je, wat kan ik hiermee koken, en wat raakt op of mis ik? ${haveText}`,
+            },
           ],
         },
       ],
@@ -79,6 +103,7 @@ export async function POST(req: Request) {
     return Response.json({
       ingredients: Array.isArray(parsed.ingredients) ? parsed.ingredients.map(String) : [],
       suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions : [],
+      missing: Array.isArray(parsed.missing) ? parsed.missing : [],
     })
   } catch (e) {
     console.error('Koelkast-scan fout:', e)

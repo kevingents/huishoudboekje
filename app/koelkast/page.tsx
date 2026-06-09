@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { Camera, Upload, Sparkles, Plus, UtensilsCrossed, Check } from 'lucide-react'
+import { Camera, Upload, Sparkles, Plus, UtensilsCrossed, Check, ShoppingBasket } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
 import DashboardCard from '@/components/DashboardCard'
 import ModuleGate from '@/components/ModuleGate'
@@ -11,6 +11,11 @@ import { useShopping } from '@/lib/hooks'
 interface Suggestion {
   title: string
   description: string
+}
+
+interface MissingItem {
+  item: string
+  note: string
 }
 
 /** Schaal een afbeelding terug naar max 1024px en geef een JPEG data-URL. */
@@ -39,13 +44,14 @@ function downscale(file: File): Promise<string> {
 }
 
 export default function KoelkastPage() {
-  const { addItem } = useShopping()
+  const { items: shoppingItems, addItem } = useShopping()
   const fileRef = useRef<HTMLInputElement>(null)
   const [preview, setPreview] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [ingredients, setIngredients] = useState<string[]>([])
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
+  const [missing, setMissing] = useState<MissingItem[]>([])
   const [added, setAdded] = useState<Set<string>>(new Set())
 
   const onPick = async (file: File | undefined) => {
@@ -53,6 +59,7 @@ export default function KoelkastPage() {
     setError(null)
     setIngredients([])
     setSuggestions([])
+    setMissing([])
     setAdded(new Set())
     try {
       setPreview(await downscale(file))
@@ -66,12 +73,17 @@ export default function KoelkastPage() {
     setBusy(true)
     setError(null)
     try {
-      const res = (await apiPost('/api/fridge/scan', { image: preview })) as {
+      const have = shoppingItems.map((i) => i.label)
+      const res = (await apiPost('/api/fridge/scan', { image: preview, have })) as {
         ingredients: string[]
         suggestions: Suggestion[]
+        missing: MissingItem[]
       }
       setIngredients(res.ingredients ?? [])
       setSuggestions(res.suggestions ?? [])
+      // Filter dubbel: laat weg wat al op de boodschappenlijst staat.
+      const onList = new Set(shoppingItems.map((i) => i.label.toLowerCase().trim()))
+      setMissing((res.missing ?? []).filter((m) => m.item && !onList.has(m.item.toLowerCase().trim())))
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Analyse mislukt.')
     } finally {
@@ -172,6 +184,38 @@ export default function KoelkastPage() {
             </DashboardCard>
           )}
 
+          {missing.length > 0 && (
+            <DashboardCard title="Wat raakt op" icon={ShoppingBasket} iconClassName="text-amber-500">
+              <ul className="flex flex-col gap-2.5">
+                {missing.map((m) => (
+                  <li key={m.item} className="flex items-center gap-3">
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-semibold text-slate-800">{m.item}</span>
+                      <span className="block text-xs text-slate-500">{m.note}</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => addToShopping(m.item)}
+                      disabled={added.has(m.item)}
+                      className={[
+                        'pill shrink-0 border px-3 py-1.5 text-xs',
+                        added.has(m.item)
+                          ? 'border-brand/30 bg-brand-light text-brand'
+                          : 'border-cardborder bg-white text-slate-600 hover:border-brand/40 hover:text-brand',
+                      ].join(' ')}
+                    >
+                      {added.has(m.item) ? <Check className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
+                      {added.has(m.item) ? 'Toegevoegd' : 'Op lijst'}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-3 text-xs text-slate-400">
+                Op basis van de foto en je boodschappenlijst.
+              </p>
+            </DashboardCard>
+          )}
+
           {suggestions.length > 0 && (
             <DashboardCard title="Wat je kunt koken" icon={UtensilsCrossed}>
               <ul className="flex flex-col">
@@ -188,7 +232,7 @@ export default function KoelkastPage() {
             </DashboardCard>
           )}
 
-          {ingredients.length === 0 && suggestions.length === 0 && !busy && (
+          {ingredients.length === 0 && suggestions.length === 0 && missing.length === 0 && !busy && (
             <DashboardCard bg="bg-ai/60" bordered={false}>
               <p className="text-sm text-slate-600">
                 Maak een foto van je koelkast of voorraadkast en tik op <strong>Analyseer</strong>.
