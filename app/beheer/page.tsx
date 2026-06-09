@@ -21,6 +21,7 @@ import {
 } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
 import DashboardCard from '@/components/DashboardCard'
+import RewardsManager from '@/components/RewardsManager'
 import { fetcher } from '@/lib/api'
 
 interface AdminStats {
@@ -228,6 +229,9 @@ export default function BeheerPage() {
               )}
             </DashboardCard>
           </div>
+
+          {/* Adverteerder-gesponsorde beloningen beheren */}
+          <RewardsManager />
         </div>
       )}
     </>

@@ -452,3 +452,47 @@ export function useSubscriptions() {
     },
   }
 }
+
+/* -------------------------------------------------------------------------- */
+/*  Beloningen (platform-breed, adverteerder-gesponsord)                      */
+/* -------------------------------------------------------------------------- */
+
+export interface Reward {
+  id: number
+  partner: string
+  title: string
+  description: string
+  imageUrl: string | null
+  conditions: string | null
+  category: string
+  active: boolean
+  sortOrder: number
+}
+
+/** Beheer (admin): volledige CRUD op de globale beloningen-catalogus. */
+export function useAdminRewards() {
+  const c = useCollection<Reward>('/api/admin/rewards')
+  return {
+    rewards: c.items,
+    isLoading: c.isLoading,
+    addReward: (payload: Partial<Reward>) =>
+      c.create(payload as Record<string, unknown>, {
+        partner: payload.partner ?? '',
+        title: payload.title ?? '',
+        description: payload.description ?? '',
+        imageUrl: payload.imageUrl ?? null,
+        conditions: payload.conditions ?? null,
+        category: payload.category ?? 'uitje',
+        active: payload.active ?? true,
+        sortOrder: payload.sortOrder ?? 0,
+      }),
+    updateReward: (id: number, payload: Partial<Reward>) => c.update(id, payload),
+    removeReward: (id: number) => c.remove(id),
+  }
+}
+
+/** Gezin: leest de actieve beloningen-catalogus. */
+export function useRewards() {
+  const { data, isLoading } = useSWR<Reward[]>('/api/rewards', fetcher)
+  return { rewards: data ?? [], isLoading }
+}

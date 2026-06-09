@@ -201,3 +201,22 @@ model FixedCost {
 
   @@index([householdId])
 }
+
+// Platform-brede, adverteerder-gesponsorde beloningen voor het gezinsspel.
+// GEEN householdId: dit is een globale catalogus, beheerd in /beheer en
+// zichtbaar voor alle gezinnen. Koppelt later aan een Task (veld rewardId).
+model Reward {
+  id          Int      @id @default(autoincrement())
+  partner     String // adverteerder, bv. "Efteling"
+  title       String // "Dagje Efteling"
+  description String
+  imageUrl    String?
+  conditions  String? // voorwaarden, bv. "Mits 20 taken volbracht"
+  category    String   @default("uitje") // uitje | product | tegoed | ervaring
+  active      Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([active])
+}
