@@ -28,7 +28,7 @@ export default function Modal({ open, onClose, title, children }: ModalProps) {
       role="presentation"
     >
       <div
-        className="w-full max-w-md rounded-card bg-white p-5 shadow-soft sm:p-6"
+        className="max-h-[88dvh] w-full max-w-md overflow-y-auto rounded-card bg-white p-5 shadow-soft sm:p-6"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import {
   Sun,
@@ -33,7 +33,7 @@ import { resolveWeatherIcon } from '@/lib/icons'
 import { rankRecipes } from '@/lib/recommend'
 import { readCoParenting, coParentNow } from '@/lib/coparent'
 
-import { family, today, stockAlert, diaperStock, aiSuggestion } from '@/lib/mockData'
+import { stockAlert, diaperStock, aiSuggestion } from '@/lib/mockData'
 
 const ALL_WIDGETS: { key: string; label: string; span: 1 | 2 }[] = [
   { key: 'recept', label: 'Recept van vandaag', span: 1 },
@@ -61,7 +61,18 @@ export default function Vandaag() {
   const coParent = coParentNow(readCoParenting(settings.coParenting), new Date())
   const WeatherIcon = resolveWeatherIcon(weather?.icon ?? 'Cloud')
   const recipe = rankRecipes(recipes)[0]
-  const greetingName = user?.name.split(' ')[0] ?? family.greetingName
+  const greetingName = user?.name?.split(' ')[0] ?? ''
+
+  // Tijd-afhankelijke begroeting + echte datum (client-side, geen hydratie-mismatch).
+  const [greet, setGreet] = useState('Hallo')
+  const [dateStr, setDateStr] = useState('')
+  useEffect(() => {
+    const d = new Date()
+    const h = d.getHours()
+    setGreet(h < 6 ? 'Goedenacht' : h < 12 ? 'Goedemorgen' : h < 18 ? 'Goedemiddag' : 'Goedenavond')
+    const s = d.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' })
+    setDateStr(s.charAt(0).toUpperCase() + s.slice(1))
+  }, [])
 
   // Indeling per gebruiker (opgeslagen in de household-settings onder een user-key).
   const dashKey = user ? `dashboard_${user.id}` : 'dashboard_anon'
@@ -238,10 +249,11 @@ export default function Vandaag() {
             <Sun className="h-7 w-7" strokeWidth={2.2} />
           </span>
           <div>
-            <h1 className="text-xl font-extrabold text-slate-800 sm:text-2xl">Goedemorgen, {greetingName}!</h1>
-            <p className="text-sm text-slate-500">
-              {today.weekday} {today.date}
-            </p>
+            <h1 className="text-xl font-extrabold text-slate-800 sm:text-2xl">
+              {greet}
+              {greetingName ? `, ${greetingName}` : ''}!
+            </h1>
+            <p className="text-sm text-slate-500">{dateStr}</p>
           </div>
         </div>
 

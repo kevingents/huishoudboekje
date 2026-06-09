@@ -150,18 +150,20 @@ export default function TakenPage() {
                     <button
                       type="button"
                       onClick={() => setStatus(task.id, 'todo')}
-                      className="pill shrink-0 bg-brand-light px-3 py-1.5 text-xs font-semibold text-brand hover:bg-emerald-100"
+                      aria-label="Accepteren"
+                      className="pill shrink-0 bg-brand-light px-2.5 py-1.5 text-xs font-semibold text-brand hover:bg-emerald-100"
                     >
                       <Check className="h-3.5 w-3.5" />
-                      Accepteren
+                      <span className="hidden sm:inline">Accepteren</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => setStatus(task.id, 'geweigerd')}
-                      className="pill shrink-0 border border-cardborder bg-white px-3 py-1.5 text-xs font-semibold text-slate-500 hover:bg-rose-50 hover:text-rose-500"
+                      aria-label="Weigeren"
+                      className="pill shrink-0 border border-cardborder bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-500 hover:bg-rose-50 hover:text-rose-500"
                     >
                       <X className="h-3.5 w-3.5" />
-                      Weigeren
+                      <span className="hidden sm:inline">Weigeren</span>
                     </button>
                   </Row>
                 ))}
