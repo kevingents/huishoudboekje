@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LogOut } from 'lucide-react'
+import { LogOut, ShieldCheck } from 'lucide-react'
 import { sidebarNav, type NavItem } from '@/lib/mockData'
 import { useAuth } from '@/lib/hooks'
 
@@ -24,6 +24,12 @@ export default function Sidebar() {
         {sidebarNav.map((item) => (
           <SidebarItem key={item.label} item={item} active={isActive(pathname, item.href)} />
         ))}
+        {user?.isAdmin && (
+          <SidebarItem
+            item={{ label: 'Beheer', icon: ShieldCheck, href: '/beheer' }}
+            active={isActive(pathname, '/beheer')}
+          />
+        )}
       </nav>
 
       {/* User + logout */}

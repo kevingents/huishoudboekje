@@ -281,6 +281,7 @@ export interface AuthUser {
   email: string
   role?: string
   householdId?: number
+  isAdmin?: boolean
 }
 
 export function useAuth() {

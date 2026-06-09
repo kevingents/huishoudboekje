@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
+import { isAdminEmail } from '@/lib/admin'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 export async function GET() {
   const user = await getCurrentUser()
-  return NextResponse.json({ user })
+  if (!user) return NextResponse.json({ user: null })
+  return NextResponse.json({ user: { ...user, isAdmin: isAdminEmail(user.email) } })
 }

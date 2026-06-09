@@ -1,8 +1,14 @@
 import { createMollieClient, type MollieClient } from '@mollie/api-client'
 
-/** Mollie-client of null wanneer er geen API-key is ingesteld. */
+/** Mollie-client of null wanneer er geen API-key is ingesteld.
+   Accepteert een paar gangbare env-namen, zodat zowel MOLLIE_API_KEY als
+   MOLLIE_TEST_API(_KEY) werkt. */
 export function getMollie(): MollieClient | null {
-  const apiKey = process.env.MOLLIE_API_KEY
+  const apiKey =
+    process.env.MOLLIE_API_KEY ||
+    process.env.MOLLIE_TEST_API_KEY ||
+    process.env.MOLLIE_TEST_API ||
+    process.env.MOLLIE_LIVE_API_KEY
   if (!apiKey) return null
   return createMollieClient({ apiKey })
 }
