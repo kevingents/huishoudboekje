@@ -10,6 +10,7 @@ import {
   LayoutGrid,
   Wallet,
   CreditCard,
+  Camera,
   type LucideIcon,
 } from 'lucide-react'
 import type { ChatMessage } from './types'
@@ -29,6 +30,7 @@ export const sidebarNav: NavItem[] = [
   { label: 'Agenda', icon: Calendar, href: '/agenda' },
   { label: 'Boodschappen', icon: ShoppingCart, href: '/boodschappen' },
   { label: 'Recepten', icon: ChefHat, href: '/recepten' },
+  { label: 'Koelkast', icon: Camera, href: '/koelkast' },
   { label: 'Budget', icon: BarChart3, href: '/budget' },
   { label: 'Abonnementen', icon: CreditCard, href: '/abonnementen' },
   { label: 'Gezin', icon: Users, href: '/gezin' },
