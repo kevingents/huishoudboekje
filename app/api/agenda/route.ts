@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db'
 import { describeDate } from '@/lib/date'
 import { requireHousehold } from '@/lib/guard'
+import { notify } from '@/lib/notify'
 
 export const dynamic = 'force-dynamic'
 
@@ -33,5 +34,15 @@ export async function POST(req: Request) {
       source: 'manual',
     },
   })
+
+  // Iedereen in het huishouden een melding geven (in-app, en e-mail als dat
+  // aanstaat in de notificatie-voorkeuren).
+  await notify({
+    householdId: hid,
+    type: 'agenda',
+    title: 'Nieuwe afspraak',
+    body: `${event.title} op ${event.weekday} ${event.day} ${event.month}${event.time ? ` om ${event.time}` : ''} — voor ${event.who}.`,
+  }).catch(() => {})
+
   return Response.json(event, { status: 201 })
 }

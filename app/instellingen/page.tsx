@@ -1,13 +1,21 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Settings, Bell, Wallet, Users, LogOut, UserCircle } from 'lucide-react'
+import { Settings, Bell, Wallet, Users, LogOut, UserCircle, Sparkles } from 'lucide-react'
 import Link from 'next/link'
 import PageHeader from '@/components/PageHeader'
 import DashboardCard from '@/components/DashboardCard'
 import IntegrationsSection from '@/components/IntegrationsSection'
 import { useSettings, useFamily, useAuth } from '@/lib/hooks'
 import { mergePrefs } from '@/lib/notifications'
+
+const AI_DATA = [
+  { key: 'agenda', label: 'Agenda', description: 'Aankomende afspraken' },
+  { key: 'boodschappen', label: 'Boodschappen', description: 'Je open boodschappenlijst' },
+  { key: 'budget', label: 'Budget', description: 'Categorieën en uitgaven' },
+  { key: 'recepten', label: 'Recepten', description: 'Favorieten en voorkeuren' },
+  { key: 'gezin', label: 'Gezin', description: 'Namen en rollen van gezinsleden' },
+]
 
 export default function InstellingenPage() {
   const { settings, setSetting } = useSettings()
@@ -16,6 +24,16 @@ export default function InstellingenPage() {
 
   const prefs = mergePrefs(settings.notifications)
   const savedTarget = typeof settings.budgetTarget === 'number' ? settings.budgetTarget : 500
+
+  // AI-instellingen (standaard aan; alle data toegestaan tenzij uitgezet).
+  const aiEnabled = settings.aiEnabled !== false
+  const aiDataRaw = (settings.aiData ?? {}) as Record<string, boolean>
+  const aiAllows = (key: string) => aiDataRaw[key] !== false
+  const setAiData = (key: string, value: boolean) => {
+    const next: Record<string, boolean> = {}
+    for (const d of AI_DATA) next[d.key] = d.key === key ? value : aiAllows(d.key)
+    setSetting('aiData', next)
+  }
 
   const [target, setTarget] = useState(savedTarget)
   useEffect(() => setTarget(savedTarget), [savedTarget])
@@ -73,6 +91,53 @@ export default function InstellingenPage() {
               </li>
             ))}
           </ul>
+        </DashboardCard>
+
+        {/* AI-assistent: aan/uit + welke gegevens */}
+        <DashboardCard title="AI-assistent" icon={Sparkles} iconClassName="text-violet-500">
+          <div className="flex items-center gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-slate-800">AI-assistent gebruiken</p>
+              <p className="text-xs text-slate-500">
+                Persoonlijke antwoorden op basis van jullie eigen gegevens.
+              </p>
+            </div>
+            <Toggle
+              enabled={aiEnabled}
+              onClick={() => setSetting('aiEnabled', !aiEnabled)}
+              label="AI-assistent aan of uit"
+            />
+          </div>
+
+          {aiEnabled && (
+            <>
+              <hr className="my-4 border-cardborder" />
+              <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                Welke gegevens mag de AI gebruiken?
+              </p>
+              <ul className="flex flex-col">
+                {AI_DATA.map((d, index) => (
+                  <li key={d.key}>
+                    <div className="flex items-center gap-3 py-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold text-slate-800">{d.label}</p>
+                        <p className="text-xs text-slate-500">{d.description}</p>
+                      </div>
+                      <Toggle
+                        enabled={aiAllows(d.key)}
+                        onClick={() => setAiData(d.key, !aiAllows(d.key))}
+                        label={`${d.label} voor AI`}
+                      />
+                    </div>
+                    {index < AI_DATA.length - 1 && <hr className="border-cardborder" />}
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-2 text-xs text-slate-400">
+                Voor kinderen kun je de AI helemaal uitzetten met de schakelaar bovenaan.
+              </p>
+            </>
+          )}
         </DashboardCard>
 
         {/* Budget target */}

@@ -5,7 +5,7 @@ import { Calendar, Plus, Clock, Trash2, Link2 } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
 import DashboardCard from '@/components/DashboardCard'
 import Modal from '@/components/Modal'
-import { useAgenda } from '@/lib/hooks'
+import { useAgenda, useFamily } from '@/lib/hooks'
 import type { AgendaEvent } from '@/lib/types'
 
 const accentClasses: Record<string, { badge: string; dot: string; bar: string }> = {
@@ -49,6 +49,7 @@ function groupByDate(events: AgendaEvent[]) {
 
 export default function AgendaPage() {
   const { events, isLoading, addEvent, removeEvent } = useAgenda()
+  const { members } = useFamily()
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState({ date: '', title: '', time: '', who: 'Gezin', accent: 'sky' })
 
@@ -200,11 +201,18 @@ export default function AgendaPage() {
           </div>
           <label className="text-xs font-semibold text-slate-500">
             Voor wie
-            <input
+            <select
               value={form.who}
               onChange={(e) => setForm({ ...form, who: e.target.value })}
               className={`mt-1 ${inputClass}`}
-            />
+            >
+              <option value="Gezin">Het hele gezin</option>
+              {members.map((m) => (
+                <option key={m.id} value={m.name}>
+                  {m.name}
+                </option>
+              ))}
+            </select>
           </label>
           <div className="text-xs font-semibold text-slate-500">
             Kleur
