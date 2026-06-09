@@ -20,6 +20,7 @@ import {
 
 import DashboardCard from '@/components/DashboardCard'
 import BudgetCard from '@/components/BudgetCard'
+import DayBudgetCard from '@/components/DayBudgetCard'
 import AgendaCard from '@/components/AgendaCard'
 import ShoppingList from '@/components/ShoppingList'
 import NotificationBell from '@/components/NotificationBell'
@@ -34,6 +35,7 @@ import { readCoParenting, coParentNow } from '@/lib/coparent'
 import { aiSuggestion } from '@/lib/mockData'
 
 const ALL_WIDGETS: { key: string; label: string; span: 1 | 2 }[] = [
+  { key: 'dagbudget', label: 'Vandaag te besteden', span: 2 },
   { key: 'recept', label: 'Recept van vandaag', span: 1 },
   { key: 'weer', label: 'Weer', span: 1 },
   { key: 'agenda', label: 'Komende afspraken', span: 1 },
@@ -43,7 +45,7 @@ const ALL_WIDGETS: { key: string; label: string; span: 1 | 2 }[] = [
   { key: 'aanbiedingen', label: 'Aanbiedingen', span: 1 },
   { key: 'boodschappen', label: 'Boodschappenlijst', span: 2 },
 ]
-const DEFAULT_WIDGETS = ['recept', 'weer', 'agenda', 'budget', 'ai', 'boodschappen']
+const DEFAULT_WIDGETS = ['dagbudget', 'recept', 'weer', 'agenda', 'budget', 'ai', 'boodschappen']
 const labelOf = (key: string) => ALL_WIDGETS.find((w) => w.key === key)?.label ?? key
 
 export default function Vandaag() {
@@ -73,9 +75,11 @@ export default function Vandaag() {
   // Indeling per gebruiker (opgeslagen in de household-settings onder een user-key).
   const dashKey = user ? `dashboard_${user.id}` : 'dashboard_anon'
   const savedRaw = settings[dashKey]
-  const order: string[] = Array.isArray(savedRaw)
+  const baseOrder: string[] = Array.isArray(savedRaw)
     ? (savedRaw as string[]).filter((k) => ALL_WIDGETS.some((w) => w.key === k))
     : DEFAULT_WIDGETS
+  // Nieuw dagbudget-widget ook tonen bij bestaande indelingen (bovenaan).
+  const order = baseOrder.includes('dagbudget') ? baseOrder : ['dagbudget', ...baseOrder]
 
   const [editOpen, setEditOpen] = useState(false)
   const [draft, setDraft] = useState<string[]>(order)
@@ -126,6 +130,8 @@ export default function Vandaag() {
             </Link>
           </DashboardCard>
         )
+      case 'dagbudget':
+        return <DayBudgetCard key={key} />
       case 'budget':
         return <BudgetCard key={key} />
       case 'weer':

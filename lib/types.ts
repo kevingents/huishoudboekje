@@ -65,6 +65,7 @@ export interface Transaction {
   category: string
   amount: number
   date: string
+  createdAt?: string
 }
 
 export interface ChatMessage {
