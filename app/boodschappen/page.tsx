@@ -4,10 +4,11 @@ import { useMemo, useState } from 'react'
 import { ShoppingCart, Plus, Check, Trash2 } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
 import DashboardCard from '@/components/DashboardCard'
-import { shoppingList, type ShoppingItem } from '@/lib/mockData'
+import { useShopping } from '@/lib/hooks'
+import type { ShoppingItem } from '@/lib/types'
 
 export default function BoodschappenPage() {
-  const [items, setItems] = useState<ShoppingItem[]>(shoppingList)
+  const { items, isLoading, addItem, toggleItem, removeItem, clearChecked } = useShopping()
   const [draft, setDraft] = useState('')
 
   const checkedCount = items.filter((item) => item.checked).length
@@ -23,24 +24,12 @@ export default function BoodschappenPage() {
     return [...groups.entries()]
   }, [items])
 
-  const toggle = (id: number) =>
-    setItems((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, checked: !item.checked } : item)),
-    )
-
-  const remove = (id: number) => setItems((prev) => prev.filter((item) => item.id !== id))
-
   const add = () => {
     const label = draft.trim()
     if (!label) return
-    setItems((prev) => [
-      ...prev,
-      { id: Math.max(0, ...prev.map((item) => item.id)) + 1, label, checked: false, category: 'Overig' },
-    ])
+    addItem(label)
     setDraft('')
   }
-
-  const clearChecked = () => setItems((prev) => prev.filter((item) => !item.checked))
 
   return (
     <>
@@ -62,7 +51,7 @@ export default function BoodschappenPage() {
         }
       />
 
-      {/* Progress */}
+      {/* Progress + add */}
       <DashboardCard className="mb-5">
         <div className="flex items-center justify-between">
           <p className="text-sm font-semibold text-slate-700">Voortgang</p>
@@ -75,7 +64,6 @@ export default function BoodschappenPage() {
           />
         </div>
 
-        {/* Add new item */}
         <form
           onSubmit={(event) => {
             event.preventDefault()
@@ -100,55 +88,59 @@ export default function BoodschappenPage() {
       </DashboardCard>
 
       {/* Grouped list */}
-      <div className="flex flex-col gap-5">
-        {grouped.map(([category, categoryItems]) => (
-          <DashboardCard key={category} title={category}>
-            <ul className="flex flex-col gap-1">
-              {categoryItems.map((item) => (
-                <li
-                  key={item.id}
-                  className="group flex items-center gap-3 rounded-2xl px-2 py-2.5 transition-colors hover:bg-slate-50"
-                >
-                  <button
-                    type="button"
-                    onClick={() => toggle(item.id)}
-                    aria-pressed={item.checked}
-                    className={[
-                      'grid h-6 w-6 shrink-0 place-items-center rounded-md border transition-colors',
-                      item.checked
-                        ? 'border-brand bg-brand text-white'
-                        : 'border-slate-300 bg-white hover:border-brand/50',
-                    ].join(' ')}
+      {isLoading && items.length === 0 ? (
+        <p className="text-sm text-slate-400">Laden…</p>
+      ) : (
+        <div className="flex flex-col gap-5">
+          {grouped.map(([category, categoryItems]) => (
+            <DashboardCard key={category} title={category}>
+              <ul className="flex flex-col gap-1">
+                {categoryItems.map((item) => (
+                  <li
+                    key={item.id}
+                    className="group flex items-center gap-3 rounded-2xl px-2 py-2.5 transition-colors hover:bg-slate-50"
                   >
-                    {item.checked && <Check className="h-4 w-4" strokeWidth={3} />}
-                  </button>
-
-                  <span className="min-w-0 flex-1">
-                    <span
+                    <button
+                      type="button"
+                      onClick={() => toggleItem(item)}
+                      aria-pressed={item.checked}
                       className={[
-                        'block text-sm font-medium',
-                        item.checked ? 'text-slate-400 line-through' : 'text-slate-800',
+                        'grid h-6 w-6 shrink-0 place-items-center rounded-md border transition-colors',
+                        item.checked
+                          ? 'border-brand bg-brand text-white'
+                          : 'border-slate-300 bg-white hover:border-brand/50',
                       ].join(' ')}
                     >
-                      {item.label}
-                    </span>
-                    {item.qty && <span className="block text-xs text-slate-400">{item.qty}</span>}
-                  </span>
+                      {item.checked && <Check className="h-4 w-4" strokeWidth={3} />}
+                    </button>
 
-                  <button
-                    type="button"
-                    onClick={() => remove(item.id)}
-                    aria-label={`${item.label} verwijderen`}
-                    className="grid h-8 w-8 place-items-center rounded-full text-slate-300 opacity-0 transition-all hover:bg-rose-50 hover:text-rose-500 group-hover:opacity-100"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </DashboardCard>
-        ))}
-      </div>
+                    <span className="min-w-0 flex-1">
+                      <span
+                        className={[
+                          'block text-sm font-medium',
+                          item.checked ? 'text-slate-400 line-through' : 'text-slate-800',
+                        ].join(' ')}
+                      >
+                        {item.label}
+                      </span>
+                      {item.qty && <span className="block text-xs text-slate-400">{item.qty}</span>}
+                    </span>
+
+                    <button
+                      type="button"
+                      onClick={() => removeItem(item.id)}
+                      aria-label={`${item.label} verwijderen`}
+                      className="grid h-8 w-8 place-items-center rounded-full text-slate-300 opacity-0 transition-all hover:bg-rose-50 hover:text-rose-500 group-hover:opacity-100"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </DashboardCard>
+          ))}
+        </div>
+      )}
     </>
   )
 }

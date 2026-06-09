@@ -1,3 +1,5 @@
+'use client'
+
 import Link from 'next/link'
 import {
   Sun,
@@ -17,12 +19,12 @@ import DashboardCard from '@/components/DashboardCard'
 import BudgetCard from '@/components/BudgetCard'
 import AgendaCard from '@/components/AgendaCard'
 import ShoppingList from '@/components/ShoppingList'
+import { useFamily, useRecipes } from '@/lib/hooks'
 
 import {
   family,
   today,
   notificationCount,
-  recipe,
   stockAlert,
   weather,
   diaperStock,
@@ -30,6 +32,10 @@ import {
 } from '@/lib/mockData'
 
 export default function Home() {
+  const { members } = useFamily()
+  const { recipes } = useRecipes()
+  const recipe = recipes[0]
+
   return (
     <>
       {/* ------------------------------------------------------------------ */}
@@ -52,9 +58,9 @@ export default function Home() {
 
         <div className="flex items-center gap-3 sm:gap-4">
           <Link href="/gezin" className="flex -space-x-3" aria-label="Naar het gezin">
-            {family.members.map((member) => (
+            {members.map((member) => (
               <span
-                key={member.name}
+                key={member.id}
                 title={member.name}
                 className={`grid h-10 w-10 place-items-center rounded-full border-2 border-white bg-gradient-to-br text-xs font-bold text-white shadow-sm ${member.color}`}
               >
@@ -83,27 +89,33 @@ export default function Home() {
         {/* Recipe of the day */}
         <DashboardCard title="Vandaag eten we dit" icon={UtensilsCrossed}>
           <div className="relative mb-4 aspect-[16/10] overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-100 to-amber-100">
-            <img
-              src={recipe.image}
-              alt={recipe.title}
-              loading="lazy"
-              className="h-full w-full object-cover"
-            />
+            {recipe && (
+              <img
+                src={recipe.image}
+                alt={recipe.title}
+                loading="lazy"
+                className="h-full w-full object-cover"
+              />
+            )}
           </div>
-          <h3 className="text-lg font-bold text-slate-800">{recipe.title}</h3>
-          <div className="mt-2 flex items-center gap-4 text-sm text-slate-500">
-            <span className="inline-flex items-center gap-1.5">
-              <Clock className="h-4 w-4" /> {recipe.time}
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <Users className="h-4 w-4" /> {recipe.servings}
-            </span>
-          </div>
+          <h3 className="text-lg font-bold text-slate-800">
+            {recipe ? recipe.title : 'Nog geen recept gekozen'}
+          </h3>
+          {recipe && (
+            <div className="mt-2 flex items-center gap-4 text-sm text-slate-500">
+              <span className="inline-flex items-center gap-1.5">
+                <Clock className="h-4 w-4" /> {recipe.time}
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <Users className="h-4 w-4" /> {recipe.servings}
+              </span>
+            </div>
+          )}
           <Link
             href="/recepten"
             className="pill mt-4 bg-brand-light px-4 py-2.5 text-brand hover:bg-emerald-100"
           >
-            Bekijk recept
+            Bekijk recepten
           </Link>
         </DashboardCard>
 

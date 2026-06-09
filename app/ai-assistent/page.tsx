@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import { Sparkles, Send, Wand2 } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
-import { aiMessages, aiPrompts, type ChatMessage } from '@/lib/mockData'
+import { aiMessages, aiPrompts } from '@/lib/mockData'
+import type { ChatMessage } from '@/lib/types'
 
 /** Canned reply so the demo feels alive without a real backend. */
 const cannedReply =

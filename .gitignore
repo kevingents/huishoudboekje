@@ -15,8 +15,12 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# local env files
+# local env files (secrets)
 .env*.local
+
+# prisma — lokale SQLite database
+/prisma/*.db
+/prisma/*.db-journal
 
 # typescript
 *.tsbuildinfo
