@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useState } from 'react'
 import { Check, ShoppingCart, ArrowRight } from 'lucide-react'
 import DashboardCard from './DashboardCard'
@@ -40,13 +41,13 @@ export default function ShoppingList({ className = '' }: { className?: string })
           </button>
         ))}
 
-        <button
-          type="button"
+        <Link
+          href="/boodschappen"
           className="pill ml-auto bg-brand px-4 py-2.5 text-white shadow-sm shadow-brand/20 hover:bg-brand-dark"
         >
           Naar boodschappen
           <ArrowRight className="h-4 w-4" />
-        </button>
+        </Link>
       </div>
     </DashboardCard>
   )

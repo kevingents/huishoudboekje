@@ -1,20 +1,26 @@
+'use client'
+
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { ChevronDown } from 'lucide-react'
 import { sidebarNav, family, type NavItem } from '@/lib/mockData'
 
 export default function Sidebar() {
+  const pathname = usePathname()
+
   return (
     <aside className="hidden w-[112px] shrink-0 flex-col border-r border-cardborder bg-white py-5 lg:flex">
       {/* Brand mark */}
-      <div className="mb-6 flex justify-center">
+      <Link href="/" className="mb-6 flex justify-center" aria-label="Naar het overzicht">
         <div className="grid h-11 w-11 place-items-center rounded-2xl bg-gradient-to-br from-brand to-emerald-600 text-lg font-extrabold text-white shadow-sm shadow-brand/30">
           h
         </div>
-      </div>
+      </Link>
 
       {/* Menu */}
       <nav className="scrollbar-thin flex flex-1 flex-col items-center gap-1 overflow-y-auto px-2">
         {sidebarNav.map((item) => (
-          <SidebarItem key={item.label} item={item} />
+          <SidebarItem key={item.label} item={item} active={isActive(pathname, item.href)} />
         ))}
       </nav>
 
@@ -36,11 +42,16 @@ export default function Sidebar() {
   )
 }
 
-function SidebarItem({ item }: { item: NavItem }) {
-  const { label, icon: Icon, active } = item
+function isActive(pathname: string, href: string) {
+  return href === '/' ? pathname === '/' : pathname.startsWith(href)
+}
+
+function SidebarItem({ item, active }: { item: NavItem; active: boolean }) {
+  const { label, icon: Icon, href } = item
   return (
-    <a
-      href="#"
+    <Link
+      href={href}
+      aria-current={active ? 'page' : undefined}
       className={`group flex w-full flex-col items-center gap-1.5 rounded-2xl py-2.5 transition-colors ${
         active ? '' : 'hover:bg-slate-50'
       }`}
@@ -59,6 +70,6 @@ function SidebarItem({ item }: { item: NavItem }) {
       >
         {label}
       </span>
-    </a>
+    </Link>
   )
 }
