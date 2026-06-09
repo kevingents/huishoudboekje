@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "db:seed": "tsx prisma/seed.ts",
-    "db:reset": "prisma migrate reset --force"
+    "db:reset": "prisma migrate reset --force",
+    "gen:icons": "node scripts/gen-icons.mjs"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

@@ -28,6 +28,8 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  // Sla Next-internals en statische bestanden over.
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|ics)).*)'],
+  // Sla Next-internals, statische bestanden en PWA-bestanden (sw.js, manifest) over.
+  matcher: [
+    '/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|sw.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|ics|js|webmanifest)).*)',
+  ],
 }

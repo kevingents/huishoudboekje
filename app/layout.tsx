@@ -1,17 +1,22 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import AppFrame from '@/components/AppFrame'
+import PWARegister from '@/components/PWARegister'
 
 export const metadata: Metadata = {
   title: 'Huishoudboekje — Gezinsdashboard',
   description:
     'Het centrale dashboard voor jouw gezin: agenda, boodschappen, voorraad, budget, weer, recepten en AI-suggesties op één plek.',
+  manifest: '/manifest.webmanifest',
+  appleWebApp: { capable: true, title: 'Huishoudboekje', statusBarStyle: 'default' },
+  icons: { icon: '/icon-192.png', apple: '/icon-192.png' },
 }
 
 export const viewport: Viewport = {
-  themeColor: '#F6F8FA',
+  themeColor: '#35B558',
   width: 'device-width',
   initialScale: 1,
+  maximumScale: 1,
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -28,6 +33,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className="font-sans">
+        <PWARegister />
         <AppFrame>{children}</AppFrame>
       </body>
     </html>
