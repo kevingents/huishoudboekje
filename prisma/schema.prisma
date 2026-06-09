@@ -217,6 +217,34 @@ model Card {
   @@index([householdId])
 }
 
+// Eigen beloningen van het gezin (household-scoped), naast de partner-catalogus.
+model FamilyReward {
+  id          Int      @id @default(autoincrement())
+  householdId Int
+  title       String // "30 min extra schermtijd"
+  description String?
+  cost        Int      @default(0) // punten/taken nodig
+  createdAt   DateTime @default(now())
+
+  @@index([householdId])
+}
+
+// Documenten/bewijzen: garantiebewijzen en legitimatie (paspoort/rijbewijs) met
+// optionele verloopdatum voor reminders. Gedeeld binnen het huishouden.
+model Document {
+  id          Int      @id @default(autoincrement())
+  householdId Int
+  title       String // "Wasmachine garantie", "Paspoort Sanne"
+  type        String   @default("garantie") // garantie | legitimatie | overig
+  owner       String? // van wie (bv. gezinslid)
+  imageUrl    String? // foto van het bewijs/document
+  expiresAt   String? // verloopdatum yyyy-mm-dd
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  @@index([householdId])
+}
+
 // Platform-brede, adverteerder-gesponsorde beloningen voor het gezinsspel.
 // GEEN householdId: dit is een globale catalogus, beheerd in /beheer en
 // zichtbaar voor alle gezinnen. Koppelt later aan een Task (veld rewardId).

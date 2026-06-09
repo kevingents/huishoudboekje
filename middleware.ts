@@ -15,7 +15,11 @@ export async function middleware(req: NextRequest) {
 
   // Publieke API's: auth (registreren/inloggen/uitloggen/me) en de Mollie-webhook
   // (die komt van Mollie zonder sessie-cookie).
-  if (pathname.startsWith('/api/auth') || pathname === '/api/webhooks/mollie') {
+  if (
+    pathname.startsWith('/api/auth') ||
+    pathname === '/api/webhooks/mollie' ||
+    pathname.startsWith('/api/cron')
+  ) {
     return NextResponse.next()
   }
 

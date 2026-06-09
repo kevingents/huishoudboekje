@@ -1,5 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "prisma generate && prisma migrate deploy && next build",
-  "framework": "nextjs"
+  "framework": "nextjs",
+  "crons": [{ "path": "/api/cron/expiry", "schedule": "0 8 * * *" }]
 }

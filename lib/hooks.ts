@@ -527,3 +527,68 @@ export function useCards() {
     removeCard: (id: number) => c.remove(id),
   }
 }
+
+/* -------------------------------------------------------------------------- */
+/*  Eigen gezins-beloningen                                                   */
+/* -------------------------------------------------------------------------- */
+
+export interface FamilyReward {
+  id: number
+  title: string
+  description: string | null
+  cost: number
+}
+
+export function useFamilyRewards() {
+  const c = useCollection<FamilyReward>('/api/family-rewards')
+  return {
+    rewards: c.items,
+    isLoading: c.isLoading,
+    addReward: (payload: { title: string; description?: string | null; cost?: number }) =>
+      c.create(payload as Record<string, unknown>, {
+        title: payload.title,
+        description: payload.description ?? null,
+        cost: payload.cost ?? 0,
+      }),
+    removeReward: (id: number) => c.remove(id),
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Documenten (garantie / legitimatie, met verloopdatum)                     */
+/* -------------------------------------------------------------------------- */
+
+export interface FamilyDocument {
+  id: number
+  title: string
+  type: string
+  owner: string | null
+  imageUrl: string | null
+  expiresAt: string | null
+  notes: string | null
+}
+
+export function useDocuments() {
+  const c = useCollection<FamilyDocument>('/api/documents')
+  return {
+    documents: c.items,
+    isLoading: c.isLoading,
+    addDocument: (payload: {
+      title: string
+      type: string
+      owner?: string | null
+      imageUrl?: string | null
+      expiresAt?: string | null
+      notes?: string | null
+    }) =>
+      c.create(payload as Record<string, unknown>, {
+        title: payload.title,
+        type: payload.type,
+        owner: payload.owner ?? null,
+        imageUrl: payload.imageUrl ?? null,
+        expiresAt: payload.expiresAt ?? null,
+        notes: payload.notes ?? null,
+      }),
+    removeDocument: (id: number) => c.remove(id),
+  }
+}
