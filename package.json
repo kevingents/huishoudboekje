@@ -17,6 +17,8 @@
     "@anthropic-ai/sdk": "^0.102.0",
     "@mollie/api-client": "^4.5.0",
     "@prisma/client": "^6.19.3",
+    "@types/bcryptjs": "^2.4.6",
+    "bcryptjs": "^3.0.3",
     "lucide-react": "^0.408.0",
     "next": "^14.2.35",
     "node-ical": "^0.26.1",

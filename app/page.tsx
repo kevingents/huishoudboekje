@@ -18,7 +18,7 @@ import DashboardCard from '@/components/DashboardCard'
 import BudgetCard from '@/components/BudgetCard'
 import AgendaCard from '@/components/AgendaCard'
 import ShoppingList from '@/components/ShoppingList'
-import { useFamily, useRecipes, useWeather } from '@/lib/hooks'
+import { useFamily, useRecipes, useWeather, useAuth } from '@/lib/hooks'
 import { resolveWeatherIcon } from '@/lib/icons'
 
 import { family, today, notificationCount, stockAlert, diaperStock, aiSuggestion } from '@/lib/mockData'
@@ -27,8 +27,10 @@ export default function Home() {
   const { members } = useFamily()
   const { recipes } = useRecipes()
   const { weather } = useWeather()
+  const { user } = useAuth()
   const WeatherIcon = resolveWeatherIcon(weather?.icon ?? 'Cloud')
   const recipe = recipes[0]
+  const greetingName = user?.name.split(' ')[0] ?? family.greetingName
 
   return (
     <>
@@ -42,7 +44,7 @@ export default function Home() {
           </span>
           <div>
             <h1 className="text-xl font-extrabold text-slate-800 sm:text-2xl">
-              Goedemorgen, {family.greetingName}!
+              Goedemorgen, {greetingName}!
             </h1>
             <p className="text-sm text-slate-500">
               {today.weekday} {today.date}

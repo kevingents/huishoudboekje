@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
-import Sidebar from '@/components/Sidebar'
-import MobileNav from '@/components/MobileNav'
+import AppFrame from '@/components/AppFrame'
 
 export const metadata: Metadata = {
   title: 'Huishoudboekje — Gezinsdashboard',
@@ -29,19 +28,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className="font-sans">
-        <div className="h-[100dvh] bg-canvas lg:p-6">
-          {/* Large rounded white app frame, shared across every route */}
-          <div className="mx-auto flex h-full max-w-[1440px] overflow-hidden bg-white shadow-card lg:rounded-[28px]">
-            <Sidebar />
-
-            {/* Scrollable content area */}
-            <main className="scrollbar-thin flex-1 overflow-y-auto px-4 pb-28 pt-6 sm:px-6 lg:px-8 lg:pb-8">
-              <div className="mx-auto max-w-6xl">{children}</div>
-            </main>
-          </div>
-
-          <MobileNav />
-        </div>
+        <AppFrame>{children}</AppFrame>
       </body>
     </html>
   )

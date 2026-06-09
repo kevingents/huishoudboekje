@@ -229,6 +229,29 @@ export function useSettings() {
 }
 
 /* -------------------------------------------------------------------------- */
+/*  Authenticatie                                                             */
+/* -------------------------------------------------------------------------- */
+
+export interface AuthUser {
+  id: number
+  name: string
+  email: string
+}
+
+export function useAuth() {
+  const { data, isLoading, mutate } = useSWR<{ user: AuthUser | null }>('/api/auth/me', fetcher)
+  return {
+    user: data?.user ?? null,
+    isLoading,
+    logout: async () => {
+      await apiPost('/api/auth/logout', {})
+      await mutate({ user: null }, { revalidate: false })
+      window.location.href = '/inloggen'
+    },
+  }
+}
+
+/* -------------------------------------------------------------------------- */
 /*  AI Assistent (Claude)                                                     */
 /* -------------------------------------------------------------------------- */
 

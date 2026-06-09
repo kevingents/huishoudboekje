@@ -1,17 +1,18 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Settings, Bell, Wallet, Users } from 'lucide-react'
+import { Settings, Bell, Wallet, Users, LogOut, UserCircle } from 'lucide-react'
 import Link from 'next/link'
 import PageHeader from '@/components/PageHeader'
 import DashboardCard from '@/components/DashboardCard'
 import IntegrationsSection from '@/components/IntegrationsSection'
-import { useSettings, useFamily } from '@/lib/hooks'
+import { useSettings, useFamily, useAuth } from '@/lib/hooks'
 import type { NotificationSetting } from '@/lib/types'
 
 export default function InstellingenPage() {
   const { settings, setSetting } = useSettings()
   const { members } = useFamily()
+  const { user, logout } = useAuth()
 
   const notifications = (settings.notifications as NotificationSetting[] | undefined) ?? []
   const savedTarget = typeof settings.budgetTarget === 'number' ? settings.budgetTarget : 500
@@ -109,6 +110,27 @@ export default function InstellingenPage() {
           >
             Gezinsleden beheren
           </Link>
+        </DashboardCard>
+
+        {/* Account */}
+        <DashboardCard title="Account" icon={UserCircle} iconClassName="text-slate-600">
+          <div className="flex items-center gap-3">
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-brand to-emerald-600 text-sm font-bold text-white">
+              {(user?.name ?? '·').slice(0, 1).toUpperCase()}
+            </span>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-slate-800">{user?.name ?? '…'}</p>
+              <p className="truncate text-xs text-slate-500">{user?.email ?? ''}</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={logout}
+            className="pill mt-4 w-full border border-cardborder bg-white px-4 py-2.5 text-slate-700 hover:bg-rose-50 hover:text-rose-600 sm:w-auto"
+          >
+            <LogOut className="h-4 w-4" />
+            Uitloggen
+          </button>
         </DashboardCard>
 
         <p className="px-1 text-center text-xs text-slate-400">Huishoudboekje · versie 0.1.0</p>

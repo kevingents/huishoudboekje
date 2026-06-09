@@ -2,11 +2,13 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ChevronDown } from 'lucide-react'
-import { sidebarNav, family, type NavItem } from '@/lib/mockData'
+import { LogOut } from 'lucide-react'
+import { sidebarNav, type NavItem } from '@/lib/mockData'
+import { useAuth } from '@/lib/hooks'
 
 export default function Sidebar() {
   const pathname = usePathname()
+  const { user, logout } = useAuth()
 
   return (
     <aside className="hidden w-[112px] shrink-0 flex-col border-r border-cardborder bg-white py-5 lg:flex">
@@ -24,20 +26,27 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      {/* Family switcher */}
-      <button className="mx-2 mt-4 flex flex-col items-center gap-1.5 rounded-2xl py-2 transition-colors hover:bg-slate-50">
-        <img
-          src={family.photo}
-          alt=""
-          className="h-12 w-12 rounded-2xl border border-cardborder bg-gradient-to-br from-slate-100 to-slate-200 object-cover"
-        />
-        <span className="text-center text-[11px] font-semibold leading-tight text-slate-700">
-          Het Jansen
-          <br />
-          Gezin
+      {/* User + logout */}
+      <div className="mx-2 mt-4 flex flex-col items-center gap-2">
+        <span
+          className="grid h-11 w-11 place-items-center rounded-2xl bg-gradient-to-br from-brand to-emerald-600 text-sm font-bold text-white shadow-sm"
+          title={user?.name ?? ''}
+        >
+          {(user?.name ?? '·').slice(0, 1).toUpperCase()}
         </span>
-        <ChevronDown className="h-4 w-4 text-slate-400" />
-      </button>
+        <span className="line-clamp-2 text-center text-[11px] font-semibold leading-tight text-slate-700">
+          {user?.name ?? '…'}
+        </span>
+        <button
+          type="button"
+          onClick={logout}
+          aria-label="Uitloggen"
+          className="flex flex-col items-center gap-1 rounded-xl px-2 py-1.5 text-slate-400 transition-colors hover:bg-slate-50 hover:text-rose-500"
+        >
+          <LogOut className="h-5 w-5" strokeWidth={2.1} />
+          <span className="text-[10px] font-medium">Uitloggen</span>
+        </button>
+      </div>
     </aside>
   )
 }
