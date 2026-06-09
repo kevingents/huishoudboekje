@@ -7,12 +7,10 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  // Pooled verbinding voor de app (runtime).
-  url       = env("DATABASE_URL")
-  // Directe (unpooled) verbinding voor migraties. Neon zet beide automatisch in
-  // Vercel; lokaal/niet-Neon: zet DATABASE_URL_UNPOOLED gelijk aan DATABASE_URL.
-  directUrl = env("DATABASE_URL_UNPOOLED")
+  provider = "postgresql"
+  // Directe (unpooled) Neon-verbinding voor zowel runtime als migraties — geen
+  // pgbouncer-gedoe. Prima voor deze schaal; later evt. pooled voor runtime.
+  url      = env("DATABASE_URL_UNPOOLED")
 }
 
 model Household {
