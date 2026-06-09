@@ -1,7 +1,6 @@
-// Prisma schema voor Huishoudboekje.
-// Dev: SQLite (draait direct). Voor deploy/multi-device: zet provider op
-// "postgresql" en DATABASE_URL naar een gehoste Postgres (Neon/Supabase) —
-// de modellen en code blijven gelijk.
+// Prisma schema voor Huishoudboekje (multi-tenant).
+// Elk huishouden (Household) is een aparte tenant; alle data hangt aan een
+// householdId. Dev: SQLite. Voor deploy/multi-device: provider op "postgresql".
 
 generator client {
   provider = "prisma-client-js"
@@ -12,51 +11,73 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Household {
+  id        Int      @id @default(autoincrement())
+  name      String
+  tier      String   @default("basis") // basis | plus | compleet
+  createdAt DateTime @default(now())
+}
+
 model User {
   id           Int      @id @default(autoincrement())
   name         String
   email        String   @unique
   passwordHash String
+  householdId  Int
+  role         String   @default("member") // owner | member | operator
   createdAt    DateTime @default(now())
+
+  @@index([householdId])
 }
 
 model FamilyMember {
-  id        Int      @id @default(autoincrement())
-  name      String
-  initials  String
-  color     String
-  role      String?
-  birthday  String?
-  createdAt DateTime @default(now())
+  id          Int      @id @default(autoincrement())
+  householdId Int
+  name        String
+  initials    String
+  color       String
+  role        String?
+  birthday    String?
+  createdAt   DateTime @default(now())
+
+  @@index([householdId])
 }
 
 model AgendaEvent {
-  id         Int      @id @default(autoincrement())
-  dateKey    String
-  day        String
-  month      String
-  weekday    String
-  title      String
-  time       String
-  who        String
-  accent     String   @default("sky")
+  id          Int      @id @default(autoincrement())
+  householdId Int
+  dateKey     String
+  day         String
+  month       String
+  weekday     String
+  title       String
+  time        String
+  who         String
+  accent      String   @default("sky")
   // "manual" (in de app gemaakt) of "ical" (gesynct uit een agenda/Parro-feed)
-  source     String   @default("manual")
-  externalId String?  @unique
-  createdAt  DateTime @default(now())
+  source      String   @default("manual")
+  externalId  String?
+  createdAt   DateTime @default(now())
+
+  @@unique([householdId, externalId])
+  @@index([householdId])
 }
 
 model ShoppingItem {
-  id        Int      @id @default(autoincrement())
-  label     String
-  checked   Boolean  @default(false)
-  category  String   @default("Overig")
-  qty       String?
-  createdAt DateTime @default(now())
+  id          Int      @id @default(autoincrement())
+  householdId Int
+  label       String
+  checked     Boolean  @default(false)
+  category    String   @default("Overig")
+  qty         String?
+  createdAt   DateTime @default(now())
+
+  @@index([householdId])
 }
 
 model Recipe {
   id          Int      @id @default(autoincrement())
+  householdId Int
   title       String
   image       String
   time        String
@@ -68,52 +89,71 @@ model Recipe {
   // -1 = duim omlaag, 0 = neutraal, 1 = duim omhoog (voor aanbevelingen)
   vote        Int      @default(0)
   createdAt   DateTime @default(now())
+
+  @@index([householdId])
 }
 
 model BudgetCategory {
-  id    Int    @id @default(autoincrement())
-  name  String
+  id          Int    @id @default(autoincrement())
+  householdId Int
+  name        String
   // lucide-iconnaam, in de UI teruggemapt naar het component
-  icon  String @default("ShoppingCart")
-  spent Float  @default(0)
-  limit Float  @default(0)
-  color String @default("emerald")
+  icon        String @default("ShoppingCart")
+  spent       Float  @default(0)
+  limit       Float  @default(0)
+  color       String @default("emerald")
+
+  @@index([householdId])
 }
 
 model Transaction {
-  id        Int      @id @default(autoincrement())
-  label     String
-  category  String
-  amount    Float
-  date      String
-  createdAt DateTime @default(now())
+  id          Int      @id @default(autoincrement())
+  householdId Int
+  label       String
+  category    String
+  amount      Float
+  date        String
+  createdAt   DateTime @default(now())
+
+  @@index([householdId])
 }
 
 model ChatMessage {
-  id        Int      @id @default(autoincrement())
-  role      String // "assistant" | "user"
-  text      String
-  createdAt DateTime @default(now())
+  id          Int      @id @default(autoincrement())
+  householdId Int
+  role        String // "assistant" | "user"
+  text        String
+  createdAt   DateTime @default(now())
+
+  @@index([householdId])
 }
 
-// Vrije sleutel/waarde-config, bewerkbaar via het Instellingen-menu.
-// value = JSON-tekst (budget-target, weer-locatie, toggles, iCal-URL's, ...).
+// Vrije sleutel/waarde-config per huishouden, bewerkbaar via Instellingen.
 model Setting {
-  key   String @id
-  value String
+  id          Int    @id @default(autoincrement())
+  householdId Int
+  key         String
+  value       String
+
+  @@unique([householdId, key])
 }
 
-// Eén record per koppeling (weather | ical | ai | mollie | supermarkt).
+// Eén record per koppeling per huishouden (weather | ical | ai | mollie | supermarkt).
 model Integration {
-  key       String   @id
-  name      String
-  status    String   @default("disconnected") // connected | disconnected | coming_soon
-  config    String   @default("{}") // JSON-tekst
-  updatedAt DateTime @updatedAt
+  id          Int      @id @default(autoincrement())
+  householdId Int
+  key         String
+  name        String
+  status      String   @default("disconnected") // connected | disconnected | coming_soon
+  config      String   @default("{}") // JSON-tekst
+  updatedAt   DateTime @updatedAt
+
+  @@unique([householdId, key])
 }
 
 model Subscription {
   id                   Int      @id @default(autoincrement())
+  householdId          Int
   name                 String
   amount               Float
   interval             String // bijv. "1 month"
@@ -121,30 +161,41 @@ model Subscription {
   mollieCustomerId     String?
   mollieSubscriptionId String?
   createdAt            DateTime @default(now())
+
+  @@index([householdId])
 }
 
 model Notification {
-  id        Int      @id @default(autoincrement())
-  type      String   @default("system") // stock | agenda | budget | ai | system
-  title     String
-  body      String?
-  read      Boolean  @default(false)
-  createdAt DateTime @default(now())
+  id          Int      @id @default(autoincrement())
+  householdId Int
+  type        String   @default("system") // stock | agenda | budget | ai | system
+  title       String
+  body        String?
+  read        Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([householdId])
 }
 
 model SavingsGoal {
-  id        Int      @id @default(autoincrement())
-  name      String
-  target    Float
-  saved     Float    @default(0)
-  createdAt DateTime @default(now())
+  id          Int      @id @default(autoincrement())
+  householdId Int
+  name        String
+  target      Float
+  saved       Float    @default(0)
+  createdAt   DateTime @default(now())
+
+  @@index([householdId])
 }
 
 model FixedCost {
-  id        Int      @id @default(autoincrement())
-  name      String
-  amount    Float
+  id          Int      @id @default(autoincrement())
+  householdId Int
+  name        String
+  amount      Float
   // dag van de maand waarop het wordt afgeschreven (optioneel)
-  dueDay    Int?
-  createdAt DateTime @default(now())
+  dueDay      Int?
+  createdAt   DateTime @default(now())
+
+  @@index([householdId])
 }

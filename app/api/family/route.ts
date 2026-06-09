@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db'
+import { requireHousehold } from '@/lib/guard'
 
 export const dynamic = 'force-dynamic'
 
@@ -20,18 +21,23 @@ const GRADIENTS = [
 ]
 
 export async function GET() {
-  const members = await prisma.familyMember.findMany({ orderBy: { id: 'asc' } })
+  const hid = await requireHousehold()
+  if (hid instanceof Response) return hid
+  const members = await prisma.familyMember.findMany({ where: { householdId: hid }, orderBy: { id: 'asc' } })
   return Response.json(members)
 }
 
 export async function POST(req: Request) {
+  const hid = await requireHousehold()
+  if (hid instanceof Response) return hid
   const body = await req.json()
   if (!body?.name) {
     return Response.json({ error: 'name is verplicht' }, { status: 400 })
   }
-  const count = await prisma.familyMember.count()
+  const count = await prisma.familyMember.count({ where: { householdId: hid } })
   const member = await prisma.familyMember.create({
     data: {
+      householdId: hid,
       name: String(body.name),
       initials: body.initials ? String(body.initials) : initialsFrom(String(body.name)),
       color: body.color ? String(body.color) : GRADIENTS[count % GRADIENTS.length],

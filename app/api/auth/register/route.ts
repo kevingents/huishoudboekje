@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { hashPassword, sessionCookieOptions } from '@/lib/auth'
 import { signSession, SESSION_COOKIE } from '@/lib/session'
 import { sendEmail, emailLayout } from '@/lib/email'
+import { createDefaultsForHousehold } from '@/lib/defaults'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -44,18 +45,27 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Er bestaat al een account met dit e-mailadres.' }, { status: 409 })
   }
 
+  // Nieuw huishouden (tenant) + eigenaar.
+  const lastWord = name.trim().split(/\s+/).pop() || name
+  const household = await prisma.household.create({ data: { name: `Het ${lastWord} Gezin` } })
+  const householdId = household.id
+
   const user = await prisma.user.create({
-    data: { name, email, passwordHash: await hashPassword(password) },
+    data: { name, email, passwordHash: await hashPassword(password), householdId, role: 'owner' },
   })
+
+  // Standaard budgetcategorieën, instellingen en integraties voor dit huishouden.
+  await createDefaultsForHousehold(prisma, householdId)
 
   // Eventuele gezinsleden die tijdens registratie zijn opgegeven.
   const members = Array.isArray(body?.members) ? body.members : []
-  let index = await prisma.familyMember.count()
+  let index = 0
   for (const m of members) {
     const memberName = String(m?.name ?? '').trim()
     if (!memberName) continue
     await prisma.familyMember.create({
       data: {
+        householdId,
         name: memberName,
         initials: initialsFrom(memberName),
         color: GRADIENTS[index % GRADIENTS.length],

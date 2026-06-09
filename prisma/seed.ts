@@ -1,9 +1,11 @@
 import { PrismaClient } from '@prisma/client'
+import bcrypt from 'bcryptjs'
+import { defaultSettings, DEFAULT_INTEGRATIONS } from '../lib/defaults'
 
 const prisma = new PrismaClient()
 
-/* Zelfstandige seed-data (spiegelt de oorspronkelijke mock-data). Iconen staan
-   als naam-string; tags als komma-gescheiden tekst. */
+/* Multi-tenant seed: één demo-huishouden met een demo-gebruiker en rijke
+   voorbeelddata. Echte nieuwe huishoudens krijgen hun data via registratie. */
 
 const familyMembers = [
   { name: 'Mark', initials: 'M', color: 'from-sky-400 to-blue-500', role: 'Vader', birthday: '14 maart' },
@@ -67,31 +69,8 @@ const chatMessages = [
   { role: 'assistant', text: 'Je hebt nog kip en broccoli in voorraad. Wat dacht je van de romige kip-pasta? Klaar in 30 minuten en Tom is er dol op.' },
 ]
 
-const settings: { key: string; value: string }[] = [
-  { key: 'budgetTarget', value: '500' },
-  {
-    key: 'notifications',
-    value: JSON.stringify([
-      { key: 'stock', label: 'Voorraadmeldingen', description: 'Krijg een seintje als iets bijna op is.', inApp: true, email: false },
-      { key: 'agenda', label: 'Agenda-herinneringen', description: 'Herinnering voor een afspraak.', inApp: true, email: false },
-      { key: 'budget', label: 'Budgetwaarschuwingen', description: 'Melding bij 90% van een maandlimiet.', inApp: true, email: true },
-      { key: 'menu', label: 'Wekelijks menu', description: 'Overzicht van het menu en de boodschappen.', inApp: false, email: true },
-      { key: 'ai', label: 'AI-suggesties', description: 'Tips van je assistent.', inApp: true, email: false },
-    ]),
-  },
-  { key: 'weatherLocation', value: JSON.stringify({ name: 'Amsterdam', lat: 52.37, lon: 4.9 }) },
-]
-
-const integrations = [
-  { key: 'weather', name: 'Weer (Open-Meteo)', status: 'connected', config: '{}' },
-  { key: 'ical', name: 'Agenda & school (Parro, Google, Outlook)', status: 'disconnected', config: JSON.stringify({ urls: [] }) },
-  { key: 'ai', name: 'AI Assistent (Claude)', status: 'disconnected', config: '{}' },
-  { key: 'mollie', name: 'Abonnementen (Mollie)', status: 'disconnected', config: '{}' },
-  { key: 'supermarkt', name: 'Boodschappen (supermarkt)', status: 'coming_soon', config: '{}' },
-]
-
 async function main() {
-  // Idempotent: leeg alle tabellen en vul opnieuw.
+  // Schone slate (idempotent).
   await prisma.$transaction([
     prisma.chatMessage.deleteMany(),
     prisma.transaction.deleteMany(),
@@ -101,21 +80,43 @@ async function main() {
     prisma.shoppingItem.deleteMany(),
     prisma.familyMember.deleteMany(),
     prisma.subscription.deleteMany(),
+    prisma.notification.deleteMany(),
+    prisma.savingsGoal.deleteMany(),
+    prisma.fixedCost.deleteMany(),
     prisma.setting.deleteMany(),
     prisma.integration.deleteMany(),
+    prisma.user.deleteMany(),
+    prisma.household.deleteMany(),
   ])
 
-  await prisma.familyMember.createMany({ data: familyMembers })
-  await prisma.shoppingItem.createMany({ data: shoppingItems })
-  await prisma.agendaEvent.createMany({ data: agendaEvents })
-  await prisma.recipe.createMany({ data: recipes })
-  await prisma.budgetCategory.createMany({ data: budgetCategories })
-  await prisma.transaction.createMany({ data: transactions })
-  await prisma.chatMessage.createMany({ data: chatMessages })
-  await prisma.setting.createMany({ data: settings })
-  await prisma.integration.createMany({ data: integrations })
+  const household = await prisma.household.create({
+    data: { name: 'Het Jansen Gezin', tier: 'compleet' },
+  })
+  const householdId = household.id
 
-  console.log('Seed voltooid.')
+  await prisma.user.create({
+    data: {
+      name: 'Sanne Jansen',
+      email: 'demo@huishoudboekje.nl',
+      passwordHash: await bcrypt.hash('demo1234', 10),
+      householdId,
+      role: 'owner',
+    },
+  })
+
+  const withHid = <T extends object>(rows: T[]) => rows.map((r) => ({ ...r, householdId }))
+
+  await prisma.familyMember.createMany({ data: withHid(familyMembers) })
+  await prisma.shoppingItem.createMany({ data: withHid(shoppingItems) })
+  await prisma.agendaEvent.createMany({ data: withHid(agendaEvents) })
+  await prisma.recipe.createMany({ data: withHid(recipes) })
+  await prisma.budgetCategory.createMany({ data: withHid(budgetCategories) })
+  await prisma.transaction.createMany({ data: withHid(transactions) })
+  await prisma.chatMessage.createMany({ data: withHid(chatMessages) })
+  await prisma.setting.createMany({ data: defaultSettings(householdId) })
+  await prisma.integration.createMany({ data: DEFAULT_INTEGRATIONS.map((i) => ({ ...i, householdId })) })
+
+  console.log('Seed voltooid — demo-account: demo@huishoudboekje.nl / demo1234')
 }
 
 main()

@@ -1,7 +1,10 @@
 import { prisma } from '@/lib/db'
 import { describeDate } from '@/lib/date'
+import { requireHousehold, notFound } from '@/lib/guard'
 
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+  const hid = await requireHousehold()
+  if (hid instanceof Response) return hid
   const id = Number(params.id)
   const body = await req.json()
   const data: Record<string, unknown> = {}
@@ -9,11 +12,15 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   for (const key of ['title', 'time', 'who', 'accent'] as const) {
     if (body[key] !== undefined) data[key] = String(body[key])
   }
-  const event = await prisma.agendaEvent.update({ where: { id }, data })
+  const result = await prisma.agendaEvent.updateMany({ where: { id, householdId: hid }, data })
+  if (result.count === 0) return notFound()
+  const event = await prisma.agendaEvent.findUnique({ where: { id } })
   return Response.json(event)
 }
 
 export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
-  await prisma.agendaEvent.delete({ where: { id: Number(params.id) } })
+  const hid = await requireHousehold()
+  if (hid instanceof Response) return hid
+  await prisma.agendaEvent.deleteMany({ where: { id: Number(params.id), householdId: hid } })
   return new Response(null, { status: 204 })
 }

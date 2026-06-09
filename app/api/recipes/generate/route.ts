@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { prisma } from '@/lib/db'
 import { serializeRecipe, tagsToString } from '@/lib/serialize'
+import { requireHousehold } from '@/lib/guard'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -22,6 +23,9 @@ const RECIPE_SCHEMA = {
 } as const
 
 export async function POST(req: Request) {
+  const hid = await requireHousehold()
+  if (hid instanceof Response) return hid
+
   if (!process.env.ANTHROPIC_API_KEY) {
     return Response.json(
       { error: 'Koppel eerst de AI-assistent (ANTHROPIC_API_KEY) om recepten te laten genereren.' },
@@ -33,8 +37,8 @@ export async function POST(req: Request) {
   const wish = String(body?.wish ?? '').trim()
   const ingredients: string[] = Array.isArray(body?.ingredients) ? body.ingredients.map(String) : []
 
-  // Smaakvoorkeur afleiden uit eerder geduimde recepten.
-  const liked = await prisma.recipe.findMany({ where: { vote: { gt: 0 } }, select: { tags: true } })
+  // Smaakvoorkeur afleiden uit eerder geduimde recepten van dit huishouden.
+  const liked = await prisma.recipe.findMany({ where: { householdId: hid, vote: { gt: 0 } }, select: { tags: true } })
   const likedTags = [...new Set(liked.flatMap((r) => r.tags.split(',').map((t) => t.trim()).filter(Boolean)))]
 
   const context = [
@@ -72,6 +76,7 @@ export async function POST(req: Request) {
 
     const recipe = await prisma.recipe.create({
       data: {
+        householdId: hid,
         title: String(parsed.title),
         description: String(parsed.description ?? ''),
         time: String(parsed.time ?? ''),
