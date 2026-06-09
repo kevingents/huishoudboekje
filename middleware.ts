@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { verifySession, SESSION_COOKIE } from '@/lib/session'
 
-const PUBLIC_PAGES = ['/inloggen', '/registreren']
+const PUBLIC_PAGES = ['/inloggen', '/registreren', '/uitnodiging']
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl

@@ -1,11 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { Users, Cake, UserPlus, Pencil, Trash2 } from 'lucide-react'
+import { Users, Cake, UserPlus, Pencil, Trash2, Mail, Copy, Check } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
 import DashboardCard from '@/components/DashboardCard'
 import Modal from '@/components/Modal'
 import { useFamily } from '@/lib/hooks'
+import { apiPost } from '@/lib/api'
 import type { FamilyMember } from '@/lib/types'
 
 const inputClass =
@@ -37,6 +38,50 @@ export default function GezinPage() {
     if (editing) await updateMember(editing.id, form)
     else await addMember(form)
     setOpen(false)
+  }
+
+  // Uitnodigen
+  const [inviteFor, setInviteFor] = useState<FamilyMember | null>(null)
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [inviteBusy, setInviteBusy] = useState(false)
+  const [inviteError, setInviteError] = useState<string | null>(null)
+  const [inviteResult, setInviteResult] = useState<{ link: string; emailed: boolean } | null>(null)
+  const [copied, setCopied] = useState(false)
+
+  const startInvite = (member: FamilyMember) => {
+    setInviteFor(member)
+    setInviteEmail('')
+    setInviteError(null)
+    setInviteResult(null)
+    setCopied(false)
+  }
+
+  const sendInvite = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!inviteFor || !inviteEmail.trim()) return
+    setInviteBusy(true)
+    setInviteError(null)
+    try {
+      const res = (await apiPost('/api/family/invite', {
+        email: inviteEmail,
+        name: inviteFor.name,
+      })) as { link: string; emailed: boolean }
+      setInviteResult(res)
+    } catch (err) {
+      setInviteError(err instanceof Error ? err.message : 'Uitnodigen mislukt.')
+    } finally {
+      setInviteBusy(false)
+    }
+  }
+
+  const copyLink = async () => {
+    if (!inviteResult) return
+    try {
+      await navigator.clipboard.writeText(inviteResult.link)
+      setCopied(true)
+    } catch {
+      /* clipboard niet beschikbaar */
+    }
   }
 
   return (
@@ -80,6 +125,15 @@ export default function GezinPage() {
                   )}
                 </div>
                 <div className="ml-auto flex shrink-0 gap-1">
+                  <button
+                    type="button"
+                    onClick={() => startInvite(member)}
+                    aria-label={`${member.name} uitnodigen`}
+                    title="Uitnodigen via e-mail"
+                    className="grid h-9 w-9 place-items-center rounded-full border border-cardborder bg-white text-slate-500 transition-colors hover:bg-brand-light hover:text-brand"
+                  >
+                    <Mail className="h-4 w-4" />
+                  </button>
                   <button
                     type="button"
                     onClick={() => startEdit(member)}
@@ -164,6 +218,62 @@ export default function GezinPage() {
             {editing ? 'Wijzigingen opslaan' : 'Lid opslaan'}
           </button>
         </form>
+      </Modal>
+
+      <Modal open={!!inviteFor} onClose={() => setInviteFor(null)} title={inviteFor ? `${inviteFor.name} uitnodigen` : ''}>
+        {inviteResult ? (
+          <div className="flex flex-col gap-3">
+            <p className="text-sm text-slate-600">
+              {inviteResult.emailed
+                ? `Uitnodiging verstuurd naar ${inviteEmail}.`
+                : 'Uitnodiging klaar — deel deze link (e-mail is niet gekoppeld):'}
+            </p>
+            <div className="flex items-center gap-2 rounded-xl bg-slate-50 p-2">
+              <span className="min-w-0 flex-1 truncate text-xs text-slate-600">{inviteResult.link}</span>
+              <button
+                type="button"
+                onClick={copyLink}
+                className="pill shrink-0 bg-white px-3 py-1.5 text-xs text-slate-700 ring-1 ring-cardborder hover:bg-slate-100"
+              >
+                {copied ? <Check className="h-3.5 w-3.5 text-brand" /> : <Copy className="h-3.5 w-3.5" />}
+                {copied ? 'Gekopieerd' : 'Kopieer'}
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={() => setInviteFor(null)}
+              className="pill mt-1 bg-brand px-4 py-2.5 text-white shadow-sm shadow-brand/20 hover:bg-brand-dark"
+            >
+              Klaar
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={sendInvite} className="flex flex-col gap-3">
+            <p className="text-sm text-slate-500">
+              Stuur {inviteFor?.name} een uitnodiging om een eigen account aan te maken in dit gezin.
+            </p>
+            <label className="text-xs font-semibold text-slate-500">
+              E-mailadres
+              <input
+                autoFocus
+                type="email"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                placeholder="naam@voorbeeld.nl"
+                className={`mt-1 ${inputClass}`}
+              />
+            </label>
+            {inviteError && <p className="text-sm font-medium text-rose-600">{inviteError}</p>}
+            <button
+              type="submit"
+              disabled={inviteBusy}
+              className="pill mt-1 bg-brand px-4 py-2.5 text-white shadow-sm shadow-brand/20 hover:bg-brand-dark disabled:opacity-50"
+            >
+              <Mail className="h-4 w-4" />
+              {inviteBusy ? 'Bezig…' : 'Uitnodiging versturen'}
+            </button>
+          </form>
+        )}
       </Modal>
     </>
   )
