@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import {
   Sun,
@@ -11,6 +12,11 @@ import {
   Baby,
   Plus,
   Sparkles,
+  CreditCard,
+  SlidersHorizontal,
+  ArrowUp,
+  ArrowDown,
+  EyeOff,
 } from 'lucide-react'
 
 import DashboardCard from '@/components/DashboardCard'
@@ -19,37 +25,213 @@ import AgendaCard from '@/components/AgendaCard'
 import ShoppingList from '@/components/ShoppingList'
 import NotificationBell from '@/components/NotificationBell'
 import Crest from '@/components/Crest'
+import Modal from '@/components/Modal'
 import { useFamily, useRecipes, useWeather, useAuth, useSettings } from '@/lib/hooks'
 import { resolveWeatherIcon } from '@/lib/icons'
 import { rankRecipes } from '@/lib/recommend'
 
 import { family, today, stockAlert, diaperStock, aiSuggestion } from '@/lib/mockData'
 
+const ALL_WIDGETS: { key: string; label: string; span: 1 | 2 }[] = [
+  { key: 'recept', label: 'Recept van vandaag', span: 1 },
+  { key: 'voorraad', label: 'Voorraad-seintje', span: 1 },
+  { key: 'weer', label: 'Weer', span: 1 },
+  { key: 'agenda', label: 'Komende afspraken', span: 1 },
+  { key: 'budget', label: 'Budget', span: 1 },
+  { key: 'luiers', label: 'Luiervoorraad', span: 1 },
+  { key: 'ai', label: 'AI-suggestie', span: 1 },
+  { key: 'pasjes', label: 'Pasjes', span: 1 },
+  { key: 'boodschappen', label: 'Boodschappenlijst', span: 2 },
+]
+const DEFAULT_WIDGETS = ['recept', 'voorraad', 'weer', 'agenda', 'budget', 'ai', 'boodschappen']
+const labelOf = (key: string) => ALL_WIDGETS.find((w) => w.key === key)?.label ?? key
+
 export default function Vandaag() {
   const { members } = useFamily()
   const { recipes } = useRecipes()
   const { weather } = useWeather()
   const { user } = useAuth()
-  const { settings } = useSettings()
+  const { settings, setSetting } = useSettings()
+
   const crest = typeof settings.familyCrest === 'string' ? settings.familyCrest : null
   const WeatherIcon = resolveWeatherIcon(weather?.icon ?? 'Cloud')
   const recipe = rankRecipes(recipes)[0]
   const greetingName = user?.name.split(' ')[0] ?? family.greetingName
 
+  // Indeling per gebruiker (opgeslagen in de household-settings onder een user-key).
+  const dashKey = user ? `dashboard_${user.id}` : 'dashboard_anon'
+  const savedRaw = settings[dashKey]
+  const order: string[] = Array.isArray(savedRaw)
+    ? (savedRaw as string[]).filter((k) => ALL_WIDGETS.some((w) => w.key === k))
+    : DEFAULT_WIDGETS
+
+  const [editOpen, setEditOpen] = useState(false)
+  const [draft, setDraft] = useState<string[]>(order)
+
+  const openEdit = () => {
+    setDraft(order)
+    setEditOpen(true)
+  }
+  const move = (i: number, dir: -1 | 1) => {
+    const next = [...draft]
+    const j = i + dir
+    if (j < 0 || j >= next.length) return
+    ;[next[i], next[j]] = [next[j], next[i]]
+    setDraft(next)
+  }
+  const removeWidget = (key: string) => setDraft(draft.filter((k) => k !== key))
+  const addWidget = (key: string) => setDraft([...draft, key])
+  const saveLayout = async () => {
+    await setSetting(dashKey, draft)
+    setEditOpen(false)
+  }
+  const hidden = ALL_WIDGETS.filter((w) => !draft.includes(w.key))
+
+  function renderWidget(key: string) {
+    switch (key) {
+      case 'recept':
+        return (
+          <DashboardCard key={key} title="Vandaag eten we dit" icon={UtensilsCrossed}>
+            <div className="relative mb-4 aspect-[16/10] overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-100 to-amber-100">
+              {recipe && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={recipe.image} alt={recipe.title} loading="lazy" className="h-full w-full object-cover" />
+              )}
+            </div>
+            <h3 className="text-lg font-bold text-slate-800">{recipe ? recipe.title : 'Nog geen recept gekozen'}</h3>
+            {recipe && (
+              <div className="mt-2 flex items-center gap-4 text-sm text-slate-500">
+                <span className="inline-flex items-center gap-1.5">
+                  <Clock className="h-4 w-4" /> {recipe.time}
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <Users className="h-4 w-4" /> {recipe.servings}
+                </span>
+              </div>
+            )}
+            <Link href="/recepten" className="pill mt-4 bg-brand-light px-4 py-2.5 text-brand hover:bg-emerald-100">
+              Bekijk recepten
+            </Link>
+          </DashboardCard>
+        )
+      case 'voorraad':
+        return (
+          <DashboardCard key={key} bg="bg-indigo-50/70" bordered={false} className="ring-1 ring-indigo-100">
+            <Link href="/boodschappen" className="flex w-full items-center gap-4 text-left">
+              <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white text-indigo-500 shadow-sm">
+                <Milk className="h-6 w-6" strokeWidth={2.2} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-base font-bold text-slate-800">{stockAlert.title}</span>
+                <span className="block text-sm text-slate-500">{stockAlert.subtitle}</span>
+              </span>
+              <ChevronRight className="h-5 w-5 shrink-0 text-slate-400" />
+            </Link>
+          </DashboardCard>
+        )
+      case 'budget':
+        return <BudgetCard key={key} />
+      case 'weer':
+        return (
+          <DashboardCard key={key} bg="bg-weather" bordered={false}>
+            <div className="flex items-start gap-4">
+              <span className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-white/70 text-sky-500">
+                <WeatherIcon className="h-9 w-9" strokeWidth={2} />
+              </span>
+              <div>
+                <p className="text-sm font-medium text-slate-500">
+                  {weather ? `${weather.day} · ${weather.location}` : 'Weer laden…'}
+                </p>
+                <p className="text-2xl font-extrabold text-slate-800">
+                  {weather ? `${weather.condition}, ${weather.temp}°` : '—'}
+                </p>
+                <p className="text-sm text-slate-500">{weather ? `${weather.low}° / ${weather.high}°` : ''}</p>
+              </div>
+            </div>
+          </DashboardCard>
+        )
+      case 'agenda':
+        return <AgendaCard key={key} />
+      case 'luiers':
+        return (
+          <DashboardCard key={key}>
+            <div className="flex items-center gap-4">
+              <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-orange-100 text-stock">
+                <Baby className="h-7 w-7" strokeWidth={2.1} />
+              </span>
+              <div>
+                <p className="text-base font-bold text-slate-800">{diaperStock.title}</p>
+                <p className="text-sm font-semibold text-stock">nog {diaperStock.daysLeft} dagen</p>
+              </div>
+            </div>
+            <div className="mt-4 h-2.5 w-full overflow-hidden rounded-full bg-orange-100">
+              <div className="h-full rounded-full bg-stock transition-all" style={{ width: `${diaperStock.percent}%` }} />
+            </div>
+            <Link
+              href="/boodschappen"
+              className="pill mt-4 w-full border border-orange-200 bg-orange-50 px-4 py-2.5 text-stock hover:bg-orange-100 sm:w-auto"
+            >
+              <Plus className="h-4 w-4" />
+              Toevoegen aan boodschappen
+            </Link>
+          </DashboardCard>
+        )
+      case 'ai':
+        return (
+          <DashboardCard
+            key={key}
+            title="Suggestie van je AI-assistent"
+            icon={Sparkles}
+            iconClassName="text-violet-500"
+            bg="bg-ai"
+            bordered={false}
+          >
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+              <div className="relative aspect-[4/3] w-full shrink-0 overflow-hidden rounded-2xl bg-gradient-to-br from-violet-100 to-amber-100 sm:h-24 sm:w-28">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={aiSuggestion.image} alt="Suggestie" loading="lazy" className="h-full w-full object-cover" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-slate-700">{aiSuggestion.text}</p>
+                <Link href="/ai-assistent" className="pill mt-3 text-violet-600 hover:text-violet-700">
+                  Bekijk recept &amp; aanbiedingen
+                  <ChevronRight className="h-4 w-4" />
+                </Link>
+              </div>
+            </div>
+          </DashboardCard>
+        )
+      case 'pasjes':
+        return (
+          <DashboardCard key={key}>
+            <Link href="/pasjes" className="flex w-full items-center gap-4 text-left">
+              <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-sky-100 text-sky-500">
+                <CreditCard className="h-6 w-6" strokeWidth={2.1} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-base font-bold text-slate-800">Pasjes</span>
+                <span className="block text-sm text-slate-500">Klantenkaarten van het gezin bij de hand</span>
+              </span>
+              <ChevronRight className="h-5 w-5 shrink-0 text-slate-400" />
+            </Link>
+          </DashboardCard>
+        )
+      case 'boodschappen':
+        return <ShoppingList key={key} className="lg:col-span-2" />
+      default:
+        return null
+    }
+  }
+
   return (
     <>
-      {/* ------------------------------------------------------------------ */}
-      {/*  Header                                                            */}
-      {/* ------------------------------------------------------------------ */}
       <header className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <span className="grid h-12 w-12 place-items-center rounded-2xl bg-amber-100 text-amber-500">
             <Sun className="h-7 w-7" strokeWidth={2.2} />
           </span>
           <div>
-            <h1 className="text-xl font-extrabold text-slate-800 sm:text-2xl">
-              Goedemorgen, {greetingName}!
-            </h1>
+            <h1 className="text-xl font-extrabold text-slate-800 sm:text-2xl">Goedemorgen, {greetingName}!</h1>
             <p className="text-sm text-slate-500">
               {today.weekday} {today.date}
             </p>
@@ -74,164 +256,103 @@ export default function Vandaag() {
             ))}
           </Link>
 
+          <button
+            type="button"
+            onClick={openEdit}
+            aria-label="Vandaag aanpassen"
+            title="Vandaag aanpassen"
+            className="grid h-10 w-10 place-items-center rounded-full border border-cardborder bg-white text-slate-500 transition-colors hover:bg-slate-50 hover:text-brand"
+          >
+            <SlidersHorizontal className="h-5 w-5" />
+          </button>
           <NotificationBell />
         </div>
       </header>
 
-      {/* ------------------------------------------------------------------ */}
-      {/*  Dashboard grid                                                    */}
-      {/* ------------------------------------------------------------------ */}
-      <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
-        {/* Recipe of the day */}
-        <DashboardCard title="Vandaag eten we dit" icon={UtensilsCrossed}>
-          <div className="relative mb-4 aspect-[16/10] overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-100 to-amber-100">
-            {recipe && (
-              <img
-                src={recipe.image}
-                alt={recipe.title}
-                loading="lazy"
-                className="h-full w-full object-cover"
-              />
-            )}
-          </div>
-          <h3 className="text-lg font-bold text-slate-800">
-            {recipe ? recipe.title : 'Nog geen recept gekozen'}
-          </h3>
-          {recipe && (
-            <div className="mt-2 flex items-center gap-4 text-sm text-slate-500">
-              <span className="inline-flex items-center gap-1.5">
-                <Clock className="h-4 w-4" /> {recipe.time}
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <Users className="h-4 w-4" /> {recipe.servings}
-              </span>
-            </div>
-          )}
-          <Link
-            href="/recepten"
-            className="pill mt-4 bg-brand-light px-4 py-2.5 text-brand hover:bg-emerald-100"
-          >
-            Bekijk recepten
-          </Link>
-        </DashboardCard>
-
-        {/* Right column of row 1: milk reminder + budget */}
-        <div className="flex flex-col gap-5">
-          {/* Milk almost out */}
-          <DashboardCard bg="bg-indigo-50/70" bordered={false} className="ring-1 ring-indigo-100">
-            <Link href="/boodschappen" className="flex w-full items-center gap-4 text-left">
-              <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white text-indigo-500 shadow-sm">
-                <Milk className="h-6 w-6" strokeWidth={2.2} />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-base font-bold text-slate-800">{stockAlert.title}</span>
-                <span className="block text-sm text-slate-500">{stockAlert.subtitle}</span>
-              </span>
-              <ChevronRight className="h-5 w-5 shrink-0 text-slate-400" />
-            </Link>
-          </DashboardCard>
-
-          <BudgetCard />
-        </div>
-
-        {/* Weather (live via Open-Meteo) */}
-        <DashboardCard bg="bg-weather" bordered={false}>
-          <div className="flex items-start gap-4">
-            <span className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-white/70 text-sky-500">
-              <WeatherIcon className="h-9 w-9" strokeWidth={2} />
-            </span>
-            <div>
-              <p className="text-sm font-medium text-slate-500">
-                {weather ? `${weather.day} · ${weather.location}` : 'Weer laden…'}
-              </p>
-              <p className="text-2xl font-extrabold text-slate-800">
-                {weather ? `${weather.condition}, ${weather.temp}°` : '—'}
-              </p>
-              <p className="text-sm text-slate-500">
-                {weather ? `${weather.low}° / ${weather.high}°` : ''}
-              </p>
-            </div>
-          </div>
-          {weather?.wet && (
-            <>
-              <p className="mt-4 font-semibold text-slate-700">Voetbaltraining afgelast?</p>
-              <div className="mt-3 flex flex-wrap gap-3">
-                <button
-                  type="button"
-                  className="pill border border-sky-200 bg-white px-5 py-2.5 text-slate-700 hover:bg-sky-50"
-                >
-                  Afgelasten
-                </button>
-                <button
-                  type="button"
-                  className="pill bg-sky-500 px-5 py-2.5 text-white shadow-sm shadow-sky-500/30 hover:bg-sky-600"
-                >
-                  Training gaat door
-                </button>
-              </div>
-            </>
-          )}
-        </DashboardCard>
-
-        {/* Upcoming appointments */}
-        <AgendaCard />
-
-        {/* Diaper stock */}
+      {order.length === 0 ? (
         <DashboardCard>
-          <div className="flex items-center gap-4">
-            <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-orange-100 text-stock">
-              <Baby className="h-7 w-7" strokeWidth={2.1} />
-            </span>
+          <p className="text-sm text-slate-500">
+            Je hebt geen kaarten gekozen. Tik op het schuifjes-icoon rechtsboven om je Vandaag in te
+            delen.
+          </p>
+        </DashboardCard>
+      ) : (
+        <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-2">{order.map(renderWidget)}</div>
+      )}
+
+      {/* Vandaag indelen */}
+      <Modal open={editOpen} onClose={() => setEditOpen(false)} title="Vandaag indelen">
+        <div className="flex flex-col gap-4">
+          <p className="text-sm text-slate-500">
+            Kies welke kaarten je ziet en in welke volgorde. Dit is persoonlijk — alleen voor jou.
+          </p>
+
+          <div>
+            <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Zichtbaar</p>
+            <ul className="flex flex-col gap-1.5">
+              {draft.map((key, i) => (
+                <li key={key} className="flex items-center gap-2 rounded-xl border border-cardborder bg-white p-2.5">
+                  <span className="min-w-0 flex-1 text-sm font-semibold text-slate-700">{labelOf(key)}</span>
+                  <button
+                    type="button"
+                    onClick={() => move(i, -1)}
+                    disabled={i === 0}
+                    aria-label="Omhoog"
+                    className="grid h-7 w-7 place-items-center rounded-full text-slate-400 hover:bg-slate-100 disabled:opacity-30"
+                  >
+                    <ArrowUp className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => move(i, 1)}
+                    disabled={i === draft.length - 1}
+                    aria-label="Omlaag"
+                    className="grid h-7 w-7 place-items-center rounded-full text-slate-400 hover:bg-slate-100 disabled:opacity-30"
+                  >
+                    <ArrowDown className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => removeWidget(key)}
+                    aria-label="Verbergen"
+                    className="grid h-7 w-7 place-items-center rounded-full text-slate-400 hover:bg-rose-50 hover:text-rose-500"
+                  >
+                    <EyeOff className="h-4 w-4" />
+                  </button>
+                </li>
+              ))}
+              {draft.length === 0 && <li className="text-sm text-slate-400">Nog niets gekozen.</li>}
+            </ul>
+          </div>
+
+          {hidden.length > 0 && (
             <div>
-              <p className="text-base font-bold text-slate-800">{diaperStock.title}</p>
-              <p className="text-sm font-semibold text-stock">nog {diaperStock.daysLeft} dagen</p>
+              <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Toevoegen</p>
+              <div className="flex flex-wrap gap-2">
+                {hidden.map((w) => (
+                  <button
+                    key={w.key}
+                    type="button"
+                    onClick={() => addWidget(w.key)}
+                    className="pill border border-cardborder bg-white px-3 py-1.5 text-xs text-slate-600 hover:border-brand/40 hover:text-brand"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    {w.label}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-          <div className="mt-4 h-2.5 w-full overflow-hidden rounded-full bg-orange-100">
-            <div
-              className="h-full rounded-full bg-stock transition-all"
-              style={{ width: `${diaperStock.percent}%` }}
-            />
-          </div>
-          <Link
-            href="/boodschappen"
-            className="pill mt-4 w-full border border-orange-200 bg-orange-50 px-4 py-2.5 text-stock hover:bg-orange-100 sm:w-auto"
+          )}
+
+          <button
+            type="button"
+            onClick={saveLayout}
+            className="pill bg-brand px-4 py-2.5 text-white shadow-sm shadow-brand/20 hover:bg-brand-dark"
           >
-            <Plus className="h-4 w-4" />
-            Toevoegen aan boodschappen
-          </Link>
-        </DashboardCard>
-
-        {/* AI suggestion */}
-        <DashboardCard
-          title="Suggestie van je AI-assistent"
-          icon={Sparkles}
-          iconClassName="text-violet-500"
-          bg="bg-ai"
-          bordered={false}
-        >
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-            <div className="relative aspect-[4/3] w-full shrink-0 overflow-hidden rounded-2xl bg-gradient-to-br from-violet-100 to-amber-100 sm:h-24 sm:w-28">
-              <img
-                src={aiSuggestion.image}
-                alt="Lasagne"
-                loading="lazy"
-                className="h-full w-full object-cover"
-              />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-slate-700">{aiSuggestion.text}</p>
-              <Link href="/ai-assistent" className="pill mt-3 text-violet-600 hover:text-violet-700">
-                Bekijk recept &amp; aanbiedingen
-                <ChevronRight className="h-4 w-4" />
-              </Link>
-            </div>
-          </div>
-        </DashboardCard>
-
-        {/* Shopping list (full width) */}
-        <ShoppingList className="lg:col-span-2" />
-      </div>
+            Opslaan
+          </button>
+        </div>
+      </Modal>
     </>
   )
 }
