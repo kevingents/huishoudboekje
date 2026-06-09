@@ -12,6 +12,7 @@ import type {
   Integration,
   ChatMessage,
   Subscription,
+  NotificationItem,
 } from './types'
 
 // Negatieve, dalende tijdelijke id's voor optimistische toevoegingen.
@@ -247,6 +248,35 @@ export function useAuth() {
       await apiPost('/api/auth/logout', {})
       await mutate({ user: null }, { revalidate: false })
       window.location.href = '/inloggen'
+    },
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Meldingen                                                                 */
+/* -------------------------------------------------------------------------- */
+
+export function useNotifications() {
+  const { data, isLoading, mutate } = useSWR<{ items: NotificationItem[]; unread: number }>(
+    '/api/notifications',
+    fetcher,
+    { refreshInterval: 60_000 },
+  )
+  return {
+    items: data?.items ?? [],
+    unread: data?.unread ?? 0,
+    isLoading,
+    markRead: async (id: number) => {
+      await apiPatch(`/api/notifications/${id}`, { read: true })
+      await mutate()
+    },
+    markAllRead: async () => {
+      await apiPost('/api/notifications/read', {})
+      await mutate()
+    },
+    remove: async (id: number) => {
+      await apiDelete(`/api/notifications/${id}`)
+      await mutate()
     },
   }
 }

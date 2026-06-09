@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { hashPassword, sessionCookieOptions } from '@/lib/auth'
 import { signSession, SESSION_COOKIE } from '@/lib/session'
+import { sendEmail, emailLayout } from '@/lib/email'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -64,6 +65,16 @@ export async function POST(req: Request) {
     })
     index++
   }
+
+  // Transactionele welkomstmail (no-op zonder RESEND_API_KEY).
+  await sendEmail({
+    to: email,
+    subject: 'Welkom bij Huishoudboekje',
+    html: emailLayout(
+      `Welkom, ${name}!`,
+      '<p>Je gezinsdashboard staat klaar. Log in en zet je agenda, boodschappen, budget en koppelingen naar wens.</p>',
+    ),
+  })
 
   const res = NextResponse.json(
     { user: { id: user.id, name: user.name, email: user.email } },

@@ -97,3 +97,12 @@ export interface Subscription {
   mollieCustomerId?: string | null
   mollieSubscriptionId?: string | null
 }
+
+export interface NotificationItem {
+  id: number
+  type: string
+  title: string
+  body: string | null
+  read: boolean
+  createdAt: string
+}

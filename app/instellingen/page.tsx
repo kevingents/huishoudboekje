@@ -7,23 +7,21 @@ import PageHeader from '@/components/PageHeader'
 import DashboardCard from '@/components/DashboardCard'
 import IntegrationsSection from '@/components/IntegrationsSection'
 import { useSettings, useFamily, useAuth } from '@/lib/hooks'
-import type { NotificationSetting } from '@/lib/types'
+import { mergePrefs } from '@/lib/notifications'
 
 export default function InstellingenPage() {
   const { settings, setSetting } = useSettings()
   const { members } = useFamily()
   const { user, logout } = useAuth()
 
-  const notifications = (settings.notifications as NotificationSetting[] | undefined) ?? []
+  const prefs = mergePrefs(settings.notifications)
   const savedTarget = typeof settings.budgetTarget === 'number' ? settings.budgetTarget : 500
 
   const [target, setTarget] = useState(savedTarget)
   useEffect(() => setTarget(savedTarget), [savedTarget])
 
-  const toggle = (key: string) => {
-    const next = notifications.map((item) =>
-      item.key === key ? { ...item, enabled: !item.enabled } : item,
-    )
+  const setChannel = (key: string, channel: 'inApp' | 'email', value: boolean) => {
+    const next = prefs.map((p) => (p.key === key ? { ...p, [channel]: value } : p))
     setSetting('notifications', next)
   }
 
@@ -39,24 +37,42 @@ export default function InstellingenPage() {
       <div className="flex flex-col gap-5">
         {/* Notifications */}
         <DashboardCard title="Notificaties" icon={Bell} iconClassName="text-amber-500">
-          {notifications.length === 0 ? (
-            <p className="text-sm text-slate-400">Laden…</p>
-          ) : (
-            <ul className="flex flex-col">
-              {notifications.map((item, index) => (
-                <li key={item.key}>
-                  <div className="flex items-center gap-4 py-3.5">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold text-slate-800">{item.label}</p>
-                      <p className="text-xs text-slate-500">{item.description}</p>
-                    </div>
-                    <Toggle enabled={item.enabled} onClick={() => toggle(item.key)} label={item.label} />
+          <div className="mb-1 flex items-center gap-3 pb-1">
+            <span className="flex-1" />
+            <span className="w-12 text-center text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+              In-app
+            </span>
+            <span className="w-12 text-center text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+              E-mail
+            </span>
+          </div>
+          <ul className="flex flex-col">
+            {prefs.map((item, index) => (
+              <li key={item.key}>
+                <div className="flex items-center gap-3 py-3.5">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-slate-800">{item.label}</p>
+                    <p className="text-xs text-slate-500">{item.description}</p>
                   </div>
-                  {index < notifications.length - 1 && <hr className="border-cardborder" />}
-                </li>
-              ))}
-            </ul>
-          )}
+                  <div className="grid w-12 place-items-center">
+                    <Toggle
+                      enabled={item.inApp}
+                      onClick={() => setChannel(item.key, 'inApp', !item.inApp)}
+                      label={`${item.label} in-app`}
+                    />
+                  </div>
+                  <div className="grid w-12 place-items-center">
+                    <Toggle
+                      enabled={item.email}
+                      onClick={() => setChannel(item.key, 'email', !item.email)}
+                      label={`${item.label} e-mail`}
+                    />
+                  </div>
+                </div>
+                {index < prefs.length - 1 && <hr className="border-cardborder" />}
+              </li>
+            ))}
+          </ul>
         </DashboardCard>
 
         {/* Budget target */}

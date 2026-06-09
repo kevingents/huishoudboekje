@@ -72,10 +72,11 @@ const settings: { key: string; value: string }[] = [
   {
     key: 'notifications',
     value: JSON.stringify([
-      { key: 'stock', label: 'Voorraadmeldingen', description: 'Krijg een seintje als iets bijna op is.', enabled: true },
-      { key: 'agenda', label: 'Agenda-herinneringen', description: 'Herinnering 30 minuten voor een afspraak.', enabled: true },
-      { key: 'budget', label: 'Budgetwaarschuwingen', description: 'Melding bij 90% van een maandlimiet.', enabled: false },
-      { key: 'ai', label: 'AI-suggesties', description: 'Dagelijkse tips van je assistent.', enabled: true },
+      { key: 'stock', label: 'Voorraadmeldingen', description: 'Krijg een seintje als iets bijna op is.', inApp: true, email: false },
+      { key: 'agenda', label: 'Agenda-herinneringen', description: 'Herinnering voor een afspraak.', inApp: true, email: false },
+      { key: 'budget', label: 'Budgetwaarschuwingen', description: 'Melding bij 90% van een maandlimiet.', inApp: true, email: true },
+      { key: 'menu', label: 'Wekelijks menu', description: 'Overzicht van het menu en de boodschappen.', inApp: false, email: true },
+      { key: 'ai', label: 'AI-suggesties', description: 'Tips van je assistent.', inApp: true, email: false },
     ]),
   },
   { key: 'weatherLocation', value: JSON.stringify({ name: 'Amsterdam', lat: 52.37, lon: 4.9 }) },

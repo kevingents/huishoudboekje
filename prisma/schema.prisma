@@ -120,3 +120,12 @@ model Subscription {
   mollieSubscriptionId String?
   createdAt            DateTime @default(now())
 }
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  type      String   @default("system") // stock | agenda | budget | ai | system
+  title     String
+  body      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}

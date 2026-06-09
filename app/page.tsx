@@ -3,7 +3,6 @@
 import Link from 'next/link'
 import {
   Sun,
-  Bell,
   UtensilsCrossed,
   Clock,
   Users,
@@ -18,10 +17,11 @@ import DashboardCard from '@/components/DashboardCard'
 import BudgetCard from '@/components/BudgetCard'
 import AgendaCard from '@/components/AgendaCard'
 import ShoppingList from '@/components/ShoppingList'
+import NotificationBell from '@/components/NotificationBell'
 import { useFamily, useRecipes, useWeather, useAuth } from '@/lib/hooks'
 import { resolveWeatherIcon } from '@/lib/icons'
 
-import { family, today, notificationCount, stockAlert, diaperStock, aiSuggestion } from '@/lib/mockData'
+import { family, today, stockAlert, diaperStock, aiSuggestion } from '@/lib/mockData'
 
 export default function Home() {
   const { members } = useFamily()
@@ -65,16 +65,7 @@ export default function Home() {
             ))}
           </Link>
 
-          <button
-            type="button"
-            aria-label="Notificaties"
-            className="relative grid h-11 w-11 place-items-center rounded-full border border-cardborder bg-white text-slate-600 transition-colors hover:bg-slate-50"
-          >
-            <Bell className="h-5 w-5" strokeWidth={2.2} />
-            <span className="absolute -right-0.5 -top-0.5 grid h-5 w-5 place-items-center rounded-full bg-red-500 text-[10px] font-bold text-white ring-2 ring-white">
-              {notificationCount}
-            </span>
-          </button>
+          <NotificationBell />
         </div>
       </header>
 
