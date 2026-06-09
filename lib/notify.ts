@@ -47,4 +47,30 @@ export async function notify(opts: {
     const html = emailLayout(opts.title, `<p>${opts.body ?? ''}</p>`)
     await Promise.all(users.map((u) => sendEmail({ to: u.email, subject: opts.title, html })))
   }
+
+  // Echte pushmeldingen (best effort): gericht aan de juiste gebruikers.
+  try {
+    const { sendPushToUsers } = await import('./push')
+    let userIds: number[]
+    if (opts.targetMember) {
+      const member = await prisma.familyMember.findFirst({
+        where: { householdId: opts.householdId, name: opts.targetMember },
+        select: { id: true },
+      })
+      const users = await prisma.user.findMany({
+        where: {
+          householdId: opts.householdId,
+          OR: [{ role: { not: 'child' } }, ...(member ? [{ memberId: member.id }] : [])],
+        },
+        select: { id: true },
+      })
+      userIds = users.map((u) => u.id)
+    } else {
+      const users = await prisma.user.findMany({ where: { householdId: opts.householdId }, select: { id: true } })
+      userIds = users.map((u) => u.id)
+    }
+    await sendPushToUsers(userIds, { title: opts.title, body: opts.body })
+  } catch {
+    /* push is best-effort */
+  }
 }

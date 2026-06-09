@@ -220,6 +220,18 @@ model Card {
   @@index([householdId])
 }
 
+// Web-push-abonnementen per gebruiker (voor echte pushmeldingen).
+model PushSubscription {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
 // Gezinsspel: taken toegewezen aan een gezinslid, met punten en status.
 model Task {
   id          Int      @id @default(autoincrement())

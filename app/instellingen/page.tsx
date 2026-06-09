@@ -1,13 +1,14 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Settings, Bell, Wallet, Users, LogOut, UserCircle, Sparkles, Smartphone, Download, Share, Check } from 'lucide-react'
+import { Settings, Bell, BellRing, Wallet, Users, LogOut, UserCircle, Sparkles, Smartphone, Download, Share, Check } from 'lucide-react'
 import Link from 'next/link'
 import PageHeader from '@/components/PageHeader'
 import DashboardCard from '@/components/DashboardCard'
 import IntegrationsSection from '@/components/IntegrationsSection'
 import { useSettings, useFamily, useAuth } from '@/lib/hooks'
 import { usePwaInstall } from '@/lib/usePwaInstall'
+import { usePush } from '@/lib/usePush'
 import { mergePrefs } from '@/lib/notifications'
 
 const AI_DATA = [
@@ -23,6 +24,7 @@ export default function InstellingenPage() {
   const { members } = useFamily()
   const { user, logout } = useAuth()
   const pwa = usePwaInstall()
+  const push = usePush()
 
   const prefs = mergePrefs(settings.notifications)
   const savedTarget = typeof settings.budgetTarget === 'number' ? settings.budgetTarget : 500
@@ -93,6 +95,41 @@ export default function InstellingenPage() {
               </li>
             ))}
           </ul>
+        </DashboardCard>
+
+        {/* Pushmeldingen */}
+        <DashboardCard title="Pushmeldingen" icon={BellRing} iconClassName="text-amber-500">
+          {!push.configured ? (
+            <p className="text-sm text-slate-500">
+              Pushmeldingen zijn nog niet ingesteld op de server (VAPID-sleutels ontbreken).
+            </p>
+          ) : !push.supported ? (
+            <p className="text-sm text-slate-500">
+              Dit apparaat ondersteunt geen pushmeldingen. Op de iPhone werkt het alleen als Fam op
+              je beginscherm staat.
+            </p>
+          ) : (
+            <div className="flex items-center gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-slate-800">Meldingen op dit apparaat</p>
+                <p className="text-xs text-slate-500">
+                  Krijg een seintje op je telefoon, ook als de app dicht is.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => (push.subscribed ? push.disable() : push.enable())}
+                disabled={push.busy}
+                className={`pill px-4 py-2 text-sm font-semibold disabled:opacity-50 ${
+                  push.subscribed
+                    ? 'border border-cardborder bg-white text-slate-600 hover:bg-slate-50'
+                    : 'bg-brand text-white shadow-sm shadow-brand/20 hover:bg-brand-dark'
+                }`}
+              >
+                {push.busy ? 'Bezig…' : push.subscribed ? 'Uitzetten' : 'Aanzetten'}
+              </button>
+            </div>
+          )}
         </DashboardCard>
 
         {/* AI-assistent: aan/uit + welke gegevens */}
