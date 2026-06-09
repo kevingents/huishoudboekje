@@ -211,6 +211,11 @@ export default function Landing() {
                       </>
                     )}
                   </div>
+                  {t.price > 0 && (
+                    <p className="mt-2 inline-flex w-fit items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-600">
+                      1e maand gratis
+                    </p>
+                  )}
                   <p className="mt-3 flex-1 text-sm text-slate-500">{t.blurb}</p>
                   <Link
                     href="/registreren"
@@ -227,8 +232,8 @@ export default function Landing() {
             })}
           </div>
           <p className="mx-auto mt-6 max-w-2xl text-center text-xs text-slate-400">
-            Je kunt op elk moment up- of downgraden en betaalt nooit voor functies die je niet gebruikt.
-            Betalingen lopen veilig via Mollie.
+            De 1e maand is gratis op Plus en Compleet. Je kunt op elk moment up- of downgraden en
+            betaalt nooit voor functies die je niet gebruikt. Betalingen lopen veilig via Mollie.
           </p>
         </div>
       </section>

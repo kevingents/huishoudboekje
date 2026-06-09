@@ -4,7 +4,7 @@ import { useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { LogOut, X, ShieldCheck } from 'lucide-react'
-import { sidebarNav, type NavItem } from '@/lib/mockData'
+import { sidebarNav, mobileMenuGroups, type NavItem } from '@/lib/mockData'
 import { useAuth } from '@/lib/hooks'
 
 /** Volledig navigatie-overzicht voor mobiel (het zijmenu is daar verborgen). */
@@ -21,10 +21,17 @@ export default function MobileMenu({ open, onClose }: { open: boolean; onClose: 
 
   if (!open) return null
 
-  const items: NavItem[] = [...sidebarNav]
-  if (user?.isAdmin) items.push({ label: 'Beheer', icon: ShieldCheck, href: '/beheer' })
-
+  const byHref = new Map(sidebarNav.map((i) => [i.href, i]))
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/')
+
+  // Groepen opbouwen uit de hrefs; Beheer (admin) komt onder "Account".
+  const groups = mobileMenuGroups.map((g) => {
+    const items = g.hrefs.map((h) => byHref.get(h)).filter((x): x is NavItem => Boolean(x))
+    if (g.title === 'Account' && user?.isAdmin) {
+      items.push({ label: 'Beheer', icon: ShieldCheck, href: '/beheer' })
+    }
+    return { title: g.title, items }
+  })
 
   return (
     <div className="fixed inset-0 z-[60] lg:hidden" role="dialog" aria-modal="true" aria-label="Menu">
@@ -44,33 +51,44 @@ export default function MobileMenu({ open, onClose }: { open: boolean; onClose: 
           </button>
         </div>
 
-        <div className="grid grid-cols-3 gap-3">
-          {items.map((item) => {
-            const active = isActive(item.href)
-            const Icon = item.icon
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={onClose}
-                aria-current={active ? 'page' : undefined}
-                className={`flex flex-col items-center gap-2 rounded-2xl border p-3 text-center transition-colors ${
-                  active ? 'border-brand/30 bg-brand-light' : 'border-cardborder bg-white hover:bg-slate-50'
-                }`}
-              >
-                <span
-                  className={`grid h-10 w-10 place-items-center rounded-xl ${
-                    active ? 'bg-brand text-white' : 'bg-slate-100 text-slate-500'
-                  }`}
-                >
-                  <Icon className="h-5 w-5" strokeWidth={2.1} />
-                </span>
-                <span className={`text-[11px] font-semibold leading-tight ${active ? 'text-brand' : 'text-slate-600'}`}>
-                  {item.label}
-                </span>
-              </Link>
-            )
-          })}
+        <div className="flex flex-col gap-5">
+          {groups.map((group) =>
+            group.items.length === 0 ? null : (
+              <div key={group.title}>
+                <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                  {group.title}
+                </p>
+                <div className="grid grid-cols-3 gap-3">
+                  {group.items.map((item) => {
+                    const active = isActive(item.href)
+                    const Icon = item.icon
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={onClose}
+                        aria-current={active ? 'page' : undefined}
+                        className={`flex flex-col items-center gap-2 rounded-2xl border p-3 text-center transition-colors ${
+                          active ? 'border-brand/30 bg-brand-light' : 'border-cardborder bg-white hover:bg-slate-50'
+                        }`}
+                      >
+                        <span
+                          className={`grid h-10 w-10 place-items-center rounded-xl ${
+                            active ? 'bg-brand text-white' : 'bg-slate-100 text-slate-500'
+                          }`}
+                        >
+                          <Icon className="h-5 w-5" strokeWidth={2.1} />
+                        </span>
+                        <span className={`text-[11px] font-semibold leading-tight ${active ? 'text-brand' : 'text-slate-600'}`}>
+                          {item.label}
+                        </span>
+                      </Link>
+                    )
+                  })}
+                </div>
+              </div>
+            ),
+          )}
         </div>
 
         <div className="mt-5 flex items-center gap-3 rounded-2xl bg-slate-50 p-3">

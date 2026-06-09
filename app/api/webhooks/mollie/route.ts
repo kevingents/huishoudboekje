@@ -35,11 +35,16 @@ export async function POST(req: Request) {
       })
       if (sub) {
         const origin = baseUrl(req)
+        // 1e maand gratis: de terugkerende betaling start pas over een maand.
+        const start = new Date()
+        start.setMonth(start.getMonth() + 1)
+        const startDate = start.toISOString().slice(0, 10)
         const created = await mollie.customerSubscriptions.create({
           customerId,
           amount: { currency: 'EUR', value: sub.amount.toFixed(2) },
           interval: sub.interval,
           description: sub.name,
+          startDate,
           ...(isPublic(origin) ? { webhookUrl: `${origin}/api/webhooks/mollie` } : {}),
         })
         await prisma.subscription.update({

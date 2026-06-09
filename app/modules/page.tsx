@@ -164,6 +164,12 @@ export default function ModulesPage() {
                 )}
               </div>
 
+              {t.price > 0 && (
+                <p className="mb-3 inline-flex w-fit items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-600">
+                  1e maand gratis
+                </p>
+              )}
+
               <ul className="mb-5 flex flex-1 flex-col gap-2 text-sm">
                 {t.key === 'basis'
                   ? CORE_FEATURES.map((f) => (

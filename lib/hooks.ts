@@ -259,6 +259,7 @@ export function useSettings() {
   return {
     settings,
     isLoading,
+    mutate,
     setSetting: async (key: string, value: unknown) => {
       await mutate(
         async () => {

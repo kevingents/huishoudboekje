@@ -48,5 +48,17 @@ export async function POST(req: Request) {
   // AI maakt het wapen; zonder key valt het terug op de procedurele variant.
   const svg = (await aiCrest(description)) || proceduralCrest(description, initial)
 
+  // Server-side opslaan (autoritatief) zodat het altijd bewaard blijft.
+  await prisma.setting.upsert({
+    where: { householdId_key: { householdId: hid, key: 'familyCrest' } },
+    update: { value: JSON.stringify(svg) },
+    create: { householdId: hid, key: 'familyCrest', value: JSON.stringify(svg) },
+  })
+  await prisma.setting.upsert({
+    where: { householdId_key: { householdId: hid, key: 'familyCrestDescription' } },
+    update: { value: JSON.stringify(description) },
+    create: { householdId: hid, key: 'familyCrestDescription', value: JSON.stringify(description) },
+  })
+
   return Response.json({ svg })
 }

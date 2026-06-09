@@ -30,7 +30,7 @@ function emailFailNote(reason?: string): string {
 export default function GezinPage() {
   const { members, isLoading, addMember, updateMember, removeMember } = useFamily()
   const { household } = useHousehold()
-  const { settings, setSetting } = useSettings()
+  const { settings, mutate: mutateSettings } = useSettings()
   const crest = typeof settings.familyCrest === 'string' ? settings.familyCrest : null
 
   // Familiewapen genereren
@@ -51,9 +51,9 @@ export default function GezinPage() {
     setCrestBusy(true)
     setCrestError(null)
     try {
-      const res = (await apiPost('/api/household/crest', { description: crestDesc })) as { svg: string }
-      await setSetting('familyCrest', res.svg)
-      await setSetting('familyCrestDescription', crestDesc)
+      await apiPost('/api/household/crest', { description: crestDesc })
+      // De route slaat het server-side op; haal de settings opnieuw op.
+      await mutateSettings()
       setCrestOpen(false)
     } catch (err) {
       setCrestError(err instanceof Error ? err.message : 'Genereren mislukt.')

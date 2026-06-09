@@ -42,6 +42,17 @@ export const sidebarNav: NavItem[] = [
   { label: 'Instellingen', icon: Settings, href: '/instellingen' },
 ]
 
+/** Gegroepeerd menu (het "Meer"-overzicht op mobiel) zodat het overzichtelijk
+   blijft. Verwijst naar hrefs uit sidebarNav. */
+export const mobileMenuGroups: { title: string; hrefs: string[] }[] = [
+  { title: 'Vandaag', hrefs: ['/vandaag'] },
+  { title: 'Dagelijks', hrefs: ['/agenda', '/boodschappen', '/gezin'] },
+  { title: 'Koken', hrefs: ['/recepten', '/koelkast'] },
+  { title: 'Geldzaken', hrefs: ['/budget', '/modules', '/pasjes'] },
+  { title: 'Extra', hrefs: ['/ai-assistent', '/beloningen'] },
+  { title: 'Account', hrefs: ['/instellingen'] },
+]
+
 /** Bottom navigation items shown on mobile (de centrale "+" staat apart). */
 export const mobileNav: NavItem[] = [
   { label: 'Vandaag', icon: LayoutGrid, href: '/vandaag' },
