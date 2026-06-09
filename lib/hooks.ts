@@ -401,9 +401,11 @@ export interface Profile {
   name: string
   email: string
   avatarUrl: string | null
+  nickname: string | null
   phone: string | null
   address: string | null
   birthday: string | null
+  emergencyContact: string | null
   role: string
 }
 
@@ -413,7 +415,12 @@ export function useProfile() {
     profile: data ?? null,
     isLoading,
     updateProfile: async (
-      payload: Partial<Pick<Profile, 'name' | 'email' | 'avatarUrl' | 'phone' | 'address' | 'birthday'>>,
+      payload: Partial<
+        Pick<
+          Profile,
+          'name' | 'email' | 'avatarUrl' | 'nickname' | 'phone' | 'address' | 'birthday' | 'emergencyContact'
+        >
+      >,
     ) => {
       const updated = (await apiPatch('/api/account/profile', payload as Record<string, unknown>)) as Profile
       await mutate(updated, { revalidate: false })

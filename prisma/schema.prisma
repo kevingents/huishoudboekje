@@ -32,11 +32,13 @@ model User {
   memberId     Int? // gekoppeld FamilyMember (welk gezinslid is deze login)
   termsAcceptedAt DateTime? // moment van akkoord met voorwaarden + privacybeleid
   // Profielgegevens die de gebruiker zelf beheert.
-  avatarUrl    String? // profielfoto (data-URL of externe URL)
-  phone        String?
-  address      String?
-  birthday     String? // geboortedatum (yyyy-mm-dd of vrije tekst)
-  createdAt    DateTime @default(now())
+  avatarUrl        String? // profielfoto (data-URL of externe URL)
+  nickname         String? // roepnaam
+  phone            String?
+  address          String?
+  birthday         String? // geboortedatum (yyyy-mm-dd of vrije tekst)
+  emergencyContact String? // noodcontact (naam + telefoon)
+  createdAt        DateTime @default(now())
 
   @@index([householdId])
 }

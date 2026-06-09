@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { UserCircle, Camera, Pencil, KeyRound, Phone, MapPin, Cake } from 'lucide-react'
+import { UserCircle, Camera, Pencil, KeyRound, Phone, MapPin, Cake, ShieldAlert } from 'lucide-react'
 import DashboardCard from './DashboardCard'
 import Modal from './Modal'
 import { useProfile } from '@/lib/hooks'
@@ -46,7 +46,15 @@ export default function ProfileCard() {
 
   const [editOpen, setEditOpen] = useState(false)
   const [pwOpen, setPwOpen] = useState(false)
-  const [form, setForm] = useState({ name: '', email: '', phone: '', address: '', birthday: '' })
+  const [form, setForm] = useState({
+    name: '',
+    nickname: '',
+    email: '',
+    phone: '',
+    address: '',
+    birthday: '',
+    emergencyContact: '',
+  })
   const [pw, setPw] = useState({ current: '', next: '' })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -55,10 +63,12 @@ export default function ProfileCard() {
   const openEdit = () => {
     setForm({
       name: profile?.name ?? '',
+      nickname: profile?.nickname ?? '',
       email: profile?.email ?? '',
       phone: profile?.phone ?? '',
       address: profile?.address ?? '',
       birthday: profile?.birthday ?? '',
+      emergencyContact: profile?.emergencyContact ?? '',
     })
     setError(null)
     setEditOpen(true)
@@ -83,10 +93,12 @@ export default function ProfileCard() {
     try {
       await updateProfile({
         name: form.name,
+        nickname: form.nickname,
         email: form.email,
         phone: form.phone,
         address: form.address,
         birthday: form.birthday,
+        emergencyContact: form.emergencyContact,
       })
       setEditOpen(false)
     } catch (err) {
@@ -143,7 +155,10 @@ export default function ProfileCard() {
         </button>
 
         <div className="min-w-0 flex-1">
-          <p className="truncate text-base font-bold text-slate-800">{profile?.name ?? '…'}</p>
+          <p className="truncate text-base font-bold text-slate-800">
+            {profile?.name ?? '…'}
+            {profile?.nickname && <span className="font-normal text-slate-400"> · {profile.nickname}</span>}
+          </p>
           <p className="truncate text-sm text-slate-500">{profile?.email ?? ''}</p>
         </div>
 
@@ -157,7 +172,7 @@ export default function ProfileCard() {
         </button>
       </div>
 
-      {(profile?.phone || profile?.address || profile?.birthday) && (
+      {(profile?.phone || profile?.address || profile?.birthday || profile?.emergencyContact) && (
         <div className="mt-3 flex flex-col gap-1.5 border-t border-cardborder pt-3 text-sm text-slate-600">
           {profile?.phone && (
             <p className="flex items-center gap-2">
@@ -175,6 +190,12 @@ export default function ProfileCard() {
             <p className="flex items-center gap-2">
               <Cake className="h-3.5 w-3.5 text-slate-400" />
               {profile.birthday}
+            </p>
+          )}
+          {profile?.emergencyContact && (
+            <p className="flex items-center gap-2">
+              <ShieldAlert className="h-3.5 w-3.5 text-rose-400" />
+              Noodcontact: {profile.emergencyContact}
             </p>
           )}
         </div>
@@ -196,14 +217,25 @@ export default function ProfileCard() {
       {/* Profiel bewerken */}
       <Modal open={editOpen} onClose={() => setEditOpen(false)} title="Profiel bewerken">
         <form onSubmit={saveProfile} className="flex flex-col gap-3">
-          <label className="text-xs font-semibold text-slate-500">
-            Naam
-            <input
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              className={`mt-1 ${inputClass}`}
-            />
-          </label>
+          <div className="flex gap-3">
+            <label className="flex-1 text-xs font-semibold text-slate-500">
+              Naam
+              <input
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                className={`mt-1 ${inputClass}`}
+              />
+            </label>
+            <label className="flex-1 text-xs font-semibold text-slate-500">
+              Roepnaam
+              <input
+                value={form.nickname}
+                onChange={(e) => setForm({ ...form, nickname: e.target.value })}
+                placeholder="Bijv. San"
+                className={`mt-1 ${inputClass}`}
+              />
+            </label>
+          </div>
           <label className="text-xs font-semibold text-slate-500">
             E-mailadres
             <input
@@ -239,6 +271,15 @@ export default function ProfileCard() {
               value={form.address}
               onChange={(e) => setForm({ ...form, address: e.target.value })}
               placeholder="Straat 1, 1234 AB Plaats"
+              className={`mt-1 ${inputClass}`}
+            />
+          </label>
+          <label className="text-xs font-semibold text-slate-500">
+            Noodcontact <span className="font-normal text-slate-400">— optioneel</span>
+            <input
+              value={form.emergencyContact}
+              onChange={(e) => setForm({ ...form, emergencyContact: e.target.value })}
+              placeholder="Naam + telefoonnummer"
               className={`mt-1 ${inputClass}`}
             />
           </label>

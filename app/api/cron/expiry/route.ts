@@ -56,5 +56,20 @@ export async function GET(req: Request) {
     }
   }
 
-  return Response.json({ ok: true, checked: docs.length, notified, icalSynced: synced })
+  // Bewaartermijnen (AVG-dataminimalisatie): ruim oude data op die niet meer nodig is.
+  const day = 24 * 60 * 60 * 1000
+  const cutoffChat = new Date(Date.now() - 365 * day) // AI-chats > 12 maanden
+  const cutoffNotif = new Date(Date.now() - 90 * day) // gelezen meldingen > 3 maanden
+  const [chatDeleted, notifDeleted] = await Promise.all([
+    prisma.chatMessage.deleteMany({ where: { createdAt: { lt: cutoffChat } } }),
+    prisma.notification.deleteMany({ where: { read: true, createdAt: { lt: cutoffNotif } } }),
+  ])
+
+  return Response.json({
+    ok: true,
+    checked: docs.length,
+    notified,
+    icalSynced: synced,
+    cleaned: { chats: chatDeleted.count, notifications: notifDeleted.count },
+  })
 }
