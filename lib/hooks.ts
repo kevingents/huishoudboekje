@@ -10,6 +10,8 @@ import type {
   BudgetCategory,
   Transaction,
   Integration,
+  ChatMessage,
+  Subscription,
 } from './types'
 
 // Negatieve, dalende tijdelijke id's voor optimistische toevoegingen.
@@ -227,6 +229,32 @@ export function useSettings() {
 }
 
 /* -------------------------------------------------------------------------- */
+/*  AI Assistent (Claude)                                                     */
+/* -------------------------------------------------------------------------- */
+
+export function useAiChat() {
+  const { data, isLoading, mutate } = useSWR<ChatMessage[]>('/api/ai/chat', fetcher)
+  const messages = data ?? []
+  return {
+    messages,
+    isLoading,
+    send: async (text: string) => {
+      await mutate(
+        async () => {
+          const res = (await apiPost('/api/ai/chat', { text })) as { messages: ChatMessage[] }
+          return res.messages
+        },
+        {
+          optimisticData: [...messages, { id: nextTempId(), role: 'user', text }],
+          rollbackOnError: true,
+          revalidate: false,
+        },
+      )
+    },
+  }
+}
+
+/* -------------------------------------------------------------------------- */
 /*  Weer (Open-Meteo)                                                         */
 /* -------------------------------------------------------------------------- */
 
@@ -261,6 +289,42 @@ export function useIntegrations() {
     updateIntegration: async (key: string, payload: { status?: string; config?: unknown }) => {
       await apiPatch(`/api/integrations/${key}`, payload)
       await mutate()
+    },
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Abonnementen (Mollie)                                                     */
+/* -------------------------------------------------------------------------- */
+
+interface NewSubscription {
+  name: string
+  amount: number
+  interval: string
+}
+
+export function useSubscriptions() {
+  const { data, isLoading, mutate } = useSWR<Subscription[]>('/api/subscriptions', fetcher)
+  const subscriptions = data ?? []
+  return {
+    subscriptions,
+    isLoading,
+    addSubscription: async (payload: NewSubscription) => {
+      const res = (await apiPost('/api/subscriptions', payload)) as {
+        checkoutUrl?: string
+        local?: boolean
+      }
+      await mutate()
+      return res
+    },
+    removeSubscription: async (id: number) => {
+      await mutate(
+        async () => {
+          await apiDelete(`/api/subscriptions/${id}`)
+          return subscriptions.filter((s) => s.id !== id)
+        },
+        { optimisticData: subscriptions.filter((s) => s.id !== id), rollbackOnError: true, revalidate: false },
+      )
     },
   }
 }

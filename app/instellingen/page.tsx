@@ -5,6 +5,7 @@ import { Settings, Bell, Wallet, Users } from 'lucide-react'
 import Link from 'next/link'
 import PageHeader from '@/components/PageHeader'
 import DashboardCard from '@/components/DashboardCard'
+import IntegrationsSection from '@/components/IntegrationsSection'
 import { useSettings, useFamily } from '@/lib/hooks'
 import type { NotificationSetting } from '@/lib/types'
 
@@ -82,6 +83,9 @@ export default function InstellingenPage() {
             <span>€1000</span>
           </div>
         </DashboardCard>
+
+        {/* Integraties */}
+        <IntegrationsSection />
 
         {/* Family */}
         <DashboardCard title="Gezin" icon={Users} iconClassName="text-emerald-500">

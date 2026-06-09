@@ -6,6 +6,10 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  // node-ical (en zijn deps) niet meebundelen; als extern Node-package laden.
+  experimental: {
+    serverComponentsExternalPackages: ['node-ical'],
+  },
 }
 
 export default nextConfig
