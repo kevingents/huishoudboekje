@@ -1,15 +1,20 @@
 import { SequenceType } from '@mollie/api-client'
 import { prisma } from '@/lib/db'
 import { getMollie, baseUrl, isPublic } from '@/lib/mollie'
+import { requireHousehold } from '@/lib/guard'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
-  const subs = await prisma.subscription.findMany({ orderBy: { id: 'desc' } })
+  const hid = await requireHousehold()
+  if (hid instanceof Response) return hid
+  const subs = await prisma.subscription.findMany({ where: { householdId: hid }, orderBy: { id: 'desc' } })
   return Response.json(subs)
 }
 
 export async function POST(req: Request) {
+  const hid = await requireHousehold()
+  if (hid instanceof Response) return hid
   const body = await req.json()
   const name = String(body?.name ?? '').trim()
   const amount = Number(body?.amount)
@@ -19,16 +24,12 @@ export async function POST(req: Request) {
   }
 
   const sub = await prisma.subscription.create({
-    data: { name, amount, interval, status: 'pending' },
+    data: { householdId: hid, name, amount, interval, status: 'pending' },
   })
 
   const mollie = getMollie()
   if (!mollie) {
-    // Lokale tracker zonder echte betaling.
-    const updated = await prisma.subscription.update({
-      where: { id: sub.id },
-      data: { status: 'active' },
-    })
+    const updated = await prisma.subscription.update({ where: { id: sub.id }, data: { status: 'active' } })
     return Response.json({ subscription: updated, local: true })
   }
 
@@ -41,7 +42,6 @@ export async function POST(req: Request) {
       description: `Eerste betaling — ${name}`,
       sequenceType: SequenceType.first,
       redirectUrl: `${origin}/abonnementen`,
-      // Mollie weigert localhost-webhooks; alleen meesturen als publiek bereikbaar.
       ...(isPublic(origin) ? { webhookUrl: `${origin}/api/webhooks/mollie` } : {}),
     })
 
@@ -50,8 +50,7 @@ export async function POST(req: Request) {
       data: { mollieCustomerId: customer.id },
     })
 
-    const checkoutUrl = payment.getCheckoutUrl()
-    return Response.json({ subscription: updated, checkoutUrl })
+    return Response.json({ subscription: updated, checkoutUrl: payment.getCheckoutUrl() })
   } catch (e) {
     await prisma.subscription.delete({ where: { id: sub.id } })
     return Response.json({ error: `Mollie-fout: ${String(e)}` }, { status: 502 })

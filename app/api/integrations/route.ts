@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db'
+import { requireHousehold } from '@/lib/guard'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,7 +12,9 @@ function parseConfig(config: string): Record<string, unknown> {
 }
 
 export async function GET() {
-  const rows = await prisma.integration.findMany({ orderBy: { key: 'asc' } })
+  const hid = await requireHousehold()
+  if (hid instanceof Response) return hid
+  const rows = await prisma.integration.findMany({ where: { householdId: hid }, orderBy: { key: 'asc' } })
   // AI/Mollie gelden als 'connected' zodra de bijbehorende env-key is gezet.
   const aiHasKey = Boolean(process.env.ANTHROPIC_API_KEY)
   const mollieHasKey = Boolean(process.env.MOLLIE_API_KEY)

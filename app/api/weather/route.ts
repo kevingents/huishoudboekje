@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db'
 import { describeWeatherCode, weekdayName, isWet } from '@/lib/weather'
+import { requireHousehold } from '@/lib/guard'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -12,8 +13,8 @@ interface Location {
 
 const DEFAULT_LOCATION: Location = { name: 'Amsterdam', lat: 52.37, lon: 4.9 }
 
-async function getLocation(): Promise<Location> {
-  const row = await prisma.setting.findUnique({ where: { key: 'weatherLocation' } })
+async function getLocation(householdId: number): Promise<Location> {
+  const row = await prisma.setting.findFirst({ where: { householdId, key: 'weatherLocation' } })
   if (!row) return DEFAULT_LOCATION
   try {
     const parsed = JSON.parse(row.value)
@@ -25,7 +26,9 @@ async function getLocation(): Promise<Location> {
 }
 
 export async function GET() {
-  const location = await getLocation()
+  const hid = await requireHousehold()
+  if (hid instanceof Response) return hid
+  const location = await getLocation(hid)
   const url =
     `https://api.open-meteo.com/v1/forecast?latitude=${location.lat}&longitude=${location.lon}` +
     `&current=temperature_2m,weather_code` +

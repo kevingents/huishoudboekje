@@ -1,45 +1,49 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { prisma } from '@/lib/db'
+import { requireHousehold } from '@/lib/guard'
 
 export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 
-const SYSTEM_PROMPT = `Je bent de behulpzame AI-assistent in het gezinsdashboard "Huishoudboekje" van het Jansen-gezin.
+const SYSTEM_PROMPT = `Je bent de behulpzame AI-assistent in het gezinsdashboard "Huishoudboekje".
 Je helpt met maaltijden plannen, boodschappen, agenda, budget en huishoudelijke vragen.
 Antwoord in het Nederlands, vriendelijk en kort en bondig. Geef direct het antwoord, zonder je redenering te tonen.`
 
-// Zonder key valt de chat terug op een vast, nuttig voorbeeldantwoord.
 const FALLBACK_REPLY =
   'Ik kan nu nog geen live antwoord geven — koppel je AI-assistent in Instellingen (Anthropic API-key) om echte antwoorden te krijgen. Tot die tijd noteer ik je vraag alvast.'
 
 export async function GET() {
-  const messages = await prisma.chatMessage.findMany({ orderBy: { id: 'asc' } })
+  const hid = await requireHousehold()
+  if (hid instanceof Response) return hid
+  const messages = await prisma.chatMessage.findMany({ where: { householdId: hid }, orderBy: { id: 'asc' } })
   return Response.json(messages)
 }
 
 export async function POST(req: Request) {
+  const hid = await requireHousehold()
+  if (hid instanceof Response) return hid
   const body = await req.json()
   const text = String(body?.text ?? '').trim()
   if (!text) return Response.json({ error: 'text is verplicht' }, { status: 400 })
 
-  await prisma.chatMessage.create({ data: { role: 'user', text } })
+  await prisma.chatMessage.create({ data: { householdId: hid, role: 'user', text } })
 
-  const reply = await generateReply()
+  const reply = await generateReply(hid)
 
-  await prisma.chatMessage.create({ data: { role: 'assistant', text: reply } })
-  const messages = await prisma.chatMessage.findMany({ orderBy: { id: 'asc' } })
+  await prisma.chatMessage.create({ data: { householdId: hid, role: 'assistant', text: reply } })
+  const messages = await prisma.chatMessage.findMany({ where: { householdId: hid }, orderBy: { id: 'asc' } })
   return Response.json({ reply, messages })
 }
 
-async function generateReply(): Promise<string> {
+async function generateReply(householdId: number): Promise<string> {
   if (!process.env.ANTHROPIC_API_KEY) return FALLBACK_REPLY
 
   try {
     const client = new Anthropic()
-    const history = await prisma.chatMessage.findMany({ orderBy: { id: 'asc' } })
+    const history = await prisma.chatMessage.findMany({ where: { householdId }, orderBy: { id: 'asc' } })
 
     // Bouw de gespreksgeschiedenis; de Messages-API moet met 'user' beginnen.
-    const apiMessages = history
-      .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.text }))
+    const apiMessages = history.map((m) => ({ role: m.role as 'user' | 'assistant', content: m.text }))
     while (apiMessages.length && apiMessages[0].role !== 'user') apiMessages.shift()
 
     const response = await client.messages.create({

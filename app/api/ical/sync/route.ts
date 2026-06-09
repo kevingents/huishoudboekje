@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db'
 import { describeDate } from '@/lib/date'
+import { requireHousehold } from '@/lib/guard'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -21,9 +22,12 @@ function timeLabel(ev: { start: Date; end?: Date; datetype?: string }) {
   return start
 }
 
-/** Haalt de ingestelde iCal-feeds op en vervangt de gesyncte agenda-items. */
+/** Haalt de ingestelde iCal-feeds van dit huishouden op en vervangt de gesyncte items. */
 export async function POST() {
-  const integration = await prisma.integration.findUnique({ where: { key: 'ical' } })
+  const hid = await requireHousehold()
+  if (hid instanceof Response) return hid
+
+  const integration = await prisma.integration.findFirst({ where: { householdId: hid, key: 'ical' } })
   let urls: string[] = []
   try {
     urls = (JSON.parse(integration?.config ?? '{}').urls ?? []).filter(Boolean)
@@ -32,9 +36,8 @@ export async function POST() {
   }
 
   if (urls.length === 0) {
-    // Geen feeds meer: verwijder eerder gesyncte items.
-    await prisma.agendaEvent.deleteMany({ where: { source: 'ical' } })
-    await prisma.integration.update({ where: { key: 'ical' }, data: { status: 'disconnected' } })
+    await prisma.agendaEvent.deleteMany({ where: { householdId: hid, source: 'ical' } })
+    await prisma.integration.updateMany({ where: { householdId: hid, key: 'ical' }, data: { status: 'disconnected' } })
     return Response.json({ synced: 0, message: 'Geen iCal-URL ingesteld.' })
   }
 
@@ -74,23 +77,22 @@ export async function POST() {
     }
   }
 
-  // Alleen vanaf vandaag bewaren, gesorteerd, gemaximeerd.
   const upcoming = rows
     .filter((r) => r.dateKey >= todayKey)
     .sort((a, b) => a.dateKey.localeCompare(b.dateKey))
     .slice(0, 100)
 
-  // Vervang de bestaande gesyncte items.
-  await prisma.agendaEvent.deleteMany({ where: { source: 'ical' } })
+  // Vervang de bestaande gesyncte items van dit huishouden.
+  await prisma.agendaEvent.deleteMany({ where: { householdId: hid, source: 'ical' } })
   for (const r of upcoming) {
     const parts = describeDate(r.dateKey)
     await prisma.agendaEvent.create({
-      data: { ...parts, title: r.title, time: r.time, who: 'Agenda', accent: r.accent, source: 'ical', externalId: r.externalId },
+      data: { householdId: hid, ...parts, title: r.title, time: r.time, who: 'Agenda', accent: r.accent, source: 'ical', externalId: r.externalId },
     })
   }
 
-  await prisma.integration.update({
-    where: { key: 'ical' },
+  await prisma.integration.updateMany({
+    where: { householdId: hid, key: 'ical' },
     data: { status: upcoming.length > 0 || urls.length > 0 ? 'connected' : 'disconnected' },
   })
 

@@ -6,8 +6,11 @@ const PUBLIC_PAGES = ['/inloggen', '/registreren']
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
 
-  // Auth-API's zijn altijd publiek (registreren/inloggen/uitloggen/me).
-  if (pathname.startsWith('/api/auth')) return NextResponse.next()
+  // Publieke API's: auth (registreren/inloggen/uitloggen/me) en de Mollie-webhook
+  // (die komt van Mollie zonder sessie-cookie).
+  if (pathname.startsWith('/api/auth') || pathname === '/api/webhooks/mollie') {
+    return NextResponse.next()
+  }
 
   const userId = await verifySession(req.cookies.get(SESSION_COOKIE)?.value)
   const isApi = pathname.startsWith('/api')

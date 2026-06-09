@@ -26,6 +26,12 @@ export async function getCurrentUser() {
   if (!id) return null
   return prisma.user.findUnique({
     where: { id },
-    select: { id: true, name: true, email: true },
+    select: { id: true, name: true, email: true, householdId: true, role: true },
   })
+}
+
+/** Het huishouden (tenant) van de ingelogde gebruiker, of null. */
+export async function getHouseholdId(): Promise<number | null> {
+  const user = await getCurrentUser()
+  return user?.householdId ?? null
 }
