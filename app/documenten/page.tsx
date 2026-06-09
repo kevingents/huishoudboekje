@@ -12,10 +12,10 @@ const inputClass =
 
 const TYPES = [
   { value: 'garantie', label: 'Garantiebewijs', icon: FileText, accent: 'bg-sky-100 text-sky-600' },
-  { value: 'legitimatie', label: 'Legitimatie', icon: ShieldCheck, accent: 'bg-violet-100 text-violet-600' },
-  { value: 'overig', label: 'Overig', icon: FileText, accent: 'bg-slate-100 text-slate-500' },
+  { value: 'officieel', label: 'Officieel document', icon: ShieldCheck, accent: 'bg-violet-100 text-violet-600' },
 ]
-const typeMeta = (t: string) => TYPES.find((x) => x.value === t) ?? TYPES[2]
+// Alles wat geen garantie is, valt onder "officieel" (incl. oude 'legitimatie').
+const typeMeta = (t: string) => (t === 'garantie' ? TYPES[0] : TYPES[1])
 
 function downscale(file: File, max = 900): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -64,9 +64,12 @@ export default function DocumentenPage() {
   const [photo, setPhoto] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [tab, setTab] = useState<'garantie' | 'officieel'>('garantie')
+
+  const shown = documents.filter((d) => (tab === 'garantie' ? d.type === 'garantie' : d.type !== 'garantie'))
 
   const openAdd = () => {
-    setForm({ title: '', type: 'garantie', owner: '', expiresAt: '', notes: '' })
+    setForm({ title: '', type: tab, owner: '', expiresAt: '', notes: '' })
     setPhoto(null)
     setError(null)
     setAddOpen(true)
@@ -131,23 +134,46 @@ export default function DocumentenPage() {
         onChange={(e) => onPickPhoto(e.target.files?.[0])}
       />
 
+      {/* Twee secties */}
+      <div className="mb-5 flex rounded-full border border-cardborder bg-white p-1 text-sm font-semibold">
+        <button
+          type="button"
+          onClick={() => setTab('garantie')}
+          className={`flex-1 rounded-full px-4 py-2 transition-colors ${
+            tab === 'garantie' ? 'bg-brand text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          Garantiebewijzen
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab('officieel')}
+          className={`flex-1 rounded-full px-4 py-2 transition-colors ${
+            tab === 'officieel' ? 'bg-brand text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          Officiële documenten
+        </button>
+      </div>
+
       {isLoading && documents.length === 0 ? (
         <p className="text-sm text-slate-400">Laden…</p>
-      ) : documents.length === 0 ? (
+      ) : shown.length === 0 ? (
         <DashboardCard>
           <div className="flex flex-col items-center gap-3 py-6 text-center">
             <span className="grid h-14 w-14 place-items-center rounded-2xl bg-sky-100 text-sky-500">
               <FileText className="h-7 w-7" strokeWidth={2} />
             </span>
             <p className="max-w-md text-sm text-slate-600">
-              Bewaar hier garantiebewijzen en legitimatie (paspoort, rijbewijs). Vul een verloopdatum
-              in en Fam stuurt op tijd een reminder om een nieuwe aan te vragen.
+              {tab === 'garantie'
+                ? 'Nog geen garantiebewijzen. Voeg bonnetjes/garanties toe met een foto en eventueel een verloopdatum.'
+                : 'Nog geen officiële documenten. Voeg paspoort, ID of rijbewijs toe met een verloopdatum, dan stuurt Fam op tijd een reminder.'}
             </p>
           </div>
         </DashboardCard>
       ) : (
         <div className="flex flex-col gap-3">
-          {documents.map((doc) => {
+          {shown.map((doc) => {
             const meta = typeMeta(doc.type)
             const Icon = meta.icon
             const exp = expiryInfo(doc.expiresAt)
