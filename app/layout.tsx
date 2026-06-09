@@ -5,11 +5,11 @@ import PWARegister from '@/components/PWARegister'
 import InstallPrompt from '@/components/InstallPrompt'
 
 export const metadata: Metadata = {
-  title: 'Huishoudboekje — Gezinsdashboard',
+  title: 'Fam — Gezinsapp',
   description:
-    'Het centrale dashboard voor jouw gezin: agenda, boodschappen, voorraad, budget, weer, recepten en AI-suggesties op één plek.',
+    'Fam: het centrale dashboard voor jouw gezin — agenda, boodschappen, voorraad, budget, weer, recepten en AI-suggesties op één plek.',
   manifest: '/manifest.webmanifest',
-  appleWebApp: { capable: true, title: 'Huishoudboekje', statusBarStyle: 'default' },
+  appleWebApp: { capable: true, title: 'Fam', statusBarStyle: 'default' },
   icons: { icon: '/icon-192.png', apple: '/icon-192.png' },
 }
 

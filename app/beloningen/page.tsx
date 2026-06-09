@@ -27,7 +27,7 @@ export default function BeloningenPage() {
             </span>
             <p className="max-w-md text-sm text-slate-600">
               Er zijn nog geen beloningen beschikbaar. Houd het in de gaten — binnenkort komen er
-              leuke acties van partners van Fammen, zoals een dagje uit als jullie samen genoeg
+              leuke acties van partners van Fam, zoals een dagje uit als jullie samen genoeg
               taken volbrengen.
             </p>
           </div>
@@ -74,7 +74,7 @@ export default function BeloningenPage() {
       )}
 
       <p className="mt-6 text-center text-xs text-slate-400">
-        Beloningen worden mogelijk gemaakt door partners van Fammen. Binnenkort koppel je een
+        Beloningen worden mogelijk gemaakt door partners van Fam. Binnenkort koppel je een
         beloning als doel aan een taak in het gezinsspel.
       </p>
     </>

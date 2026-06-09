@@ -33,7 +33,7 @@ export default function RegistrerenPage() {
     setBusy(true)
     try {
       await apiPost('/api/auth/register', { ...form, members })
-      window.location.href = '/'
+      window.location.href = '/vandaag'
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registratie mislukt.')
       setBusy(false)
@@ -45,7 +45,7 @@ export default function RegistrerenPage() {
       {/* Brand */}
       <div className="flex flex-col items-center gap-2">
         <div className="grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br from-brand to-emerald-600 text-xl font-extrabold text-white shadow-sm shadow-brand/30">
-          h
+          F
         </div>
         <h1 className="text-lg font-extrabold text-slate-800">Account aanmaken</h1>
         <p className="text-sm text-slate-500">Zet je gezinsdashboard op.</p>

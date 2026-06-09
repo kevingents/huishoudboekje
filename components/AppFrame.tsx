@@ -20,6 +20,11 @@ const AUTH_ROUTES = [
 export default function AppFrame({ children }: { children: ReactNode }) {
   const pathname = usePathname()
 
+  // Publieke marketing-landing op "/" — eigen, schermvullende layout (geen app-shell).
+  if (pathname === '/') {
+    return <>{children}</>
+  }
+
   if (AUTH_ROUTES.includes(pathname)) {
     return (
       <div className="grid min-h-[100dvh] place-items-center bg-canvas p-4">

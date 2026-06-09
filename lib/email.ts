@@ -1,7 +1,7 @@
 /* E-mail versturen via Resend. Zonder RESEND_API_KEY wordt niets verstuurd
    (alleen gelogd), zodat de app zonder key blijft werken. */
 
-const FROM = process.env.RESEND_FROM || 'Huishoudboekje <onboarding@resend.dev>'
+const FROM = process.env.RESEND_FROM || 'Fam <onboarding@resend.dev>'
 
 export async function sendEmail(opts: {
   to: string
@@ -55,8 +55,8 @@ export function emailLayout(heading: string, bodyHtml: string, cta?: EmailCta): 
       <table role="presentation" width="520" cellpadding="0" cellspacing="0" style="max-width:520px;width:100%;background:#ffffff;border:1px solid #E8EDF2;border-radius:18px;overflow:hidden">
         <tr><td style="background:#35B558;padding:26px 28px;text-align:center">
           <table role="presentation" cellpadding="0" cellspacing="0" align="center"><tr>
-            <td style="background:rgba(255,255,255,0.18);border-radius:11px;width:42px;height:42px;text-align:center;vertical-align:middle;color:#ffffff;font-weight:800;font-size:21px">h</td>
-            <td style="padding-left:12px;color:#ffffff;font-weight:800;font-size:18px;letter-spacing:-0.01em">Huishoudboekje</td>
+            <td style="background:rgba(255,255,255,0.18);border-radius:11px;width:42px;height:42px;text-align:center;vertical-align:middle;color:#ffffff;font-weight:800;font-size:21px">F</td>
+            <td style="padding-left:12px;color:#ffffff;font-weight:800;font-size:18px;letter-spacing:-0.01em">Fam</td>
           </tr></table>
         </td></tr>
         <tr><td style="padding:28px 28px 8px">
@@ -66,7 +66,7 @@ export function emailLayout(heading: string, bodyHtml: string, cta?: EmailCta): 
         </td></tr>
         <tr><td style="padding:18px 28px 26px">
           <hr style="border:none;border-top:1px solid #EEF2F6;margin:0 0 14px">
-          <p style="font-size:12px;color:#94a3b8;margin:0;line-height:1.5">Huishoudboekje — jullie gezinsdashboard voor agenda, boodschappen, budget en meer.</p>
+          <p style="font-size:12px;color:#94a3b8;margin:0;line-height:1.5">Fam — jullie gezinsapp voor agenda, boodschappen, budget en meer.</p>
         </td></tr>
       </table>
     </td></tr>

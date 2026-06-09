@@ -95,7 +95,7 @@ export async function POST(req: Request) {
   const origin = process.env.NEXT_PUBLIC_BASE_URL || new URL(req.url).origin
   await sendEmail({
     to: email,
-    subject: 'Welkom bij Huishoudboekje',
+    subject: 'Welkom bij Fam',
     html: emailLayout(
       `Welkom, ${titleCaseName(name)}!`,
       `<p>Leuk dat je er bent! Jullie gezinsdashboard <strong>${household.name}</strong> staat klaar.</p>

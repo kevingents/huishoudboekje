@@ -13,9 +13,9 @@ export default function Sidebar() {
   return (
     <aside className="hidden w-[112px] shrink-0 flex-col border-r border-cardborder bg-white py-5 lg:flex">
       {/* Brand mark */}
-      <Link href="/" className="mb-6 flex justify-center" aria-label="Naar het overzicht">
+      <Link href="/vandaag" className="mb-6 flex justify-center" aria-label="Naar het overzicht">
         <div className="grid h-11 w-11 place-items-center rounded-2xl bg-gradient-to-br from-brand to-emerald-600 text-lg font-extrabold text-white shadow-sm shadow-brand/30">
-          h
+          F
         </div>
       </Link>
 
@@ -58,7 +58,7 @@ export default function Sidebar() {
 }
 
 function isActive(pathname: string, href: string) {
-  return href === '/' ? pathname === '/' : pathname.startsWith(href)
+  return pathname === href || pathname.startsWith(href + '/')
 }
 
 function SidebarItem({ item, active }: { item: NavItem; active: boolean }) {

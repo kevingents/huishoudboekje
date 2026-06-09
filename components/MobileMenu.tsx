@@ -24,7 +24,7 @@ export default function MobileMenu({ open, onClose }: { open: boolean; onClose: 
   const items: NavItem[] = [...sidebarNav]
   if (user?.isAdmin) items.push({ label: 'Beheer', icon: ShieldCheck, href: '/beheer' })
 
-  const isActive = (href: string) => (href === '/' ? pathname === '/' : pathname.startsWith(href))
+  const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/')
 
   return (
     <div className="fixed inset-0 z-[60] lg:hidden" role="dialog" aria-modal="true" aria-label="Menu">

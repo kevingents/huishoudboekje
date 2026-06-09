@@ -72,7 +72,7 @@ function MenuButton({
 }
 
 function isActive(pathname: string, href: string) {
-  return href === '/' ? pathname === '/' : pathname.startsWith(href)
+  return pathname === href || pathname.startsWith(href + '/')
 }
 
 function MobileNavButton({ item, active }: { item: NavItem; active: boolean }) {

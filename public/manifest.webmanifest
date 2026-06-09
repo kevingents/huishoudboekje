@@ -1,8 +1,8 @@
 {
-  "name": "Huishoudboekje — Gezinsdashboard",
-  "short_name": "Huishoudboekje",
+  "name": "Fam — Gezinsapp",
+  "short_name": "Fam",
   "description": "Eén centrale plek voor agenda, boodschappen, budget, recepten, weer en AI.",
-  "start_url": "/",
+  "start_url": "/vandaag",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",

@@ -43,12 +43,12 @@ export default function UitnodigingPage() {
     <div className="flex flex-col gap-5">
       <div className="flex flex-col items-center gap-2">
         <div className="grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br from-brand to-emerald-600 text-xl font-extrabold text-white shadow-sm shadow-brand/30">
-          h
+          F
         </div>
         <h1 className="text-lg font-extrabold text-slate-800">Je bent uitgenodigd</h1>
         <p className="text-center text-sm text-slate-500">
           {info?.householdName ? (
-            <>Word lid van <strong>{info.householdName}</strong> in Huishoudboekje.</>
+            <>Word lid van <strong>{info.householdName}</strong> in Fam.</>
           ) : (
             'Maak je account aan om lid te worden.'
           )}

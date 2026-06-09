@@ -214,7 +214,7 @@ export default function InstellingenPage() {
           </button>
         </DashboardCard>
 
-        <p className="px-1 text-center text-xs text-slate-400">Huishoudboekje · versie 0.1.0</p>
+        <p className="px-1 text-center text-xs text-slate-400">Fam · versie 0.1.0</p>
       </div>
     </>
   )

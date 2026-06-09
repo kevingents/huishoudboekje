@@ -41,7 +41,7 @@ export async function POST(req: Request) {
     subject: `Uitnodiging voor ${householdName}`,
     html: emailLayout(
       'Je bent uitgenodigd!',
-      `<p>${user.name} nodigt je uit om mee te doen met <strong>${householdName}</strong> in Huishoudboekje — jullie gezinsdashboard voor agenda, boodschappen, recepten en budget.</p>
+      `<p>${user.name} nodigt je uit om mee te doen met <strong>${householdName}</strong> in Fam — jullie gezinsapp voor agenda, boodschappen, recepten en budget.</p>
        <p>Maak je eigen account aan met de knop hieronder.</p>
        <p style="font-size:12px;color:#94a3b8;margin-top:18px">Werkt de knop niet? Kopieer deze link:<br>${link}</p>`,
       { label: 'Account aanmaken', url: link },

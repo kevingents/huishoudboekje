@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { verifySession, SESSION_COOKIE } from '@/lib/session'
 
 const PUBLIC_PAGES = [
+  '/', // publieke marketing-landing
   '/inloggen',
   '/registreren',
   '/uitnodiging',
@@ -23,8 +24,8 @@ export async function middleware(req: NextRequest) {
   const isPublicPage = PUBLIC_PAGES.includes(pathname)
 
   if (userId) {
-    // Ingelogd: houd weg van inlog-/registratiepagina's.
-    if (isPublicPage) return NextResponse.redirect(new URL('/', req.url))
+    // Ingelogd: stuur weg van de landing/auth-pagina's naar de app.
+    if (isPublicPage) return NextResponse.redirect(new URL('/vandaag', req.url))
     return NextResponse.next()
   }
 

@@ -27,7 +27,7 @@ export interface NavItem {
 }
 
 export const sidebarNav: NavItem[] = [
-  { label: 'Vandaag', icon: Home, href: '/' },
+  { label: 'Vandaag', icon: Home, href: '/vandaag' },
   { label: 'Agenda', icon: Calendar, href: '/agenda' },
   { label: 'Boodschappen', icon: ShoppingCart, href: '/boodschappen' },
   { label: 'Recepten', icon: ChefHat, href: '/recepten' },
@@ -42,7 +42,7 @@ export const sidebarNav: NavItem[] = [
 
 /** Bottom navigation items shown on mobile (de centrale "+" staat apart). */
 export const mobileNav: NavItem[] = [
-  { label: 'Vandaag', icon: LayoutGrid, href: '/' },
+  { label: 'Vandaag', icon: LayoutGrid, href: '/vandaag' },
   { label: 'Agenda', icon: Calendar, href: '/agenda' },
   { label: 'Boodschappen', icon: ShoppingCart, href: '/boodschappen' },
   { label: 'Budget', icon: Wallet, href: '/budget' },

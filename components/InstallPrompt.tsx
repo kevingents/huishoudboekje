@@ -73,14 +73,14 @@ export default function InstallPrompt() {
     <div className="fixed inset-x-0 bottom-[84px] z-[55] px-4 lg:bottom-6 lg:left-auto lg:right-6 lg:px-0">
       <div className="mx-auto flex max-w-md items-center gap-3 rounded-2xl border border-cardborder bg-white p-3 shadow-soft lg:max-w-sm">
         <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-brand to-emerald-600 text-lg font-extrabold text-white">
-          h
+          F
         </span>
 
         {mode === 'android' ? (
           <>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-bold text-slate-800">App installeren</p>
-              <p className="text-xs text-slate-500">Zet Huishoudboekje op je beginscherm.</p>
+              <p className="text-xs text-slate-500">Zet Fam op je beginscherm.</p>
             </div>
             <button
               type="button"

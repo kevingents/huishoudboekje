@@ -35,7 +35,7 @@ export async function POST(req: Request) {
     const payment = await mollie.customerPayments.create({
       customerId: customer.id,
       amount: { currency: 'EUR', value: price.toFixed(2) },
-      description: `Huishoudboekje ${tierInfo(tier).name}`,
+      description: `Fam ${tierInfo(tier).name}`,
       sequenceType: SequenceType.first,
       redirectUrl: `${origin}/modules`,
       metadata: { householdId: String(householdId), tier },
