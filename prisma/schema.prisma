@@ -26,7 +26,8 @@ model User {
   email        String   @unique
   passwordHash String
   householdId  Int
-  role         String   @default("member") // owner | member | operator
+  role         String   @default("member") // owner | member | child
+  memberId     Int? // gekoppeld FamilyMember (welk gezinslid is deze login)
   createdAt    DateTime @default(now())
 
   @@index([householdId])
@@ -40,6 +41,7 @@ model FamilyMember {
   color       String
   role        String?
   birthday    String?
+  isChild     Boolean  @default(false)
   createdAt   DateTime @default(now())
 
   @@index([householdId])
@@ -168,13 +170,14 @@ model Subscription {
 }
 
 model Notification {
-  id          Int      @id @default(autoincrement())
-  householdId Int
-  type        String   @default("system") // stock | agenda | budget | ai | system
-  title       String
-  body        String?
-  read        Boolean  @default(false)
-  createdAt   DateTime @default(now())
+  id           Int      @id @default(autoincrement())
+  householdId  Int
+  type         String   @default("system") // stock | agenda | budget | ai | system
+  title        String
+  body         String?
+  read         Boolean  @default(false)
+  targetMember String? // gericht aan één gezinslid (naam); null = hele gezin
+  createdAt    DateTime @default(now())
 
   @@index([householdId])
 }

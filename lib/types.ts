@@ -7,6 +7,7 @@ export interface FamilyMember {
   color: string
   role?: string | null
   birthday?: string | null
+  isChild?: boolean
 }
 
 export interface AgendaEvent {

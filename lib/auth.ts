@@ -26,7 +26,7 @@ export async function getCurrentUser() {
   if (!id) return null
   return prisma.user.findUnique({
     where: { id },
-    select: { id: true, name: true, email: true, householdId: true, role: true },
+    select: { id: true, name: true, email: true, householdId: true, role: true, memberId: true },
   })
 }
 

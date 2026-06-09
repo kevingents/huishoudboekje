@@ -13,7 +13,7 @@ import type { FamilyMember } from '@/lib/types'
 const inputClass =
   'w-full rounded-xl border border-cardborder bg-white px-3.5 py-2.5 text-sm text-slate-700 outline-none transition-colors placeholder:text-slate-400 focus:border-brand/40 focus:ring-2 focus:ring-brand/20'
 
-const empty = { name: '', role: '', birthday: '', email: '' }
+const empty = { name: '', role: '', birthday: '', email: '', isChild: false }
 
 /** Nette uitleg waarom de e-mail niet verstuurd kon worden. */
 function emailFailNote(reason?: string): string {
@@ -116,14 +116,20 @@ export default function GezinPage() {
 
   const startEdit = (member: FamilyMember) => {
     setEditing(member)
-    setForm({ name: member.name, role: member.role ?? '', birthday: member.birthday ?? '', email: '' })
+    setForm({
+      name: member.name,
+      role: member.role ?? '',
+      birthday: member.birthday ?? '',
+      email: '',
+      isChild: !!member.isChild,
+    })
     setOpen(true)
   }
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.name.trim()) return
-    const member = { name: form.name, role: form.role, birthday: form.birthday }
+    const member = { name: form.name, role: form.role, birthday: form.birthday, isChild: form.isChild }
     if (editing) {
       await updateMember(editing.id, member)
       setOpen(false)
@@ -140,7 +146,7 @@ export default function GezinPage() {
     setInviteError(null)
     setInviteResult(null)
     try {
-      const res = (await apiPost('/api/family/invite', { email, name: form.name })) as {
+      const res = (await apiPost('/api/family/invite', { email, name: form.name, isChild: form.isChild })) as {
         link: string
         emailed: boolean
       }
@@ -177,6 +183,8 @@ export default function GezinPage() {
       const res = (await apiPost('/api/family/invite', {
         email: inviteEmail,
         name: inviteFor.name,
+        memberId: inviteFor.id,
+        isChild: inviteFor.isChild,
       })) as { link: string; emailed: boolean; reason?: string }
       setInviteResult(res)
     } catch (err) {
@@ -304,7 +312,14 @@ export default function GezinPage() {
                   {member.initials}
                 </span>
                 <div className="min-w-0">
-                  <p className="text-lg font-bold text-slate-800">{member.name}</p>
+                  <p className="flex items-center gap-1.5 text-lg font-bold text-slate-800">
+                    {member.name}
+                    {member.isChild && (
+                      <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-600">
+                        Kind
+                      </span>
+                    )}
+                  </p>
                   {member.role && <p className="text-sm text-slate-500">{member.role}</p>}
                   {member.birthday && (
                     <p className="mt-1 inline-flex items-center gap-1.5 text-xs text-slate-500">
@@ -399,6 +414,18 @@ export default function GezinPage() {
               className={`mt-1 ${inputClass}`}
             />
           </label>
+          <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+            <input
+              type="checkbox"
+              checked={form.isChild}
+              onChange={(e) => setForm({ ...form, isChild: e.target.checked })}
+              className="h-4 w-4 accent-brand"
+            />
+            Dit is een kind
+          </label>
+          <p className="-mt-1 text-[11px] text-slate-400">
+            Een kind-account ziet geen AI, modules of beheer en krijgt eigen meldingen.
+          </p>
           {!editing && (
             <label className="text-xs font-semibold text-slate-500">
               E-mailadres <span className="font-normal text-slate-400">— optioneel</span>

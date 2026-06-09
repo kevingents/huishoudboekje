@@ -9,6 +9,8 @@ export interface InvitePayload {
   householdName: string
   email: string
   name: string
+  memberId?: number
+  isChild?: boolean
   exp: number
 }
 

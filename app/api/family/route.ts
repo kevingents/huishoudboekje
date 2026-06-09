@@ -43,6 +43,7 @@ export async function POST(req: Request) {
       color: body.color ? String(body.color) : GRADIENTS[count % GRADIENTS.length],
       role: body.role ? String(body.role) : null,
       birthday: body.birthday ? String(body.birthday) : null,
+      isChild: Boolean(body.isChild),
     },
   })
   return Response.json(member, { status: 201 })

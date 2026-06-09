@@ -168,6 +168,7 @@ interface NewMember {
   name: string
   role?: string
   birthday?: string
+  isChild?: boolean
 }
 
 export function useFamily() {
@@ -178,7 +179,14 @@ export function useFamily() {
     addMember: (m: NewMember) =>
       c.create(
         { ...m },
-        { name: m.name, initials: '·', color: 'from-slate-300 to-slate-400', role: m.role ?? null, birthday: m.birthday ?? null },
+        {
+          name: m.name,
+          initials: '·',
+          color: 'from-slate-300 to-slate-400',
+          role: m.role ?? null,
+          birthday: m.birthday ?? null,
+          isChild: m.isChild ?? false,
+        },
       ),
     updateMember: (id: number, payload: Partial<NewMember>) => c.update(id, payload),
     removeMember: (id: number) => c.remove(id),
@@ -282,7 +290,9 @@ export interface AuthUser {
   email: string
   role?: string
   householdId?: number
+  memberId?: number | null
   isAdmin?: boolean
+  isChild?: boolean
 }
 
 export function useAuth() {

@@ -41,25 +41,36 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Er bestaat al een account met dit e-mailadres.' }, { status: 409 })
   }
 
+  const isChild = !!payload.isChild
+
+  // Koppel aan het bestaande gezinslid (uit de uitnodiging of op naam); anders aanmaken.
+  let member = payload.memberId
+    ? await prisma.familyMember.findFirst({ where: { id: payload.memberId, householdId: payload.householdId } })
+    : await prisma.familyMember.findFirst({ where: { householdId: payload.householdId, name } })
+  if (!member) {
+    member = await prisma.familyMember.create({
+      data: {
+        householdId: payload.householdId,
+        name,
+        initials: initialsFrom(name),
+        color: 'from-teal-400 to-cyan-500',
+        isChild,
+      },
+    })
+  } else if (isChild && !member.isChild) {
+    member = await prisma.familyMember.update({ where: { id: member.id }, data: { isChild: true } })
+  }
+
   const user = await prisma.user.create({
     data: {
       name,
       email: payload.email,
       passwordHash: await hashPassword(password),
       householdId: payload.householdId,
-      role: 'member',
+      role: isChild ? 'child' : 'member',
+      memberId: member.id,
     },
   })
-
-  // Voeg toe als gezinslid als die er nog niet is (op naam).
-  const member = await prisma.familyMember.findFirst({
-    where: { householdId: payload.householdId, name },
-  })
-  if (!member) {
-    await prisma.familyMember.create({
-      data: { householdId: payload.householdId, name, initials: initialsFrom(name), color: 'from-teal-400 to-cyan-500' },
-    })
-  }
 
   const res = NextResponse.json({ user: { id: user.id, name: user.name, email: user.email } })
   res.cookies.set(SESSION_COOKIE, await signSession(user.id), sessionCookieOptions)

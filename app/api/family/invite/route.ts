@@ -29,8 +29,11 @@ export async function POST(req: Request) {
   })
   const householdName = household?.name ?? 'je gezin'
 
+  const memberId = body?.memberId ? Number(body.memberId) : undefined
+  const isChild = Boolean(body?.isChild)
+
   const token = await signInvite(
-    { householdId: user.householdId, householdName, email, name },
+    { householdId: user.householdId, householdName, email, name, memberId, isChild },
     Date.now(),
   )
   const origin = process.env.NEXT_PUBLIC_BASE_URL || new URL(req.url).origin

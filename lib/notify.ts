@@ -6,7 +6,13 @@ import { sendEmail, emailLayout } from './email'
  * Maakt een melding voor één huishouden volgens de ingestelde voorkeuren:
  * in-app (Notification-record) en/of per e-mail (Resend) naar de gezinsleden.
  */
-export async function notify(opts: { householdId: number; type: string; title: string; body?: string }) {
+export async function notify(opts: {
+  householdId: number
+  type: string
+  title: string
+  body?: string
+  targetMember?: string | null
+}) {
   const setting = await prisma.setting.findFirst({
     where: { householdId: opts.householdId, key: 'notifications' },
   })
@@ -22,7 +28,13 @@ export async function notify(opts: { householdId: number; type: string; title: s
   // In-app
   if (!pref || pref.inApp) {
     await prisma.notification.create({
-      data: { householdId: opts.householdId, type: opts.type, title: opts.title, body: opts.body ?? null },
+      data: {
+        householdId: opts.householdId,
+        type: opts.type,
+        title: opts.title,
+        body: opts.body ?? null,
+        targetMember: opts.targetMember ?? null,
+      },
     })
   }
 

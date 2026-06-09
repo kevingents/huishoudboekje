@@ -38,6 +38,7 @@ export async function POST(req: Request) {
     type: 'system',
     title: 'Nieuwe taak',
     body: `${title}${assignedTo ? ` — voor ${assignedTo}` : ''}${points ? ` (${points} punten)` : ''}.`,
+    targetMember: assignedTo,
   }).catch(() => {})
 
   return Response.json(task, { status: 201 })

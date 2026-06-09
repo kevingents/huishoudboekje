@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { prisma } from '@/lib/db'
 import { requireHousehold, requireModule } from '@/lib/guard'
+import { getCurrentUser } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -118,6 +119,10 @@ export async function GET() {
 export async function POST(req: Request) {
   const hid = await requireModule('ai')
   if (hid instanceof Response) return hid
+  const me = await getCurrentUser()
+  if (me?.role === 'child') {
+    return Response.json({ error: 'De AI-assistent is niet beschikbaar voor kinderen.' }, { status: 403 })
+  }
   const body = await req.json()
   const text = String(body?.text ?? '').trim()
   if (!text) return Response.json({ error: 'text is verplicht' }, { status: 400 })

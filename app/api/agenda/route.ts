@@ -42,6 +42,7 @@ export async function POST(req: Request) {
     type: 'agenda',
     title: 'Nieuwe afspraak',
     body: `${event.title} op ${event.weekday} ${event.day} ${event.month}${event.time ? ` om ${event.time}` : ''} — voor ${event.who}.`,
+    targetMember: event.who && event.who !== 'Gezin' ? event.who : null,
   }).catch(() => {})
 
   return Response.json(event, { status: 201 })

@@ -35,6 +35,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       type: 'system',
       title: `Taak ${label}`,
       body: `${task.title}${task.assignedTo ? ` (${task.assignedTo})` : ''} is ${label}.`,
+      targetMember: task.assignedTo,
     }).catch(() => {})
   }
 

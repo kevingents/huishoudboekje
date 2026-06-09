@@ -24,9 +24,15 @@ export default function MobileMenu({ open, onClose }: { open: boolean; onClose: 
   const byHref = new Map(sidebarNav.map((i) => [i.href, i]))
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/')
 
+  // Pagina's die een kind-account niet ziet.
+  const childHidden = new Set(['/ai-assistent', '/modules'])
+
   // Groepen opbouwen uit de hrefs; Beheer (admin) komt onder "Account".
   const groups = mobileMenuGroups.map((g) => {
-    const items = g.hrefs.map((h) => byHref.get(h)).filter((x): x is NavItem => Boolean(x))
+    const items = g.hrefs
+      .map((h) => byHref.get(h))
+      .filter((x): x is NavItem => Boolean(x))
+      .filter((x) => !(user?.isChild && childHidden.has(x.href)))
     if (g.title === 'Account' && user?.isAdmin) {
       items.push({ label: 'Beheer', icon: ShieldCheck, href: '/beheer' })
     }

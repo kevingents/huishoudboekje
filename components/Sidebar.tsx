@@ -6,6 +6,9 @@ import { LogOut, ShieldCheck } from 'lucide-react'
 import { sidebarNav, type NavItem } from '@/lib/mockData'
 import { useAuth } from '@/lib/hooks'
 
+// Pagina's die een kind-account niet ziet.
+const CHILD_HIDDEN = new Set(['/ai-assistent', '/modules'])
+
 export default function Sidebar() {
   const pathname = usePathname()
   const { user, logout } = useAuth()
@@ -21,9 +24,11 @@ export default function Sidebar() {
 
       {/* Menu */}
       <nav className="scrollbar-thin flex flex-1 flex-col items-center gap-1 overflow-y-auto px-2">
-        {sidebarNav.map((item) => (
-          <SidebarItem key={item.label} item={item} active={isActive(pathname, item.href)} />
-        ))}
+        {sidebarNav
+          .filter((item) => !(user?.isChild && CHILD_HIDDEN.has(item.href)))
+          .map((item) => (
+            <SidebarItem key={item.label} item={item} active={isActive(pathname, item.href)} />
+          ))}
         {user?.isAdmin && (
           <SidebarItem
             item={{ label: 'Beheer', icon: ShieldCheck, href: '/beheer' }}
