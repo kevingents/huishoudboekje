@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { ShoppingCart, Plus, Check, Trash2 } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
 import DashboardCard from '@/components/DashboardCard'
+import SponsoredAds from '@/components/SponsoredAds'
 import { useShopping } from '@/lib/hooks'
 import { estimatePrice, euro } from '@/lib/prices'
 import type { ShoppingItem } from '@/lib/types'
@@ -105,6 +106,8 @@ export default function BoodschappenPage() {
           </button>
         </form>
       </DashboardCard>
+
+      <SponsoredAds className="mb-5" />
 
       {/* Grouped list */}
       {isLoading && items.length === 0 ? (

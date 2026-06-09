@@ -26,6 +26,7 @@ import {
 import PageHeader from '@/components/PageHeader'
 import DashboardCard from '@/components/DashboardCard'
 import RewardsManager from '@/components/RewardsManager'
+import AdsManager from '@/components/AdsManager'
 import { fetcher } from '@/lib/api'
 
 interface AdminStats {
@@ -306,6 +307,9 @@ export default function BeheerPage() {
 
           {/* Adverteerder-gesponsorde beloningen beheren */}
           <RewardsManager />
+
+          {/* Advertenties / aanbiedingen beheren */}
+          <AdsManager />
         </div>
       )}
     </>

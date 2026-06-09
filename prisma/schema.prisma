@@ -301,6 +301,22 @@ model Document {
   @@index([householdId])
 }
 
+// Platform-brede advertenties/aanbiedingen (bv. AH-bonus-uitjes), beheerd door admin.
+model Ad {
+  id        Int      @id @default(autoincrement())
+  sponsor   String
+  title     String
+  body      String?
+  imageUrl  String?
+  linkUrl   String?
+  active    Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([active])
+}
+
 // Platform-brede, adverteerder-gesponsorde beloningen voor het gezinsspel.
 // GEEN householdId: dit is een globale catalogus, beheerd in /beheer en
 // zichtbaar voor alle gezinnen. Koppelt later aan een Task (veld rewardId).

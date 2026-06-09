@@ -509,6 +509,46 @@ export function useRewards() {
 }
 
 /* -------------------------------------------------------------------------- */
+/*  Advertenties / aanbiedingen (platform-breed)                              */
+/* -------------------------------------------------------------------------- */
+
+export interface Ad {
+  id: number
+  sponsor: string
+  title: string
+  body: string | null
+  imageUrl: string | null
+  linkUrl: string | null
+  active: boolean
+  sortOrder: number
+}
+
+export function useAdminAds() {
+  const c = useCollection<Ad>('/api/admin/ads')
+  return {
+    ads: c.items,
+    isLoading: c.isLoading,
+    addAd: (payload: Partial<Ad>) =>
+      c.create(payload as Record<string, unknown>, {
+        sponsor: payload.sponsor ?? '',
+        title: payload.title ?? '',
+        body: payload.body ?? null,
+        imageUrl: payload.imageUrl ?? null,
+        linkUrl: payload.linkUrl ?? null,
+        active: payload.active ?? true,
+        sortOrder: payload.sortOrder ?? 0,
+      }),
+    updateAd: (id: number, payload: Partial<Ad>) => c.update(id, payload),
+    removeAd: (id: number) => c.remove(id),
+  }
+}
+
+export function useAds() {
+  const { data, isLoading } = useSWR<Ad[]>('/api/ads', fetcher)
+  return { ads: data ?? [], isLoading }
+}
+
+/* -------------------------------------------------------------------------- */
 /*  Pasjes (gedeelde klantenkaarten, premium)                                 */
 /* -------------------------------------------------------------------------- */
 

@@ -25,6 +25,7 @@ import AgendaCard from '@/components/AgendaCard'
 import ShoppingList from '@/components/ShoppingList'
 import NotificationBell from '@/components/NotificationBell'
 import Crest from '@/components/Crest'
+import SponsoredAds from '@/components/SponsoredAds'
 import Modal from '@/components/Modal'
 import { useFamily, useRecipes, useWeather, useAuth, useSettings } from '@/lib/hooks'
 import { resolveWeatherIcon } from '@/lib/icons'
@@ -41,6 +42,7 @@ const ALL_WIDGETS: { key: string; label: string; span: 1 | 2 }[] = [
   { key: 'luiers', label: 'Luiervoorraad', span: 1 },
   { key: 'ai', label: 'AI-suggestie', span: 1 },
   { key: 'pasjes', label: 'Pasjes', span: 1 },
+  { key: 'aanbiedingen', label: 'Aanbiedingen', span: 1 },
   { key: 'boodschappen', label: 'Boodschappenlijst', span: 2 },
 ]
 const DEFAULT_WIDGETS = ['recept', 'voorraad', 'weer', 'agenda', 'budget', 'ai', 'boodschappen']
@@ -216,6 +218,8 @@ export default function Vandaag() {
             </Link>
           </DashboardCard>
         )
+      case 'aanbiedingen':
+        return <SponsoredAds key={key} />
       case 'boodschappen':
         return <ShoppingList key={key} className="lg:col-span-2" />
       default:
