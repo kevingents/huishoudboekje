@@ -18,7 +18,13 @@ export async function POST(req: Request) {
     return Response.json({ error: 'name en amount zijn verplicht' }, { status: 400 })
   }
   const cost = await prisma.fixedCost.create({
-    data: { householdId: hid, name: String(body.name), amount: Number(body.amount), dueDay: body.dueDay ? Number(body.dueDay) : null },
+    data: {
+      householdId: hid,
+      name: String(body.name),
+      amount: Number(body.amount),
+      category: body.category ? String(body.category) : 'Overig',
+      dueDay: body.dueDay ? Number(body.dueDay) : null,
+    },
   })
   return Response.json(cost, { status: 201 })
 }

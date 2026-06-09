@@ -125,5 +125,6 @@ export interface FixedCost {
   id: number
   name: string
   amount: number
+  category?: string
   dueDay?: number | null
 }

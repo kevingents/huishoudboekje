@@ -9,6 +9,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   const data: Record<string, unknown> = {}
   if (body.name !== undefined) data.name = String(body.name)
   if (body.amount !== undefined) data.amount = Number(body.amount)
+  if (body.category !== undefined) data.category = body.category ? String(body.category) : 'Overig'
   if (body.dueDay !== undefined) data.dueDay = body.dueDay ? Number(body.dueDay) : null
   const result = await prisma.fixedCost.updateMany({ where: { id, householdId: hid }, data })
   if (result.count === 0) return notFound()

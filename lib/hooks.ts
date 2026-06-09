@@ -260,8 +260,15 @@ export function useFixedCosts() {
   return {
     costs: c.items,
     isLoading: c.isLoading,
-    addCost: (name: string, amount: number, dueDay?: number) =>
-      c.create({ name, amount, dueDay }, { name, amount, dueDay: dueDay ?? null }),
+    addCost: (name: string, amount: number, dueDay?: number, category?: string) =>
+      c.create(
+        { name, amount, dueDay, category },
+        { name, amount, dueDay: dueDay ?? null, category: category ?? 'Overig' },
+      ),
+    updateCost: (
+      id: number,
+      payload: { name?: string; amount?: number; dueDay?: number | null; category?: string },
+    ) => c.update(id, payload),
     removeCost: (id: number) => c.remove(id),
   }
 }

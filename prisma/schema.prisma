@@ -212,6 +212,7 @@ model FixedCost {
   householdId Int
   name        String
   amount      Float
+  category    String   @default("Overig") // Wonen | Energie | Verzekering | Telecom ...
   // dag van de maand waarop het wordt afgeschreven (optioneel)
   dueDay      Int?
   createdAt   DateTime @default(now())
