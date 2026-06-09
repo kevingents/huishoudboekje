@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Calendar, Plus, Clock, Trash2, Link2 } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
 import DashboardCard from '@/components/DashboardCard'
@@ -55,6 +55,11 @@ export default function AgendaPage() {
   const days = useMemo(() => groupByDate(events), [events])
   const todayKey = localKey(new Date())
   const tomorrowKey = localKey(new Date(Date.now() + 86_400_000))
+
+  // Vanuit het "+"-snelmenu geopend met ?nieuw=1 → meteen de modal tonen.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('nieuw')) setOpen(true)
+  }, [])
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()

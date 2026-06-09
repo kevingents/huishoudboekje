@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { ShoppingCart, Plus, Check, Trash2 } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
 import DashboardCard from '@/components/DashboardCard'
@@ -10,6 +10,15 @@ import type { ShoppingItem } from '@/lib/types'
 export default function BoodschappenPage() {
   const { items, isLoading, addItem, toggleItem, removeItem, clearChecked } = useShopping()
   const [draft, setDraft] = useState('')
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  // Vanuit het "+"-snelmenu geopend met ?nieuw=1 → focus het invoerveld.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('nieuw')) {
+      inputRef.current?.focus()
+      inputRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    }
+  }, [])
 
   const checkedCount = items.filter((item) => item.checked).length
   const progress = items.length ? Math.round((checkedCount / items.length) * 100) : 0
@@ -72,6 +81,7 @@ export default function BoodschappenPage() {
           className="mt-5 flex gap-2"
         >
           <input
+            ref={inputRef}
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
             placeholder="Voeg een product toe…"

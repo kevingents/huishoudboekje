@@ -6,11 +6,13 @@ import { usePathname } from 'next/navigation'
 import { Plus, Menu, type LucideIcon } from 'lucide-react'
 import { mobileNav, type NavItem } from '@/lib/mockData'
 import MobileMenu from './MobileMenu'
+import QuickAddMenu from './QuickAddMenu'
 
 export default function MobileNav() {
   const pathname = usePathname()
   const [overzicht, agenda, , budget] = mobileNav
   const [menuOpen, setMenuOpen] = useState(false)
+  const [quickOpen, setQuickOpen] = useState(false)
 
   return (
     <>
@@ -19,15 +21,18 @@ export default function MobileNav() {
           <MobileNavButton item={overzicht} active={isActive(pathname, overzicht.href)} />
           <MobileNavButton item={agenda} active={isActive(pathname, agenda.href)} />
 
-          {/* Central action button — snel een boodschap toevoegen */}
+          {/* Central action button — snelmenu: taak/afspraak/boodschap */}
           <div className="flex flex-1 justify-center">
-            <Link
-              href="/boodschappen"
-              aria-label="Nieuw item toevoegen"
-              className="pill -mt-7 h-14 w-14 bg-brand text-white shadow-lg shadow-brand/30 transition-transform hover:scale-105"
+            <button
+              type="button"
+              onClick={() => setQuickOpen(true)}
+              aria-label="Toevoegen"
+              className={`pill -mt-7 h-14 w-14 bg-brand text-white shadow-lg shadow-brand/30 transition-transform hover:scale-105 ${
+                quickOpen ? 'rotate-45' : ''
+              }`}
             >
               <Plus className="h-7 w-7" strokeWidth={2.5} />
-            </Link>
+            </button>
           </div>
 
           <MobileNavButton item={budget} active={isActive(pathname, budget.href)} />
@@ -36,6 +41,7 @@ export default function MobileNav() {
       </nav>
 
       <MobileMenu open={menuOpen} onClose={() => setMenuOpen(false)} />
+      <QuickAddMenu open={quickOpen} onClose={() => setQuickOpen(false)} />
     </>
   )
 }
