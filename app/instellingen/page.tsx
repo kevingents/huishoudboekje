@@ -1,13 +1,15 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Settings, Bell, BellRing, Wallet, Users, LogOut, UserCircle, Sparkles, Smartphone, Download, Share, Check } from 'lucide-react'
+import { Settings, Bell, BellRing, Wallet, Users, LogOut, UserCircle, Sparkles, Smartphone, Download, Share, Check, Accessibility, Trash2, ShieldCheck } from 'lucide-react'
 import Link from 'next/link'
 import PageHeader from '@/components/PageHeader'
 import DashboardCard from '@/components/DashboardCard'
 import IntegrationsSection from '@/components/IntegrationsSection'
 import CoParentCard from '@/components/CoParentCard'
+import { useA11y, type FontScale } from '@/components/A11yProvider'
 import { useSettings, useFamily, useAuth } from '@/lib/hooks'
+import { apiDelete } from '@/lib/api'
 import { usePwaInstall } from '@/lib/usePwaInstall'
 import { usePush } from '@/lib/usePush'
 import { mergePrefs } from '@/lib/notifications'
@@ -26,6 +28,13 @@ export default function InstellingenPage() {
   const { user, logout } = useAuth()
   const pwa = usePwaInstall()
   const push = usePush()
+  const a11y = useA11y()
+
+  const FONT_OPTIONS: [FontScale, string][] = [
+    ['normaal', 'Normaal'],
+    ['groot', 'Groot'],
+    ['extra', 'Extra groot'],
+  ]
 
   const prefs = mergePrefs(settings.notifications)
   const savedTarget = typeof settings.budgetTarget === 'number' ? settings.budgetTarget : 500
@@ -42,6 +51,18 @@ export default function InstellingenPage() {
 
   const [target, setTarget] = useState(savedTarget)
   useEffect(() => setTarget(savedTarget), [savedTarget])
+
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleteBusy, setDeleteBusy] = useState(false)
+  const deleteAccount = async () => {
+    setDeleteBusy(true)
+    try {
+      await apiDelete('/api/household')
+      window.location.href = '/inloggen'
+    } catch {
+      setDeleteBusy(false)
+    }
+  }
 
   const setChannel = (key: string, channel: 'inApp' | 'email', value: boolean) => {
     const next = prefs.map((p) => (p.key === key ? { ...p, [channel]: value } : p))
@@ -131,6 +152,63 @@ export default function InstellingenPage() {
               </button>
             </div>
           )}
+        </DashboardCard>
+
+        {/* Toegankelijkheid */}
+        <DashboardCard title="Toegankelijkheid" icon={Accessibility} iconClassName="text-sky-500">
+          <div className="flex flex-col gap-4">
+            <div>
+              <p className="text-sm font-semibold text-slate-800">Lettergrootte</p>
+              <p className="mb-2 text-xs text-slate-500">Maakt alle tekst en knoppen in de app groter.</p>
+              <div className="inline-flex flex-wrap gap-1 rounded-full bg-slate-100 p-1">
+                {FONT_OPTIONS.map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => a11y.setFontScale(value)}
+                    aria-pressed={a11y.fontScale === value}
+                    className={`rounded-full px-3 py-1.5 text-sm font-semibold transition-colors ${
+                      a11y.fontScale === value
+                        ? 'bg-white text-brand shadow-sm'
+                        : 'text-slate-500 hover:text-slate-700'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <hr className="border-cardborder" />
+
+            <div className="flex items-center gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-slate-800">Hoog contrast</p>
+                <p className="text-xs text-slate-500">Donkerdere tekst en sterkere randen voor betere leesbaarheid.</p>
+              </div>
+              <Toggle
+                enabled={a11y.highContrast}
+                onClick={() => a11y.setHighContrast(!a11y.highContrast)}
+                label="Hoog contrast aan of uit"
+              />
+            </div>
+
+            <hr className="border-cardborder" />
+
+            <div className="flex items-center gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-slate-800">Minder beweging</p>
+                <p className="text-xs text-slate-500">Zet animaties en overgangen uit.</p>
+              </div>
+              <Toggle
+                enabled={a11y.reduceMotion}
+                onClick={() => a11y.setReduceMotion(!a11y.reduceMotion)}
+                label="Minder beweging aan of uit"
+              />
+            </div>
+
+            <p className="text-[11px] text-slate-400">Deze instellingen gelden alleen op dit apparaat.</p>
+          </div>
         </DashboardCard>
 
         {/* AI-assistent: aan/uit + welke gegevens */}
@@ -285,14 +363,73 @@ export default function InstellingenPage() {
               <p className="truncate text-xs text-slate-500">{user?.email ?? ''}</p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={logout}
-            className="pill mt-4 w-full border border-cardborder bg-white px-4 py-2.5 text-slate-700 hover:bg-rose-50 hover:text-rose-600 sm:w-auto"
-          >
-            <LogOut className="h-4 w-4" />
-            Uitloggen
-          </button>
+          <div className="mt-4 flex flex-col gap-2">
+            <a
+              href="/api/account/export"
+              className="pill w-full justify-center border border-cardborder bg-white px-4 py-2.5 text-slate-700 hover:bg-slate-50 sm:w-auto sm:justify-start"
+            >
+              <Download className="h-4 w-4" />
+              Mijn gegevens downloaden
+            </a>
+            <button
+              type="button"
+              onClick={logout}
+              className="pill w-full justify-center border border-cardborder bg-white px-4 py-2.5 text-slate-700 hover:bg-rose-50 hover:text-rose-600 sm:w-auto sm:justify-start"
+            >
+              <LogOut className="h-4 w-4" />
+              Uitloggen
+            </button>
+          </div>
+
+          {user?.role === 'owner' &&
+            (confirmDelete ? (
+              <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 p-3">
+                <p className="text-sm font-semibold text-rose-700">
+                  Account én alle gezinsgegevens verwijderen?
+                </p>
+                <p className="mt-1 text-xs text-rose-600">
+                  Dit kan niet ongedaan worden gemaakt. Agenda, budget, documenten, gezinsmail — alles
+                  van het hele gezin wordt definitief gewist.
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={deleteAccount}
+                    disabled={deleteBusy}
+                    className="pill bg-rose-600 px-3 py-2 text-xs font-semibold text-white hover:bg-rose-700 disabled:opacity-50"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    {deleteBusy ? 'Bezig…' : 'Ja, definitief verwijderen'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmDelete(false)}
+                    className="pill border border-cardborder bg-white px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                  >
+                    Annuleren
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setConfirmDelete(true)}
+                className="pill mt-2 w-full justify-center border border-rose-200 bg-white px-4 py-2.5 text-rose-600 hover:bg-rose-50 sm:w-auto sm:justify-start"
+              >
+                <Trash2 className="h-4 w-4" />
+                Account verwijderen
+              </button>
+            ))}
+
+          <div className="mt-4 flex items-center gap-4 border-t border-cardborder pt-3 text-xs">
+            <Link href="/privacy" className="inline-flex items-center gap-1 text-slate-500 hover:text-brand">
+              <ShieldCheck className="h-3.5 w-3.5" />
+              Privacybeleid
+            </Link>
+            <Link href="/voorwaarden" className="text-slate-500 hover:text-brand">
+              Voorwaarden
+            </Link>
+          </div>
         </DashboardCard>
 
         <p className="px-1 text-center text-xs text-slate-400">Fam · versie 0.1.0</p>

@@ -23,6 +23,11 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next()
   }
 
+  // Juridische pagina's zijn voor iedereen bereikbaar (ook ingelogd, geen redirect).
+  if (pathname === '/privacy' || pathname === '/voorwaarden') {
+    return NextResponse.next()
+  }
+
   const userId = await verifySession(req.cookies.get(SESSION_COOKIE)?.value)
   const isApi = pathname.startsWith('/api')
   const isPublicPage = PUBLIC_PAGES.includes(pathname)

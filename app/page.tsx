@@ -264,7 +264,9 @@ export default function Landing() {
             <span className="font-extrabold">Fam</span>
           </Link>
           <p className="text-xs text-slate-400">Jullie gezinsdashboard voor agenda, boodschappen, budget en meer.</p>
-          <div className="flex items-center gap-4 text-sm font-semibold text-slate-600">
+          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm font-semibold text-slate-600">
+            <Link href="/privacy" className="hover:text-brand">Privacy</Link>
+            <Link href="/voorwaarden" className="hover:text-brand">Voorwaarden</Link>
             <Link href="/inloggen" className="hover:text-brand">Inloggen</Link>
             <Link href="/registreren" className="hover:text-brand">Account aanmaken</Link>
           </div>

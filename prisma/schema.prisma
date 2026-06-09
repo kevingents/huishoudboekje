@@ -30,6 +30,7 @@ model User {
   householdId  Int
   role         String   @default("member") // owner | member | child
   memberId     Int? // gekoppeld FamilyMember (welk gezinslid is deze login)
+  termsAcceptedAt DateTime? // moment van akkoord met voorwaarden + privacybeleid
   createdAt    DateTime @default(now())
 
   @@index([householdId])

@@ -20,6 +20,7 @@ export default function RegistrerenPage() {
   const [memberDraft, setMemberDraft] = useState<DraftMember>({ name: '', role: '', birthday: '' })
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [accepted, setAccepted] = useState(false)
 
   const addMember = () => {
     if (!memberDraft.name.trim()) return
@@ -32,7 +33,7 @@ export default function RegistrerenPage() {
     setError(null)
     setBusy(true)
     try {
-      await apiPost('/api/auth/register', { ...form, members })
+      await apiPost('/api/auth/register', { ...form, members, acceptedTerms: accepted })
       window.location.href = '/vandaag'
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registratie mislukt.')
@@ -142,11 +143,32 @@ export default function RegistrerenPage() {
           </div>
         </div>
 
+        <label className="mt-5 flex items-start gap-2.5 text-xs text-slate-600">
+          <input
+            type="checkbox"
+            checked={accepted}
+            onChange={(e) => setAccepted(e.target.checked)}
+            className="mt-0.5 h-4 w-4 shrink-0 accent-brand"
+          />
+          <span>
+            Ik ga akkoord met de{' '}
+            <Link href="/voorwaarden" className="font-semibold text-brand hover:underline">
+              voorwaarden
+            </Link>{' '}
+            en het{' '}
+            <Link href="/privacy" className="font-semibold text-brand hover:underline">
+              privacybeleid
+            </Link>
+            . Ik voer alleen gegevens van mijn eigen gezin in en ben verantwoordelijk voor de gegevens
+            van gezinsleden, inclusief kinderen.
+          </span>
+        </label>
+
         {error && <p className="mt-4 text-sm font-medium text-rose-600">{error}</p>}
 
         <button
           type="submit"
-          disabled={busy}
+          disabled={busy || !accepted}
           className="pill mt-5 w-full bg-brand px-4 py-3 text-white shadow-sm shadow-brand/20 hover:bg-brand-dark disabled:opacity-50"
         >
           <UserPlus className="h-4 w-4" />

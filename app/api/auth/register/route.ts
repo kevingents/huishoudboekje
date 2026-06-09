@@ -54,6 +54,12 @@ export async function POST(req: Request) {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return NextResponse.json({ error: 'Vul een geldig e-mailadres in.' }, { status: 400 })
   }
+  if (!body?.acceptedTerms) {
+    return NextResponse.json(
+      { error: 'Je moet akkoord gaan met de voorwaarden en het privacybeleid.' },
+      { status: 400 },
+    )
+  }
 
   const existing = await prisma.user.findUnique({ where: { email } })
   if (existing) {
@@ -66,7 +72,14 @@ export async function POST(req: Request) {
   const householdId = household.id
 
   const user = await prisma.user.create({
-    data: { name, email, passwordHash: await hashPassword(password), householdId, role: 'owner' },
+    data: {
+      name,
+      email,
+      passwordHash: await hashPassword(password),
+      householdId,
+      role: 'owner',
+      termsAcceptedAt: new Date(),
+    },
   })
 
   // Standaard budgetcategorieën, instellingen en integraties voor dit huishouden.
