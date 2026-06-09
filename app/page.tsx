@@ -9,7 +9,6 @@ import {
   Users,
   Milk,
   ChevronRight,
-  CloudRain,
   Baby,
   Plus,
   Sparkles,
@@ -19,21 +18,16 @@ import DashboardCard from '@/components/DashboardCard'
 import BudgetCard from '@/components/BudgetCard'
 import AgendaCard from '@/components/AgendaCard'
 import ShoppingList from '@/components/ShoppingList'
-import { useFamily, useRecipes } from '@/lib/hooks'
+import { useFamily, useRecipes, useWeather } from '@/lib/hooks'
+import { resolveWeatherIcon } from '@/lib/icons'
 
-import {
-  family,
-  today,
-  notificationCount,
-  stockAlert,
-  weather,
-  diaperStock,
-  aiSuggestion,
-} from '@/lib/mockData'
+import { family, today, notificationCount, stockAlert, diaperStock, aiSuggestion } from '@/lib/mockData'
 
 export default function Home() {
   const { members } = useFamily()
   const { recipes } = useRecipes()
+  const { weather } = useWeather()
+  const WeatherIcon = resolveWeatherIcon(weather?.icon ?? 'Cloud')
   const recipe = recipes[0]
 
   return (
@@ -138,35 +132,43 @@ export default function Home() {
           <BudgetCard />
         </div>
 
-        {/* Weather */}
+        {/* Weather (live via Open-Meteo) */}
         <DashboardCard bg="bg-weather" bordered={false}>
           <div className="flex items-start gap-4">
             <span className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-white/70 text-sky-500">
-              <CloudRain className="h-9 w-9" strokeWidth={2} />
+              <WeatherIcon className="h-9 w-9" strokeWidth={2} />
             </span>
             <div>
-              <p className="text-sm font-medium text-slate-500">{weather.day}</p>
-              <p className="text-2xl font-extrabold text-slate-800">{weather.condition}</p>
+              <p className="text-sm font-medium text-slate-500">
+                {weather ? `${weather.day} · ${weather.location}` : 'Weer laden…'}
+              </p>
+              <p className="text-2xl font-extrabold text-slate-800">
+                {weather ? `${weather.condition}, ${weather.temp}°` : '—'}
+              </p>
               <p className="text-sm text-slate-500">
-                {weather.low}° / {weather.high}°
+                {weather ? `${weather.low}° / ${weather.high}°` : ''}
               </p>
             </div>
           </div>
-          <p className="mt-4 font-semibold text-slate-700">{weather.question}</p>
-          <div className="mt-3 flex flex-wrap gap-3">
-            <button
-              type="button"
-              className="pill border border-sky-200 bg-white px-5 py-2.5 text-slate-700 hover:bg-sky-50"
-            >
-              Afgelasten
-            </button>
-            <button
-              type="button"
-              className="pill bg-sky-500 px-5 py-2.5 text-white shadow-sm shadow-sky-500/30 hover:bg-sky-600"
-            >
-              Training gaat door
-            </button>
-          </div>
+          {weather?.wet && (
+            <>
+              <p className="mt-4 font-semibold text-slate-700">Voetbaltraining afgelast?</p>
+              <div className="mt-3 flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  className="pill border border-sky-200 bg-white px-5 py-2.5 text-slate-700 hover:bg-sky-50"
+                >
+                  Afgelasten
+                </button>
+                <button
+                  type="button"
+                  className="pill bg-sky-500 px-5 py-2.5 text-white shadow-sm shadow-sky-500/30 hover:bg-sky-600"
+                >
+                  Training gaat door
+                </button>
+              </div>
+            </>
+          )}
         </DashboardCard>
 
         {/* Upcoming appointments */}

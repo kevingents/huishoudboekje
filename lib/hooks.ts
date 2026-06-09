@@ -227,6 +227,29 @@ export function useSettings() {
 }
 
 /* -------------------------------------------------------------------------- */
+/*  Weer (Open-Meteo)                                                         */
+/* -------------------------------------------------------------------------- */
+
+export interface WeatherData {
+  location: string
+  day: string
+  temp: number
+  high: number
+  low: number
+  code: number
+  condition: string
+  icon: string
+  wet: boolean
+}
+
+export function useWeather() {
+  const { data, isLoading, error } = useSWR<WeatherData>('/api/weather', fetcher, {
+    refreshInterval: 30 * 60 * 1000, // elk half uur verversen
+  })
+  return { weather: data, isLoading, error }
+}
+
+/* -------------------------------------------------------------------------- */
 /*  Integraties                                                               */
 /* -------------------------------------------------------------------------- */
 

@@ -9,6 +9,15 @@ import {
   Gift,
   HeartPulse,
   GraduationCap,
+  Sun,
+  CloudSun,
+  Cloud,
+  Cloudy,
+  CloudFog,
+  CloudDrizzle,
+  CloudRain,
+  CloudSnow,
+  CloudLightning,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -36,3 +45,20 @@ export function resolveIcon(name: string): LucideIcon {
 
 /** Iconen die als keuze worden aangeboden bij het maken van een categorie. */
 export const categoryIconNames = Object.keys(iconByName)
+
+/** Weericonen (los gehouden zodat de fallback een wolk is i.p.v. een kar). */
+export const weatherIconByName: Record<string, LucideIcon> = {
+  Sun,
+  CloudSun,
+  Cloud,
+  Cloudy,
+  CloudFog,
+  CloudDrizzle,
+  CloudRain,
+  CloudSnow,
+  CloudLightning,
+}
+
+export function resolveWeatherIcon(name: string): LucideIcon {
+  return weatherIconByName[name] ?? Cloud
+}
