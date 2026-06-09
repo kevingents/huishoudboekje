@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { CalendarDays, ChevronRight } from 'lucide-react'
 import DashboardCard from './DashboardCard'
 import { appointments } from '@/lib/mockData'
@@ -32,10 +33,10 @@ export default function AgendaCard() {
         ))}
       </ul>
 
-      <button className="pill mt-3 text-violet-600 hover:text-violet-700">
+      <Link href="/agenda" className="pill mt-3 text-violet-600 hover:text-violet-700">
         Bekijk volledige agenda
         <ChevronRight className="h-4 w-4" />
-      </button>
+      </Link>
     </DashboardCard>
   )
 }

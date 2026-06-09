@@ -27,20 +27,32 @@ Open vervolgens [http://localhost:3000](http://localhost:3000).
 
 ## Structuur
 
+De app is een multi-page Next.js-app. De sidebar (desktop) en bottom-nav
+(mobiel) zitten in de gedeelde root-layout en blijven over alle routes staan;
+de actieve route licht automatisch op via `usePathname`.
+
 ```
 app/
-  layout.tsx        # Root layout + Inter font
-  page.tsx          # Het dashboard (compositie van alle cards)
-  globals.css       # Tailwind + basis-styling
+  layout.tsx            # Root layout: Inter font + gedeelde app-frame (Sidebar + MobileNav)
+  page.tsx              # /            — Vandaag (dashboard met alle cards)
+  agenda/page.tsx       # /agenda      — Afspraken gegroepeerd per dag
+  boodschappen/page.tsx # /boodschappen — Interactieve lijst per categorie + toevoegen
+  recepten/page.tsx     # /recepten    — Receptengrid met tag-filter en favorieten
+  budget/page.tsx       # /budget      — Maandoverzicht, categorieën en transacties
+  gezin/page.tsx        # /gezin       — Gezinsleden en verjaardagen
+  ai-assistent/page.tsx # /ai-assistent — Chatinterface met snelle prompts
+  instellingen/page.tsx # /instellingen — Notificatie-toggles en budget-target
+  globals.css           # Tailwind + basis-styling
 components/
-  Sidebar.tsx       # Linker navigatie (desktop)
-  DashboardCard.tsx # Herbruikbare kaart-wrapper
-  BudgetCard.tsx    # Budget met circulaire voortgang
-  AgendaCard.tsx    # Komende afspraken
-  ShoppingList.tsx  # Interactief boodschappenlijstje
-  MobileNav.tsx     # Bottom navigation (mobiel)
+  Sidebar.tsx           # Linker navigatie (desktop), Next Link + actieve staat
+  MobileNav.tsx         # Bottom navigation (mobiel), Next Link + actieve staat
+  PageHeader.tsx        # Gedeelde paginakop (icoon-badge, titel, acties)
+  DashboardCard.tsx     # Herbruikbare kaart-wrapper
+  BudgetCard.tsx        # Budget met circulaire voortgang
+  AgendaCard.tsx        # Komende afspraken (dashboard)
+  ShoppingList.tsx      # Interactief boodschappenlijstje (dashboard)
 lib/
-  mockData.ts       # Alle mock-data en types
+  mockData.ts           # Alle mock-data en types
 ```
 
 ## Designsysteem
