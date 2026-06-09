@@ -14,10 +14,11 @@ datasource db {
 }
 
 model Household {
-  id        Int      @id @default(autoincrement())
-  name      String
-  tier      String   @default("basis") // basis | plus | compleet
-  createdAt DateTime @default(now())
+  id                  Int      @id @default(autoincrement())
+  name                String
+  tier                String   @default("basis") // basis | plus | compleet
+  coParentHouseholdId Int? // gekoppeld co-ouder-huishouden (gescheiden ouders)
+  createdAt           DateTime @default(now())
 }
 
 model User {
@@ -61,6 +62,7 @@ model AgendaEvent {
   // "manual" (in de app gemaakt) of "ical" (gesynct uit een agenda/Parro-feed)
   source      String   @default("manual")
   externalId  String?
+  coShared    Boolean  @default(false) // gedeeld met het co-ouder-huishouden
   createdAt   DateTime @default(now())
 
   @@unique([householdId, externalId])

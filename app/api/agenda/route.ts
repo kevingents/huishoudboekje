@@ -8,11 +8,26 @@ export const dynamic = 'force-dynamic'
 export async function GET() {
   const hid = await requireHousehold()
   if (hid instanceof Response) return hid
-  const events = await prisma.agendaEvent.findMany({
+  const own = await prisma.agendaEvent.findMany({
     where: { householdId: hid },
     orderBy: [{ dateKey: 'asc' }, { id: 'asc' }],
   })
-  return Response.json(events)
+  // Gedeelde afspraken van het gekoppelde co-ouder-huishouden meenemen (read-only).
+  const hh = await prisma.household.findUnique({
+    where: { id: hid },
+    select: { coParentHouseholdId: true },
+  })
+  let shared: typeof own = []
+  if (hh?.coParentHouseholdId) {
+    const ext = await prisma.agendaEvent.findMany({
+      where: { householdId: hh.coParentHouseholdId, coShared: true },
+    })
+    shared = ext.map((e) => ({ ...e, source: 'coparent' }))
+  }
+  const all = [...own, ...shared].sort((a, b) =>
+    a.dateKey < b.dateKey ? -1 : a.dateKey > b.dateKey ? 1 : a.id - b.id,
+  )
+  return Response.json(all)
 }
 
 export async function POST(req: Request) {
@@ -32,6 +47,7 @@ export async function POST(req: Request) {
       who: String(body.who ?? 'Gezin'),
       accent: String(body.accent ?? 'sky'),
       source: 'manual',
+      coShared: Boolean(body.coShared),
     },
   })
 

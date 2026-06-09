@@ -107,6 +107,7 @@ interface NewEvent {
   time: string
   who: string
   accent: string
+  coShared?: boolean
 }
 
 export function useAgenda() {
@@ -276,6 +277,28 @@ export function useSettings() {
         },
         { optimisticData: { ...settings, [key]: value }, rollbackOnError: true, revalidate: false },
       )
+    },
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Co-ouderschap (twee huishoudens gekoppeld)                                */
+/* -------------------------------------------------------------------------- */
+
+export function useCoParent() {
+  const { data, isLoading, mutate } = useSWR<{ linked: boolean; linkedName: string | null; link: string }>(
+    '/api/coparent',
+    fetcher,
+  )
+  return {
+    linked: data?.linked ?? false,
+    linkedName: data?.linkedName ?? null,
+    link: data?.link ?? '',
+    isLoading,
+    refresh: mutate,
+    unlink: async () => {
+      await apiDelete('/api/coparent')
+      await mutate()
     },
   }
 }

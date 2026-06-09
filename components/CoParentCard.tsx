@@ -1,9 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { Users2, CalendarRange } from 'lucide-react'
+import { Users2, CalendarRange, Link2, Copy, Check, Unlink } from 'lucide-react'
 import DashboardCard from './DashboardCard'
-import { useSettings } from '@/lib/hooks'
+import { useSettings, useCoParent } from '@/lib/hooks'
 import { readCoParenting, coParentNow, type CoParenting } from '@/lib/coparent'
 
 const inputClass =
@@ -13,6 +13,16 @@ export default function CoParentCard() {
   const { settings, setSetting } = useSettings()
   const cp = readCoParenting(settings.coParenting)
   const [names, setNames] = useState({ parentA: cp.parentA ?? '', parentB: cp.parentB ?? '' })
+  const co = useCoParent()
+  const [copied, setCopied] = useState(false)
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(co.link)
+      setCopied(true)
+    } catch {
+      /* clipboard niet beschikbaar */
+    }
+  }
 
   const save = (next: CoParenting) => setSetting('coParenting', next)
   const base: CoParenting = {
@@ -85,6 +95,46 @@ export default function CoParentCard() {
             </p>
           )}
         </>
+      )}
+
+      <hr className="my-4 border-cardborder" />
+      {co.linked ? (
+        <div className="flex items-center gap-3">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-emerald-100 text-emerald-600">
+            <Link2 className="h-5 w-5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-slate-800">Gekoppeld met {co.linkedName}</p>
+            <p className="text-xs text-slate-500">Gedeelde afspraken zie je in beide agenda&apos;s.</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => co.unlink()}
+            className="pill shrink-0 border border-cardborder bg-white px-3 py-2 text-xs font-semibold text-rose-500 hover:bg-rose-50"
+          >
+            <Unlink className="h-4 w-4" />
+            Ontkoppelen
+          </button>
+        </div>
+      ) : (
+        <div>
+          <p className="text-sm font-semibold text-slate-800">Koppel de andere ouder</p>
+          <p className="mb-2 text-xs text-slate-500">
+            Deel deze link met de andere ouder. Als die ingelogd is en de link opent, worden jullie
+            agenda&apos;s gekoppeld.
+          </p>
+          <div className="flex items-center gap-2 rounded-xl bg-slate-50 p-2">
+            <span className="min-w-0 flex-1 truncate text-xs text-slate-600">{co.link || '…'}</span>
+            <button
+              type="button"
+              onClick={copy}
+              className="pill shrink-0 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 ring-1 ring-cardborder hover:bg-slate-100"
+            >
+              {copied ? <Check className="h-3.5 w-3.5 text-brand" /> : <Copy className="h-3.5 w-3.5" />}
+              {copied ? 'Gekopieerd' : 'Kopieer'}
+            </button>
+          </div>
+        </div>
       )}
     </DashboardCard>
   )

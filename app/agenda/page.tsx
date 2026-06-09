@@ -5,7 +5,7 @@ import { Calendar, Plus, Clock, Trash2, Link2 } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
 import DashboardCard from '@/components/DashboardCard'
 import Modal from '@/components/Modal'
-import { useAgenda, useFamily } from '@/lib/hooks'
+import { useAgenda, useFamily, useCoParent } from '@/lib/hooks'
 import type { AgendaEvent } from '@/lib/types'
 
 const accentClasses: Record<string, { badge: string; dot: string; bar: string }> = {
@@ -50,8 +50,9 @@ function groupByDate(events: AgendaEvent[]) {
 export default function AgendaPage() {
   const { events, isLoading, addEvent, removeEvent } = useAgenda()
   const { members } = useFamily()
+  const { linked: coLinked } = useCoParent()
   const [open, setOpen] = useState(false)
-  const [form, setForm] = useState({ date: '', title: '', time: '', who: 'Gezin', accent: 'sky' })
+  const [form, setForm] = useState({ date: '', title: '', time: '', who: 'Gezin', accent: 'sky', coShared: false })
   const [customWho, setCustomWho] = useState('')
 
   const days = useMemo(() => groupByDate(events), [events])
@@ -68,7 +69,7 @@ export default function AgendaPage() {
     if (!form.title.trim() || !form.date) return
     const who = form.who === '__anders' ? customWho.trim() || 'Gezin' : form.who
     await addEvent({ ...form, who })
-    setForm({ date: '', title: '', time: '', who: 'Gezin', accent: 'sky' })
+    setForm({ date: '', title: '', time: '', who: 'Gezin', accent: 'sky', coShared: false })
     setCustomWho('')
     setOpen(false)
   }
@@ -127,7 +128,8 @@ export default function AgendaPage() {
                 <ul className="flex flex-col gap-1">
                   {dayEvents.map((event) => {
                     const accent = accentClasses[event.accent] ?? accentClasses.sky
-                    const fromIcal = event.source === 'ical'
+                    const external = event.source !== 'manual'
+                    const extLabel = event.source === 'coparent' ? 'Andere ouder' : 'Gekoppeld'
                     return (
                       <li
                         key={event.id}
@@ -139,10 +141,10 @@ export default function AgendaPage() {
                           <p className="mt-0.5 flex items-center gap-1.5 text-xs text-slate-500">
                             <Clock className="h-3.5 w-3.5 shrink-0" />
                             {event.time || 'Hele dag'}
-                            {fromIcal && (
+                            {external && (
                               <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500">
                                 <Link2 className="h-2.5 w-2.5" />
-                                Gekoppeld
+                                {extLabel}
                               </span>
                             )}
                           </p>
@@ -150,7 +152,7 @@ export default function AgendaPage() {
                         <span className={`pill shrink-0 px-2.5 py-1 text-xs font-semibold ${accent.badge}`}>
                           {event.who}
                         </span>
-                        {!fromIcal && (
+                        {!external && (
                           <button
                             type="button"
                             onClick={() => removeEvent(event.id)}
@@ -244,6 +246,17 @@ export default function AgendaPage() {
               ))}
             </div>
           </div>
+          {coLinked && (
+            <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+              <input
+                type="checkbox"
+                checked={form.coShared}
+                onChange={(e) => setForm({ ...form, coShared: e.target.checked })}
+                className="h-4 w-4 accent-brand"
+              />
+              Delen met de andere ouder
+            </label>
+          )}
           <button
             type="submit"
             className="pill mt-2 bg-brand px-4 py-2.5 text-white shadow-sm shadow-brand/20 hover:bg-brand-dark"
