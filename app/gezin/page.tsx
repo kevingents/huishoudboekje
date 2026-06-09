@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { Users, Cake, UserPlus, Pencil, Trash2, Mail, Copy, Check, Shield, Sparkles, Camera } from 'lucide-react'
+import { Users, Cake, UserPlus, Pencil, Trash2, Mail, Copy, Check, Shield, Sparkles, Camera, HeartPulse } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
 import DashboardCard from '@/components/DashboardCard'
 import Modal from '@/components/Modal'
@@ -13,7 +13,19 @@ import type { FamilyMember } from '@/lib/types'
 const inputClass =
   'w-full rounded-xl border border-cardborder bg-white px-3.5 py-2.5 text-sm text-slate-700 outline-none transition-colors placeholder:text-slate-400 focus:border-brand/40 focus:ring-2 focus:ring-brand/20'
 
-const empty = { name: '', role: '', birthday: '', email: '', isChild: false }
+const empty = {
+  name: '',
+  role: '',
+  birthday: '',
+  email: '',
+  isChild: false,
+  bloodType: '',
+  allergies: '',
+  medication: '',
+  medicalNotes: '',
+}
+
+const BLOOD_TYPES = ['O−', 'O+', 'A−', 'A+', 'B−', 'B+', 'AB−', 'AB+']
 
 /** Nette uitleg waarom de e-mail niet verstuurd kon worden. */
 function emailFailNote(reason?: string): string {
@@ -122,6 +134,10 @@ export default function GezinPage() {
       birthday: member.birthday ?? '',
       email: '',
       isChild: !!member.isChild,
+      bloodType: member.bloodType ?? '',
+      allergies: member.allergies ?? '',
+      medication: member.medication ?? '',
+      medicalNotes: member.medicalNotes ?? '',
     })
     setOpen(true)
   }
@@ -129,7 +145,16 @@ export default function GezinPage() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.name.trim()) return
-    const member = { name: form.name, role: form.role, birthday: form.birthday, isChild: form.isChild }
+    const member = {
+      name: form.name,
+      role: form.role,
+      birthday: form.birthday,
+      isChild: form.isChild,
+      bloodType: form.bloodType,
+      allergies: form.allergies,
+      medication: form.medication,
+      medicalNotes: form.medicalNotes,
+    }
     if (editing) {
       await updateMember(editing.id, member)
       setOpen(false)
@@ -355,6 +380,32 @@ export default function GezinPage() {
                   </button>
                 </div>
               </div>
+
+              {(member.bloodType || member.allergies || member.medication || member.medicalNotes) && (
+                <div className="mt-3 border-t border-cardborder pt-3">
+                  <p className="mb-1.5 inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                    <HeartPulse className="h-3.5 w-3.5 text-rose-400" /> Medisch
+                  </p>
+                  <div className="flex flex-wrap gap-1.5 text-[11px]">
+                    {member.bloodType && (
+                      <span className="rounded-full bg-rose-50 px-2 py-0.5 font-semibold text-rose-600">
+                        Bloedgroep {member.bloodType}
+                      </span>
+                    )}
+                    {member.allergies && (
+                      <span className="rounded-full bg-amber-50 px-2 py-0.5 font-semibold text-amber-700">
+                        Allergie: {member.allergies}
+                      </span>
+                    )}
+                    {member.medication && (
+                      <span className="rounded-full bg-sky-50 px-2 py-0.5 font-semibold text-sky-700">
+                        Medicijn: {member.medication}
+                      </span>
+                    )}
+                  </div>
+                  {member.medicalNotes && <p className="mt-1.5 text-xs text-slate-500">{member.medicalNotes}</p>}
+                </div>
+              )}
             </DashboardCard>
           ))}
         </div>
@@ -414,6 +465,63 @@ export default function GezinPage() {
               className={`mt-1 ${inputClass}`}
             />
           </label>
+
+          {/* Medische gegevens (bijzondere persoonsgegevens) */}
+          <div className="rounded-2xl bg-rose-50/60 p-3 ring-1 ring-rose-100">
+            <p className="mb-1 inline-flex items-center gap-1.5 text-xs font-bold text-slate-700">
+              <HeartPulse className="h-4 w-4 text-rose-500" />
+              Medische gegevens <span className="font-normal text-slate-400">— optioneel</span>
+            </p>
+            <p className="mb-2.5 text-[11px] leading-snug text-slate-500">
+              Handig om bij de hand te hebben (bv. bij de huisarts). Alleen zichtbaar binnen jullie gezin.
+            </p>
+            <div className="flex flex-col gap-2.5">
+              <label className="text-xs font-semibold text-slate-500">
+                Bloedgroep
+                <select
+                  value={form.bloodType}
+                  onChange={(e) => setForm({ ...form, bloodType: e.target.value })}
+                  className={`mt-1 ${inputClass}`}
+                >
+                  <option value="">Onbekend</option>
+                  {BLOOD_TYPES.map((b) => (
+                    <option key={b} value={b}>
+                      {b}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="text-xs font-semibold text-slate-500">
+                Allergieën
+                <input
+                  value={form.allergies}
+                  onChange={(e) => setForm({ ...form, allergies: e.target.value })}
+                  placeholder="Bijv. pinda's, lactose, penicilline"
+                  className={`mt-1 ${inputClass}`}
+                />
+              </label>
+              <label className="text-xs font-semibold text-slate-500">
+                Medicijnen
+                <input
+                  value={form.medication}
+                  onChange={(e) => setForm({ ...form, medication: e.target.value })}
+                  placeholder="Bijv. inhalator (astma)"
+                  className={`mt-1 ${inputClass}`}
+                />
+              </label>
+              <label className="text-xs font-semibold text-slate-500">
+                Bijzonderheden
+                <textarea
+                  rows={2}
+                  value={form.medicalNotes}
+                  onChange={(e) => setForm({ ...form, medicalNotes: e.target.value })}
+                  placeholder="Bv. zorgverzekeraar, huisarts, of andere aandachtspunten"
+                  className={`mt-1 ${inputClass}`}
+                />
+              </label>
+            </div>
+          </div>
+
           <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
             <input
               type="checkbox"

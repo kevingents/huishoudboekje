@@ -6,7 +6,7 @@ import PageHeader from '@/components/PageHeader'
 import DashboardCard from '@/components/DashboardCard'
 import { useHousehold, useAuth } from '@/lib/hooks'
 import { apiPost } from '@/lib/api'
-import { TIERS, MODULES, TIER_RANK, type Tier } from '@/lib/modules'
+import { TIERS, MODULES, TIER_RANK, yearlyPrice, type Tier } from '@/lib/modules'
 
 const CORE_FEATURES = [
   'Agenda & school (iCal)',
@@ -50,6 +50,7 @@ export default function ModulesPage() {
   const isOwner = user?.role === 'owner'
   const [busy, setBusy] = useState<Tier | null>(null)
   const [error, setError] = useState('')
+  const [yearly, setYearly] = useState(false)
 
   const currentRank = TIER_RANK[tier]
 
@@ -58,7 +59,10 @@ export default function ModulesPage() {
     if (target === tier) return
     setBusy(target)
     try {
-      const res = (await apiPost('/api/modules/upgrade', { tier: target })) as {
+      const res = (await apiPost('/api/modules/upgrade', {
+        tier: target,
+        billing: yearly ? 'yearly' : 'monthly',
+      })) as {
         checkoutUrl?: string
         activated?: boolean
         error?: string
@@ -125,6 +129,37 @@ export default function ModulesPage() {
         </DashboardCard>
       )}
 
+      {/* Maand / jaar-schakelaar */}
+      <div className="mb-5 flex justify-center">
+        <div className="inline-flex items-center gap-1 rounded-full bg-white p-1 shadow-card ring-1 ring-cardborder">
+          <button
+            type="button"
+            onClick={() => setYearly(false)}
+            className={`rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${
+              !yearly ? 'bg-brand text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            Maandelijks
+          </button>
+          <button
+            type="button"
+            onClick={() => setYearly(true)}
+            className={`inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${
+              yearly ? 'bg-brand text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            Jaarlijks
+            <span
+              className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
+                yearly ? 'bg-white/25 text-white' : 'bg-emerald-100 text-emerald-600'
+              }`}
+            >
+              −10%
+            </span>
+          </button>
+        </div>
+      </div>
+
       {/* Pakketten */}
       <div className="grid gap-4 sm:grid-cols-3">
         {TIERS.map((t) => {
@@ -156,6 +191,11 @@ export default function ModulesPage() {
               <div className="mb-4 flex items-end gap-1">
                 {t.price === 0 ? (
                   <span className="text-2xl font-extrabold text-slate-800">Gratis</span>
+                ) : yearly ? (
+                  <>
+                    <span className="text-2xl font-extrabold text-slate-800">€{euro(yearlyPrice(t.price))}</span>
+                    <span className="pb-1 text-sm text-slate-400">/ jaar</span>
+                  </>
                 ) : (
                   <>
                     <span className="text-2xl font-extrabold text-slate-800">€{euro(t.price)}</span>
@@ -165,9 +205,16 @@ export default function ModulesPage() {
               </div>
 
               {t.price > 0 && (
-                <p className="mb-3 inline-flex w-fit items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-600">
-                  1e maand gratis
-                </p>
+                <div className="mb-3 flex flex-wrap gap-1.5">
+                  <span className="inline-flex w-fit items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-600">
+                    1e maand gratis
+                  </span>
+                  {yearly && (
+                    <span className="inline-flex w-fit items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-semibold text-amber-600">
+                      10% jaarkorting
+                    </span>
+                  )}
+                </div>
               )}
 
               <ul className="mb-5 flex flex-1 flex-col gap-2 text-sm">

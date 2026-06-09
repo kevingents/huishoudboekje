@@ -35,9 +35,11 @@ export async function POST(req: Request) {
       })
       if (sub) {
         const origin = baseUrl(req)
-        // 1e maand gratis: de terugkerende betaling start pas over een maand.
+        // De terugkerende incasso start pas ná de eerste (zojuist betaalde)
+        // periode: +1 maand bij een maandabo, +12 maanden bij een jaarabo.
+        const months = Math.max(1, parseInt(sub.interval, 10) || 1)
         const start = new Date()
-        start.setMonth(start.getMonth() + 1)
+        start.setMonth(start.getMonth() + months)
         const startDate = start.toISOString().slice(0, 10)
         const created = await mollie.customerSubscriptions.create({
           customerId,

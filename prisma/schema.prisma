@@ -44,6 +44,11 @@ model FamilyMember {
   role        String?
   birthday    String?
   isChild     Boolean  @default(false)
+  // Medische gegevens (bijzondere persoonsgegevens) — alleen binnen het gezin.
+  bloodType    String?
+  allergies    String?
+  medication   String?
+  medicalNotes String?
   createdAt   DateTime @default(now())
 
   @@index([householdId])

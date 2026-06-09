@@ -170,6 +170,10 @@ interface NewMember {
   role?: string
   birthday?: string
   isChild?: boolean
+  bloodType?: string
+  allergies?: string
+  medication?: string
+  medicalNotes?: string
 }
 
 export function useFamily() {
@@ -187,6 +191,10 @@ export function useFamily() {
           role: m.role ?? null,
           birthday: m.birthday ?? null,
           isChild: m.isChild ?? false,
+          bloodType: m.bloodType ?? null,
+          allergies: m.allergies ?? null,
+          medication: m.medication ?? null,
+          medicalNotes: m.medicalNotes ?? null,
         },
       ),
     updateMember: (id: number, payload: Partial<NewMember>) => c.update(id, payload),

@@ -13,6 +13,10 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   if (body.role !== undefined) data.role = body.role ? String(body.role) : null
   if (body.birthday !== undefined) data.birthday = body.birthday ? String(body.birthday) : null
   if (body.isChild !== undefined) data.isChild = Boolean(body.isChild)
+  if (body.bloodType !== undefined) data.bloodType = body.bloodType ? String(body.bloodType) : null
+  if (body.allergies !== undefined) data.allergies = body.allergies ? String(body.allergies) : null
+  if (body.medication !== undefined) data.medication = body.medication ? String(body.medication) : null
+  if (body.medicalNotes !== undefined) data.medicalNotes = body.medicalNotes ? String(body.medicalNotes) : null
   const result = await prisma.familyMember.updateMany({ where: { id, householdId: hid }, data })
   if (result.count === 0) return notFound()
   const member = await prisma.familyMember.findUnique({ where: { id } })

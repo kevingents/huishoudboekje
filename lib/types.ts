@@ -8,6 +8,10 @@ export interface FamilyMember {
   role?: string | null
   birthday?: string | null
   isChild?: boolean
+  bloodType?: string | null
+  allergies?: string | null
+  medication?: string | null
+  medicalNotes?: string | null
 }
 
 export interface AgendaEvent {

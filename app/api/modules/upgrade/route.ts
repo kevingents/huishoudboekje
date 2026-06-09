@@ -3,7 +3,7 @@ import { SequenceType } from '@mollie/api-client'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
 import { getMollie, baseUrl, isPublic } from '@/lib/mollie'
-import { normalizeTier, tierInfo, type Tier } from '@/lib/modules'
+import { normalizeTier, tierInfo, yearlyPrice, type Tier } from '@/lib/modules'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -21,6 +21,12 @@ export async function POST(req: Request) {
   const price = tierInfo(tier).price
   const householdId = user.householdId
 
+  // Maand- of jaarabonnement. Jaar = 10% korting + 12-maanden-interval.
+  const yearly = String(body?.billing) === 'yearly'
+  const amount = yearly ? yearlyPrice(price) : price
+  const interval = yearly ? '12 months' : '1 month'
+  const planName = `${tierInfo(tier).name}${yearly ? ' (jaar)' : ''}`
+
   // Gratis pakket (Basis) of geen Mollie: direct activeren.
   const mollie = getMollie()
   if (price === 0 || !mollie) {
@@ -30,24 +36,24 @@ export async function POST(req: Request) {
 
   // Betaald pakket via Mollie: eerste (terugkerende) betaling opzetten.
   try {
-    const customer = await mollie.customers.create({ name: `${user.name} (${tierInfo(tier).name})` })
+    const customer = await mollie.customers.create({ name: `${user.name} (${planName})` })
     const origin = baseUrl(req)
     const payment = await mollie.customerPayments.create({
       customerId: customer.id,
-      amount: { currency: 'EUR', value: price.toFixed(2) },
-      description: `Fam ${tierInfo(tier).name}`,
+      amount: { currency: 'EUR', value: amount.toFixed(2) },
+      description: `Fam ${planName}`,
       sequenceType: SequenceType.first,
       redirectUrl: `${origin}/modules`,
-      metadata: { householdId: String(householdId), tier },
+      metadata: { householdId: String(householdId), tier, billing: yearly ? 'yearly' : 'monthly' },
       ...(isPublic(origin) ? { webhookUrl: `${origin}/api/webhooks/mollie` } : {}),
     })
 
     await prisma.subscription.create({
       data: {
         householdId,
-        name: `Pakket ${tierInfo(tier).name}`,
-        amount: price,
-        interval: '1 month',
+        name: `Pakket ${planName}`,
+        amount,
+        interval,
         status: 'pending',
         mollieCustomerId: customer.id,
       },

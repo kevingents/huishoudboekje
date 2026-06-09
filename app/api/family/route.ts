@@ -44,6 +44,10 @@ export async function POST(req: Request) {
       role: body.role ? String(body.role) : null,
       birthday: body.birthday ? String(body.birthday) : null,
       isChild: Boolean(body.isChild),
+      bloodType: body.bloodType ? String(body.bloodType) : null,
+      allergies: body.allergies ? String(body.allergies) : null,
+      medication: body.medication ? String(body.medication) : null,
+      medicalNotes: body.medicalNotes ? String(body.medicalNotes) : null,
     },
   })
   return Response.json(member, { status: 201 })
