@@ -1,31 +1,10 @@
 import { prisma } from '@/lib/db'
 import { verifySvixSignature } from '@/lib/svix'
-import {
-  resolveHousehold,
-  fetchReceivedEmail,
-  listInboundAttachments,
-  classifyMail,
-} from '@/lib/inbound'
-import { describeDate } from '@/lib/date'
+import { resolveHousehold, processInboundEmail } from '@/lib/inbound'
 import { notify } from '@/lib/notify'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
-
-function stripHtml(html: string): string {
-  return html
-    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/&nbsp;/gi, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-}
-
-function todayIso(): string {
-  const d = new Date()
-  const p = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
-}
 
 /**
  * Resend Inbound-webhook: ontvangt doorgestuurde mails, laat de AI ze
@@ -80,97 +59,16 @@ export async function POST(req: Request) {
     return Response.json({ ignored: 'no_household' })
   }
 
-  // 4) Volledige body ophalen (anders de payload-velden gebruiken).
-  const full = emailId ? await fetchReceivedEmail(emailId) : null
-  const fromAddr = String(full?.from ?? data.from ?? '')
+  // 4) Afzender/onderwerp uit de payload (de body wordt in processInboundEmail opgehaald).
+  const fromAddr = String(data.from ?? '')
   const fromName = (fromAddr.match(/^([^<]+)</)?.[1] ?? '').trim() || null
-  const subject = String(full?.subject ?? data.subject ?? '(geen onderwerp)')
-  const text = String(
-    full?.text ??
-      data.text ??
-      (full?.html ? stripHtml(full.html) : data.html ? stripHtml(String(data.html)) : ''),
-  )
+  const subject = String(data.subject ?? '(geen onderwerp)')
+  const payloadText = typeof data.text === 'string' ? data.text : data.html ? String(data.html) : ''
 
-  // 5) Bijlagen ophalen (download-URL's).
-  const attachments = emailId ? await listInboundAttachments(emailId) : []
-  const firstAttachment = attachments[0] ?? null
-  const imageAttachment = attachments.find((a) => (a.content_type || '').startsWith('image/')) ?? null
+  // 5) Verwerken: body ophalen → classificeren → archiveren.
+  const result = await processInboundEmail({ householdId, emailId, fromAddr, subject, payloadText })
 
-  // 6) Classificeren met de AI.
-  const members = (
-    await prisma.familyMember.findMany({ where: { householdId }, select: { name: true } })
-  ).map((m) => m.name)
-  const cls = await classifyMail({ subject, text, from: fromAddr, members, today: todayIso() })
-
-  // 7) Automatisch op de juiste plek zetten.
-  let filedType: string | null = null
-  let filedId: number | null = null
-  let actionMsg = ''
-  try {
-    if (cls.category === 'garantie' || cls.category === 'document' || cls.category === 'factuur') {
-      const docType =
-        cls.category === 'garantie'
-          ? 'garantie'
-          : cls.category === 'factuur'
-            ? 'factuur'
-            : cls.documentType === 'legitimatie'
-              ? 'legitimatie'
-              : 'overig'
-      const amountText = cls.category === 'factuur' && cls.amount ? `Bedrag: €${cls.amount.toFixed(2)}` : ''
-      const notes = [cls.summary, amountText].filter(Boolean).join(' · ') || null
-      const doc = await prisma.document.create({
-        data: {
-          householdId,
-          title: cls.title,
-          type: docType,
-          owner: cls.owner || null,
-          expiresAt: cls.expiresAt || null,
-          notes,
-          imageUrl: imageAttachment?.download_url ?? null,
-        },
-      })
-      filedType = 'document'
-      filedId = doc.id
-      actionMsg =
-        cls.category === 'factuur'
-          ? `Opgeslagen bij Documenten (factuur${cls.amount ? `, €${cls.amount.toFixed(2)}` : ''})`
-          : `Opgeslagen bij Documenten (${docType})`
-    } else if (cls.category === 'afspraak' && cls.eventDate) {
-      const parts = describeDate(cls.eventDate)
-      const ev = await prisma.agendaEvent.create({
-        data: {
-          householdId,
-          ...parts,
-          title: cls.title,
-          time: cls.eventTime || 'Hele dag',
-          who: cls.owner || 'Agenda',
-          accent: 'violet',
-          source: 'manual',
-        },
-      })
-      filedType = 'agenda'
-      filedId = ev.id
-      actionMsg = `Toegevoegd aan de Agenda (${cls.eventDate})`
-    } else if (cls.category === 'boodschap' && cls.shoppingItems.length) {
-      const created = await Promise.all(
-        cls.shoppingItems.slice(0, 30).map((label) =>
-          prisma.shoppingItem.create({
-            data: { householdId, label: String(label).slice(0, 120), category: 'Overig' },
-          }),
-        ),
-      )
-      filedType = 'shopping'
-      filedId = created[0]?.id ?? null
-      actionMsg = `${created.length} item(s) op de Boodschappenlijst gezet`
-    } else {
-      actionMsg = 'Bewaard in de Gezinsmail-inbox'
-    }
-  } catch (e) {
-    console.error('[inbound] automatisch archiveren mislukt:', e)
-    actionMsg = 'Bewaard in de inbox (automatisch opslaan mislukte)'
-  }
-
-  // 8) MailItem (inbox) opslaan.
+  // 6) Inbox-item opslaan.
   await prisma.mailItem.create({
     data: {
       householdId,
@@ -178,24 +76,24 @@ export async function POST(req: Request) {
       fromAddr,
       fromName,
       subject,
-      snippet: text ? text.slice(0, 160) : null,
-      status: filedType ? 'verwerkt' : 'nieuw',
-      category: cls.category,
-      summary: cls.summary ? `${cls.summary} — ${actionMsg}` : actionMsg,
-      filedType,
-      filedId,
-      attachmentUrl: firstAttachment?.download_url ?? null,
-      attachmentName: firstAttachment?.filename ?? null,
+      snippet: result.snippet,
+      status: result.filedType ? 'verwerkt' : 'nieuw',
+      category: result.category,
+      summary: result.summary,
+      filedType: result.filedType,
+      filedId: result.filedId,
+      attachmentUrl: result.attachmentUrl,
+      attachmentName: result.attachmentName,
     },
   })
 
-  // 9) Het gezin op de hoogte brengen.
+  // 7) Het gezin op de hoogte brengen.
   await notify({
     householdId,
     type: 'system',
     title: 'Nieuwe gezinsmail verwerkt',
-    body: `${cls.title} — ${actionMsg}.`,
+    body: `${result.title} — ${result.summary ?? ''}`.slice(0, 200),
   })
 
-  return Response.json({ ok: true, category: cls.category, filed: filedType })
+  return Response.json({ ok: true, category: result.category, filed: result.filedType })
 }

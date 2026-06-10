@@ -17,6 +17,7 @@ import {
   Sparkles,
   Forward,
   Receipt,
+  RefreshCw,
 } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
 import DashboardCard from '@/components/DashboardCard'
@@ -69,7 +70,7 @@ export default function GezinsmailPage() {
 }
 
 function GezinsmailContent() {
-  const { address, items, isLoading, setStatus, remove } = useMail()
+  const { address, items, isLoading, setStatus, remove, reprocess } = useMail()
   const [copied, setCopied] = useState(false)
 
   const copy = async () => {
@@ -138,7 +139,13 @@ function GezinsmailContent() {
         ) : (
           <ul className="flex flex-col divide-y divide-cardborder">
             {items.map((item) => (
-              <MailRow key={item.id} item={item} onStatus={setStatus} onRemove={remove} />
+              <MailRow
+                key={item.id}
+                item={item}
+                onStatus={setStatus}
+                onRemove={remove}
+                onReprocess={reprocess}
+              />
             ))}
           </ul>
         )}
@@ -163,11 +170,22 @@ function MailRow({
   item,
   onStatus,
   onRemove,
+  onReprocess,
 }: {
   item: MailItem
   onStatus: (id: number, status: string) => Promise<void>
   onRemove: (id: number) => Promise<void>
+  onReprocess: (id: number) => Promise<{ bodyFetched?: boolean }>
 }) {
+  const [busy, setBusy] = useState(false)
+  const doReprocess = async () => {
+    setBusy(true)
+    try {
+      await onReprocess(item.id)
+    } finally {
+      setBusy(false)
+    }
+  }
   const meta = categoryMeta[item.category ?? 'overig'] ?? categoryMeta.overig
   const Icon = meta.icon
   const href = item.filedType ? filedHref[item.filedType] : meta.href
@@ -214,6 +232,17 @@ function MailRow({
               <Paperclip className="h-3 w-3" />
               {item.attachmentName || 'Bijlage'}
             </a>
+          )}
+          {item.emailId && (
+            <button
+              type="button"
+              onClick={doReprocess}
+              disabled={busy}
+              className="inline-flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-brand disabled:opacity-50"
+            >
+              <RefreshCw className={`h-3 w-3 ${busy ? 'animate-spin' : ''}`} />
+              {busy ? 'Bezig…' : 'Verwerk opnieuw'}
+            </button>
           )}
           {item.status === 'nieuw' && (
             <button

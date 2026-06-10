@@ -1,6 +1,7 @@
 import crypto from 'crypto'
 import Anthropic from '@anthropic-ai/sdk'
 import { prisma } from './db'
+import { describeDate } from './date'
 
 /* -------------------------------------------------------------------------- */
 /*  Inbound-adres (Resend Inbound)                                            */
@@ -247,5 +248,149 @@ export async function classifyMail(input: {
   } catch (e) {
     console.error('[inbound] AI-classificatie mislukt:', e)
     return fallbackClassification(input.subject)
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Verwerking: body ophalen → classificeren → archiveren                     */
+/* -------------------------------------------------------------------------- */
+
+function stripHtml(html: string): string {
+  return html
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function todayIso(): string {
+  const d = new Date()
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
+}
+
+export interface ProcessResult {
+  title: string
+  category: string
+  summary: string | null
+  snippet: string | null
+  filedType: string | null
+  filedId: number | null
+  attachmentUrl: string | null
+  attachmentName: string | null
+  bodyFetched: boolean
+}
+
+/**
+ * Haalt de volledige mail-inhoud + bijlagen op, laat de AI classificeren en zet
+ * het op de juiste plek (Documenten/Agenda/Boodschappen). Gedeeld door de inbound-
+ * webhook en de "verwerk opnieuw"-actie.
+ */
+export async function processInboundEmail(opts: {
+  householdId: number
+  emailId?: string | null
+  fromAddr: string
+  subject: string
+  payloadText?: string
+}): Promise<ProcessResult> {
+  const { householdId, emailId, fromAddr, subject } = opts
+
+  const full = emailId ? await fetchReceivedEmail(emailId) : null
+  const bodyText = full?.text || (full?.html ? stripHtml(full.html) : '') || opts.payloadText || ''
+  const bodyFetched = !!bodyText
+
+  const attachments = emailId ? await listInboundAttachments(emailId) : []
+  const firstAttachment = attachments[0] ?? null
+  const imageAttachment = attachments.find((a) => (a.content_type || '').startsWith('image/')) ?? null
+
+  const members = (
+    await prisma.familyMember.findMany({ where: { householdId }, select: { name: true } })
+  ).map((m) => m.name)
+  const cls = await classifyMail({ subject, text: bodyText, from: fromAddr, members, today: todayIso() })
+
+  let filedType: string | null = null
+  let filedId: number | null = null
+  let actionMsg = ''
+  try {
+    if (cls.category === 'garantie' || cls.category === 'document' || cls.category === 'factuur') {
+      const docType =
+        cls.category === 'garantie'
+          ? 'garantie'
+          : cls.category === 'factuur'
+            ? 'factuur'
+            : cls.documentType === 'legitimatie'
+              ? 'legitimatie'
+              : 'overig'
+      const amountText = cls.category === 'factuur' && cls.amount ? `Bedrag: €${cls.amount.toFixed(2)}` : ''
+      const notes = [cls.summary, amountText].filter(Boolean).join(' · ') || null
+      const doc = await prisma.document.create({
+        data: {
+          householdId,
+          title: cls.title,
+          type: docType,
+          owner: cls.owner || null,
+          expiresAt: cls.expiresAt || null,
+          notes,
+          imageUrl: imageAttachment?.download_url ?? null,
+        },
+      })
+      filedType = 'document'
+      filedId = doc.id
+      actionMsg =
+        cls.category === 'factuur'
+          ? `Opgeslagen bij Documenten (factuur${cls.amount ? `, €${cls.amount.toFixed(2)}` : ''})`
+          : `Opgeslagen bij Documenten (${docType})`
+    } else if (cls.category === 'afspraak' && cls.eventDate) {
+      const parts = describeDate(cls.eventDate)
+      const ev = await prisma.agendaEvent.create({
+        data: {
+          householdId,
+          ...parts,
+          title: cls.title,
+          time: cls.eventTime || 'Hele dag',
+          who: cls.owner || 'Agenda',
+          accent: 'violet',
+          source: 'manual',
+        },
+      })
+      filedType = 'agenda'
+      filedId = ev.id
+      actionMsg = `Toegevoegd aan de Agenda (${cls.eventDate})`
+    } else if (cls.category === 'boodschap' && cls.shoppingItems.length) {
+      const created = await Promise.all(
+        cls.shoppingItems.slice(0, 30).map((label) =>
+          prisma.shoppingItem.create({
+            data: { householdId, label: String(label).slice(0, 120), category: 'Overig' },
+          }),
+        ),
+      )
+      filedType = 'shopping'
+      filedId = created[0]?.id ?? null
+      actionMsg = `${created.length} item(s) op de Boodschappenlijst gezet`
+    } else {
+      actionMsg = 'Bewaard in de Gezinsmail-inbox'
+    }
+  } catch (e) {
+    console.error('[inbound] automatisch archiveren mislukt:', e)
+    actionMsg = 'Bewaard in de inbox (automatisch opslaan mislukte)'
+  }
+
+  const base = cls.summary ? `${cls.summary} — ${actionMsg}` : actionMsg
+  const summary =
+    !bodyFetched && emailId
+      ? `${base} (let op: mail-inhoud niet opgehaald — controleer RESEND_API_KEY in Vercel)`
+      : base
+
+  return {
+    title: cls.title,
+    category: cls.category,
+    summary,
+    snippet: bodyText ? bodyText.slice(0, 160) : null,
+    filedType,
+    filedId,
+    attachmentUrl: firstAttachment?.download_url ?? null,
+    attachmentName: firstAttachment?.filename ?? null,
+    bodyFetched,
   }
 }

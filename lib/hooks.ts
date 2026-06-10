@@ -889,6 +889,11 @@ export function useMail() {
       await apiDelete(`/api/mail/${id}`)
       await mutate()
     },
+    reprocess: async (id: number) => {
+      const res = (await apiPost(`/api/mail/${id}/reprocess`, {})) as { bodyFetched?: boolean }
+      await mutate()
+      return res
+    },
     refresh: () => mutate(),
   }
 }
