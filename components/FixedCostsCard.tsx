@@ -5,7 +5,7 @@ import { Repeat, Plus, Trash2 } from 'lucide-react'
 import DashboardCard from './DashboardCard'
 import Modal from './Modal'
 import { useFixedCosts } from '@/lib/hooks'
-import { FIXED_COST_CATEGORIES, suggestCostCategory } from '@/lib/budget'
+import { FIXED_COST_CATEGORIES, fixedCostMonthly, suggestCostCategory } from '@/lib/budget'
 import type { FixedCost } from '@/lib/types'
 
 const inputClass =
@@ -15,7 +15,16 @@ function euro(value: number) {
   return value.toLocaleString('nl-NL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-const emptyForm = { name: '', amount: '', dueDay: '', category: 'Overig' }
+const emptyForm = {
+  name: '',
+  amount: '',
+  dueDay: '',
+  category: 'Overig',
+  isSubscription: false,
+  subscriptionInterval: '1 month',
+  subscriptionCancelable: true,
+  subscriptionEndDate: '',
+}
 
 export default function FixedCostsCard({ className = '' }: { className?: string }) {
   const { costs, addCost, updateCost, removeCost } = useFixedCosts()
@@ -25,7 +34,7 @@ export default function FixedCostsCard({ className = '' }: { className?: string 
   // Of de gebruiker de categorie handmatig heeft gekozen (dan niet meer overschrijven).
   const [catTouched, setCatTouched] = useState(false)
 
-  const total = costs.reduce((sum, c) => sum + c.amount, 0)
+  const total = costs.reduce((sum, c) => sum + fixedCostMonthly(c), 0)
 
   const openAdd = () => {
     setEditing(null)
@@ -41,6 +50,10 @@ export default function FixedCostsCard({ className = '' }: { className?: string 
       amount: String(c.amount).replace('.', ','),
       dueDay: c.dueDay ? String(c.dueDay) : '',
       category: c.category ?? 'Overig',
+      isSubscription: c.isSubscription ?? false,
+      subscriptionInterval: c.subscriptionInterval ?? '1 month',
+      subscriptionCancelable: c.subscriptionCancelable ?? true,
+      subscriptionEndDate: c.subscriptionEndDate ?? '',
     })
     setCatTouched(true)
     setOpen(true)
@@ -60,12 +73,16 @@ export default function FixedCostsCard({ className = '' }: { className?: string 
       amount,
       dueDay: form.dueDay ? Number(form.dueDay) : null,
       category: form.category,
+      isSubscription: form.isSubscription,
+      subscriptionInterval: form.isSubscription ? form.subscriptionInterval : null,
+      subscriptionCancelable: form.isSubscription ? form.subscriptionCancelable : true,
+      subscriptionEndDate:
+        form.isSubscription && !form.subscriptionCancelable && form.subscriptionEndDate
+          ? form.subscriptionEndDate
+          : null,
     }
-    if (editing) {
-      await updateCost(editing.id, payload)
-    } else {
-      await addCost(payload.name, amount, payload.dueDay ?? undefined, payload.category)
-    }
+    if (editing) await updateCost(editing.id, payload)
+    else await addCost(payload)
     setOpen(false)
   }
 
@@ -99,10 +116,25 @@ export default function FixedCostsCard({ className = '' }: { className?: string 
                     <span className="rounded-full bg-slate-100 px-1.5 py-0.5 font-medium text-slate-500">
                       {c.category ?? 'Overig'}
                     </span>
+                    {c.isSubscription && (
+                      <span className="rounded-full bg-sky-100 px-1.5 py-0.5 font-medium text-sky-600">
+                        abonnement · {c.subscriptionInterval === '12 months' ? 'jaarlijks' : 'maandelijks'}
+                        {c.subscriptionCancelable
+                          ? ' · opzegbaar'
+                          : c.subscriptionEndDate
+                            ? ` · tot ${c.subscriptionEndDate}`
+                            : ''}
+                      </span>
+                    )}
                     {c.dueDay && <span>de {c.dueDay}e van de maand</span>}
                   </p>
                 </button>
-                <p className="text-sm font-bold text-slate-800">€{euro(c.amount)}</p>
+                <p className="text-sm font-bold text-slate-800">
+                  €{euro(c.amount)}
+                  {c.isSubscription && c.subscriptionInterval === '12 months' && (
+                    <span className="text-xs font-normal text-slate-400"> /jr</span>
+                  )}
+                </p>
                 <button
                   type="button"
                   onClick={() => removeCost(c.id)}
@@ -163,7 +195,7 @@ export default function FixedCostsCard({ className = '' }: { className?: string 
 
           <div className="flex gap-3">
             <label className="flex-1 text-xs font-semibold text-slate-500">
-              Bedrag p/m (€)
+              Bedrag {form.isSubscription && form.subscriptionInterval === '12 months' ? 'p/jaar' : 'p/m'} (€)
               <input
                 inputMode="decimal"
                 value={form.amount}
@@ -183,6 +215,52 @@ export default function FixedCostsCard({ className = '' }: { className?: string 
               />
             </label>
           </div>
+
+          <label className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+            <input
+              type="checkbox"
+              checked={form.isSubscription}
+              onChange={(e) => setForm({ ...form, isSubscription: e.target.checked })}
+              className="h-4 w-4 rounded border-cardborder text-brand focus:ring-brand/30"
+            />
+            Dit is een abonnement
+          </label>
+
+          {form.isSubscription && (
+            <div className="flex flex-col gap-3 rounded-2xl bg-slate-50 p-3">
+              <label className="text-xs font-semibold text-slate-500">
+                Interval
+                <select
+                  value={form.subscriptionInterval}
+                  onChange={(e) => setForm({ ...form, subscriptionInterval: e.target.value })}
+                  className={`mt-1 ${inputClass}`}
+                >
+                  <option value="1 month">Maandelijks</option>
+                  <option value="12 months">Jaarlijks</option>
+                </select>
+              </label>
+              <label className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+                <input
+                  type="checkbox"
+                  checked={form.subscriptionCancelable}
+                  onChange={(e) => setForm({ ...form, subscriptionCancelable: e.target.checked })}
+                  className="h-4 w-4 rounded border-cardborder text-brand focus:ring-brand/30"
+                />
+                Maandelijks opzegbaar
+              </label>
+              {!form.subscriptionCancelable && (
+                <label className="text-xs font-semibold text-slate-500">
+                  Loopt af op
+                  <input
+                    type="date"
+                    value={form.subscriptionEndDate}
+                    onChange={(e) => setForm({ ...form, subscriptionEndDate: e.target.value })}
+                    className={`mt-1 ${inputClass}`}
+                  />
+                </label>
+              )}
+            </div>
+          )}
 
           <button
             type="submit"

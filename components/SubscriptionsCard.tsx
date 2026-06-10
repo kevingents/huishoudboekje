@@ -5,6 +5,7 @@ import { Repeat, Plus, Trash2 } from 'lucide-react'
 import DashboardCard from './DashboardCard'
 import Modal from './Modal'
 import { useFixedCosts } from '@/lib/hooks'
+import { fixedCostMonthly } from '@/lib/budget'
 
 const inputClass =
   'w-full rounded-xl border border-cardborder bg-white px-3.5 py-2.5 text-sm text-slate-700 outline-none transition-colors placeholder:text-slate-400 focus:border-brand/40 focus:ring-2 focus:ring-brand/20'
@@ -17,18 +18,24 @@ function euro(value: number) {
  *  "Budget opschonen" (optie Abonnement) of voegt ze hier handmatig toe. */
 export default function SubscriptionsCard() {
   const { costs, addCost, removeCost } = useFixedCosts()
-  const subs = costs.filter((c) => (c.category || '').toLowerCase() === 'abonnement')
-  const total = subs.reduce((s, c) => s + c.amount, 0)
+  const subs = costs.filter((c) => c.isSubscription || (c.category || '').toLowerCase() === 'abonnement')
+  const total = subs.reduce((s, c) => s + fixedCostMonthly(c), 0)
 
   const [open, setOpen] = useState(false)
-  const [form, setForm] = useState({ name: '', amount: '' })
+  const [form, setForm] = useState({ name: '', amount: '', interval: '1 month' })
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     const amount = Number(form.amount.replace(',', '.'))
     if (!form.name.trim() || !amount) return
-    await addCost(form.name.trim(), amount, undefined, 'Abonnement')
-    setForm({ name: '', amount: '' })
+    await addCost({
+      name: form.name.trim(),
+      amount,
+      category: 'Abonnement',
+      isSubscription: true,
+      subscriptionInterval: form.interval,
+    })
+    setForm({ name: '', amount: '', interval: '1 month' })
     setOpen(false)
   }
 
@@ -57,10 +64,22 @@ export default function SubscriptionsCard() {
             {subs.map((s, index) => (
               <li key={s.id}>
                 <div className="group flex items-center gap-2 py-2.5">
-                  <span className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-800">{s.name}</span>
-                  <span className="text-sm font-bold text-slate-800">
+                  <div className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-semibold text-slate-800">{s.name}</span>
+                    <span className="block text-[11px] text-slate-400">
+                      {s.subscriptionInterval === '12 months' ? 'jaarlijks' : 'maandelijks'}
+                      {s.subscriptionCancelable === false
+                        ? s.subscriptionEndDate
+                          ? ` · loopt af op ${s.subscriptionEndDate}`
+                          : ''
+                        : ' · maandelijks opzegbaar'}
+                    </span>
+                  </div>
+                  <span className="shrink-0 text-sm font-bold text-slate-800">
                     €{euro(s.amount)}
-                    <span className="text-xs font-normal text-slate-400"> /mnd</span>
+                    <span className="text-xs font-normal text-slate-400">
+                      {s.subscriptionInterval === '12 months' ? ' /jr' : ' /mnd'}
+                    </span>
                   </span>
                   <button
                     type="button"
@@ -94,16 +113,32 @@ export default function SubscriptionsCard() {
               className={`mt-1 ${inputClass}`}
             />
           </label>
-          <label className="text-xs font-semibold text-slate-500">
-            Bedrag per maand (€)
-            <input
-              inputMode="decimal"
-              value={form.amount}
-              onChange={(e) => setForm({ ...form, amount: e.target.value })}
-              placeholder="12,99"
-              className={`mt-1 ${inputClass}`}
-            />
-          </label>
+          <div className="flex gap-3">
+            <label className="flex-1 text-xs font-semibold text-slate-500">
+              Bedrag {form.interval === '12 months' ? 'per jaar' : 'per maand'} (€)
+              <input
+                inputMode="decimal"
+                value={form.amount}
+                onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                placeholder="12,99"
+                className={`mt-1 ${inputClass}`}
+              />
+            </label>
+            <label className="w-32 text-xs font-semibold text-slate-500">
+              Interval
+              <select
+                value={form.interval}
+                onChange={(e) => setForm({ ...form, interval: e.target.value })}
+                className={`mt-1 ${inputClass}`}
+              >
+                <option value="1 month">Maandelijks</option>
+                <option value="12 months">Jaarlijks</option>
+              </select>
+            </label>
+          </div>
+          <p className="text-[11px] text-slate-400">
+            Meer instellen (opzegbaar / einddatum)? Bewerk het abonnement bij <span className="font-semibold">Vaste lasten</span>.
+          </p>
           <button
             type="submit"
             className="pill mt-1 bg-brand px-4 py-2.5 text-white shadow-sm shadow-brand/20 hover:bg-brand-dark"

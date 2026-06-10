@@ -24,6 +24,10 @@ export async function POST(req: Request) {
       amount: Number(body.amount),
       category: body.category ? String(body.category) : 'Overig',
       dueDay: body.dueDay ? Number(body.dueDay) : null,
+      isSubscription: Boolean(body.isSubscription),
+      subscriptionInterval: body.subscriptionInterval ? String(body.subscriptionInterval) : null,
+      subscriptionCancelable: body.subscriptionCancelable === undefined ? true : Boolean(body.subscriptionCancelable),
+      subscriptionEndDate: body.subscriptionEndDate ? String(body.subscriptionEndDate) : null,
     },
   })
   return Response.json(cost, { status: 201 })

@@ -135,4 +135,8 @@ export interface FixedCost {
   amount: number
   category?: string
   dueDay?: number | null
+  isSubscription?: boolean
+  subscriptionInterval?: string | null // "1 month" | "12 months"
+  subscriptionCancelable?: boolean
+  subscriptionEndDate?: string | null // yyyy-mm-dd
 }

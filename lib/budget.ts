@@ -197,3 +197,14 @@ export function monthlyEquivalent(amount: number, interval: string): number {
   if (unit === 'day') return (amount * 30) / n
   return amount
 }
+
+/** Maandbedrag van een vaste last: jaarlijkse abonnementen worden naar maand
+ *  omgerekend (/12); de rest is gewoon het maandbedrag. */
+export function fixedCostMonthly(cost: {
+  amount: number
+  isSubscription?: boolean
+  subscriptionInterval?: string | null
+}): number {
+  if (cost.isSubscription && cost.subscriptionInterval) return monthlyEquivalent(cost.amount, cost.subscriptionInterval)
+  return cost.amount
+}

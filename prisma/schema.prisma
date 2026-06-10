@@ -220,6 +220,11 @@ model FixedCost {
   category    String   @default("Overig") // Wonen | Energie | Verzekering | Telecom ...
   // dag van de maand waarop het wordt afgeschreven (optioneel)
   dueDay      Int?
+  // Abonnement-markering: een vaste last kan ook een abonnement zijn.
+  isSubscription         Boolean   @default(false)
+  subscriptionInterval   String?   // "1 month" | "12 months"
+  subscriptionCancelable Boolean   @default(true) // maandelijks opzegbaar
+  subscriptionEndDate    String? // einddatum yyyy-mm-dd (null = doorlopend)
   createdAt   DateTime @default(now())
 
   @@index([householdId])

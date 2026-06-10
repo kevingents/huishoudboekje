@@ -6,7 +6,7 @@ import { Wallet, Settings, ChevronRight, ArrowDownCircle } from 'lucide-react'
 import DashboardCard from './DashboardCard'
 import Modal from './Modal'
 import { useBudget, useFixedCosts, useSubscriptions, useIncome, useSettings } from '@/lib/hooks'
-import { monthlyEquivalent } from '@/lib/budget'
+import { fixedCostMonthly, monthlyEquivalent } from '@/lib/budget'
 import { computeDailyBudget } from '@/lib/dailyBudget'
 
 const inputClass =
@@ -33,7 +33,7 @@ export default function DayBudgetCard() {
   const cfg = (settings.dailyBudget ?? {}) as DayBudgetConfig
   const salaryDay = cfg.salaryDay && cfg.salaryDay >= 1 && cfg.salaryDay <= 31 ? cfg.salaryDay : 25
 
-  const fixedTotal = costs.reduce((s, c) => s + c.amount, 0)
+  const fixedTotal = costs.reduce((s, c) => s + fixedCostMonthly(c), 0)
   const subsMonthly = subscriptions
     .filter((s) => s.status === 'active')
     .reduce((s, x) => s + monthlyEquivalent(x.amount, x.interval), 0)

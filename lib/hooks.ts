@@ -268,20 +268,34 @@ export function useSavings() {
   }
 }
 
+type FixedCostInput = {
+  name?: string
+  amount?: number
+  dueDay?: number | null
+  category?: string
+  isSubscription?: boolean
+  subscriptionInterval?: string | null
+  subscriptionCancelable?: boolean
+  subscriptionEndDate?: string | null
+}
+
 export function useFixedCosts() {
   const c = useCollection<FixedCost>('/api/fixed-costs')
   return {
     costs: c.items,
     isLoading: c.isLoading,
-    addCost: (name: string, amount: number, dueDay?: number, category?: string) =>
-      c.create(
-        { name, amount, dueDay, category },
-        { name, amount, dueDay: dueDay ?? null, category: category ?? 'Overig' },
-      ),
-    updateCost: (
-      id: number,
-      payload: { name?: string; amount?: number; dueDay?: number | null; category?: string },
-    ) => c.update(id, payload),
+    addCost: (payload: FixedCostInput & { name: string; amount: number }) =>
+      c.create(payload as Record<string, unknown>, {
+        name: payload.name,
+        amount: payload.amount,
+        dueDay: payload.dueDay ?? null,
+        category: payload.category ?? 'Overig',
+        isSubscription: payload.isSubscription ?? false,
+        subscriptionInterval: payload.subscriptionInterval ?? null,
+        subscriptionCancelable: payload.subscriptionCancelable ?? true,
+        subscriptionEndDate: payload.subscriptionEndDate ?? null,
+      }),
+    updateCost: (id: number, payload: FixedCostInput) => c.update(id, payload as Record<string, unknown>),
     removeCost: (id: number) => c.remove(id),
   }
 }

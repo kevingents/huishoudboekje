@@ -18,7 +18,7 @@ import OverigCleanup from '@/components/OverigCleanup'
 import { useBudget, useSettings, useFixedCosts, useSubscriptions, useHousehold, useIncome, useLoans } from '@/lib/hooks'
 import { apiPost } from '@/lib/api'
 import { resolveIcon } from '@/lib/icons'
-import { cleanLabel, isSpendingCategory, monthlyEquivalent } from '@/lib/budget'
+import { cleanLabel, fixedCostMonthly, isSpendingCategory, monthlyEquivalent } from '@/lib/budget'
 import type { BudgetCategory } from '@/lib/types'
 
 const colorClasses: Record<string, { bar: string; iconBg: string; iconText: string }> = {
@@ -181,8 +181,8 @@ export default function BudgetPage() {
 
   // Aflossingen/schulden apart van vaste lasten houden (hypotheek + leningen).
   const isAflossing = (cat?: string) => /afloss|lening|hypothe|schuld|krediet/i.test(cat || '')
-  const fixedTotal = costs.filter((c) => !isAflossing(c.category)).reduce((sum, c) => sum + c.amount, 0)
-  const fixedAflossing = costs.filter((c) => isAflossing(c.category)).reduce((sum, c) => sum + c.amount, 0)
+  const fixedTotal = costs.filter((c) => !isAflossing(c.category)).reduce((sum, c) => sum + fixedCostMonthly(c), 0)
+  const fixedAflossing = costs.filter((c) => isAflossing(c.category)).reduce((sum, c) => sum + fixedCostMonthly(c), 0)
   const loanMonthly = loans.reduce((sum, l) => sum + (l.termAmount || 0), 0)
   const aflossingenMonthly = loanMonthly + fixedAflossing
 
@@ -208,7 +208,7 @@ export default function BudgetPage() {
       .filter((c) => !isAflossing(c.category))
       .reduce<Record<string, number>>((acc, c) => {
         const key = c.category || 'Overig'
-        acc[key] = (acc[key] ?? 0) + c.amount
+        acc[key] = (acc[key] ?? 0) + fixedCostMonthly(c)
         return acc
       }, {}),
   ).sort((a, b) => b[1] - a[1])
