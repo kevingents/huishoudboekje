@@ -121,7 +121,7 @@ export default function IncomeCard({ className = '' }: { className?: string }) {
         <button
           type="button"
           onClick={openAdd}
-          className="pill bg-emerald-50 px-3 py-1.5 text-xs text-emerald-600 hover:bg-emerald-100"
+          className="pill bg-emerald-50 px-3 py-1.5 text-xs text-emerald-600 hover:bg-emerald-100 dark:text-emerald-300"
         >
           <Plus className="h-3.5 w-3.5" />
           Inkomst

@@ -92,6 +92,10 @@ export default function BudgetPage() {
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState({ label: '', category: '', amount: '' })
   const [showAllCats, setShowAllCats] = useState(false)
+  const currentMonthLabel = (() => {
+    const f = new Date().toLocaleDateString('nl-NL', { month: 'long', year: 'numeric' })
+    return f.charAt(0).toUpperCase() + f.slice(1)
+  })()
 
   // Bon/factuur scannen
   const cameraRef = useRef<HTMLInputElement>(null)
@@ -235,7 +239,7 @@ export default function BudgetPage() {
     <>
       <PageHeader
         title="Budget"
-        subtitle="Mei 2026"
+        subtitle={currentMonthLabel}
         icon={BarChart3}
         iconClassName="bg-brand-light text-brand"
         actions={
@@ -250,13 +254,13 @@ export default function BudgetPage() {
         }
       />
 
-      <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
+      <div className="grid grid-cols-1 items-stretch gap-5 lg:grid-cols-2">
         {/* Overview ring */}
         <DashboardCard title="Gemiddeld per maand">
-          <div className="flex items-center gap-5">
-            <div className="relative h-36 w-36 shrink-0">
+          <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-start sm:gap-5">
+            <div className="relative h-28 w-28 shrink-0 sm:h-36 sm:w-36">
               <svg viewBox="0 0 128 128" className="h-full w-full -rotate-90">
-                <circle cx="64" cy="64" r={radius} fill="none" stroke="#EBF1F4" strokeWidth="13" />
+                <circle cx="64" cy="64" r={radius} fill="none" stroke="currentColor" className="text-[#EBF1F4] dark:text-slate-700" strokeWidth="13" />
                 <circle
                   cx="64"
                   cy="64"
@@ -339,10 +343,10 @@ export default function BudgetPage() {
         {/* Budgetplanner-module: prognose, spaardoelen, vaste lasten */}
         <div className="lg:col-span-2">
         <ModuleGate module="budgetplanner">
-        <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
+        <div className="grid grid-cols-1 items-stretch gap-5 lg:grid-cols-2">
         {/* Maandprognose (full width) */}
         <DashboardCard title="Maandprognose" icon={LineChart} iconClassName="text-violet-500" className="lg:col-span-2">
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-6">
             {[
               { label: 'Inkomsten', value: incomeMonthly, tone: 'pos' as const },
               { label: 'Vaste lasten', value: fixedTotal, tone: 'default' as const },
@@ -354,11 +358,15 @@ export default function BudgetPage() {
               const box =
                 item.tone === 'pos' ? 'bg-emerald-500/10' : item.tone === 'neg' ? 'bg-rose-500/10' : 'bg-slate-400/10'
               const txt =
-                item.tone === 'pos' ? 'text-emerald-600' : item.tone === 'neg' ? 'text-rose-600' : 'text-slate-800'
+                item.tone === 'pos'
+                  ? 'text-emerald-600 dark:text-emerald-400'
+                  : item.tone === 'neg'
+                    ? 'text-rose-600 dark:text-rose-400'
+                    : 'text-slate-800 dark:text-slate-100'
               return (
-                <div key={item.label} className={`rounded-2xl p-3 ${box}`}>
+                <div key={item.label} className={`rounded-2xl p-3 sm:p-4 ${box}`}>
                   <p className="text-xs text-slate-500">{item.label}</p>
-                  <p className={`text-lg font-extrabold ${txt}`}>
+                  <p className={`text-base font-extrabold sm:text-lg ${txt}`}>
                     {item.value < 0 ? '−' : ''}€{euro(Math.abs(item.value))}
                   </p>
                 </div>
@@ -403,11 +411,15 @@ export default function BudgetPage() {
                 const box =
                   item.tone === 'pos' ? 'bg-emerald-500/10' : item.tone === 'neg' ? 'bg-rose-500/10' : 'bg-slate-400/10'
                 const txt =
-                  item.tone === 'pos' ? 'text-emerald-600' : item.tone === 'neg' ? 'text-rose-600' : 'text-slate-800'
+                  item.tone === 'pos'
+                  ? 'text-emerald-600 dark:text-emerald-400'
+                  : item.tone === 'neg'
+                    ? 'text-rose-600 dark:text-rose-400'
+                    : 'text-slate-800 dark:text-slate-100'
                 return (
-                  <div key={item.label} className={`rounded-2xl p-3 ${box}`}>
+                  <div key={item.label} className={`rounded-2xl p-3 sm:p-4 ${box}`}>
                     <p className="text-xs text-slate-500">{item.label}</p>
-                    <p className={`text-lg font-extrabold ${txt}`}>
+                    <p className={`text-base font-extrabold sm:text-lg ${txt}`}>
                       {item.value < 0 ? '−' : ''}€{euro(Math.abs(item.value))}
                     </p>
                   </div>

@@ -30,7 +30,7 @@ interface UncatResp {
 const COMMON_CATS = [
   'Boodschappen', 'Horeca', 'Vervoer', 'Gas/Elektra/Water', 'Verzekeringen', 'Internet/TV/Telefoon',
   'Winkels', 'Apotheek/Medisch', 'Aflossingen', 'Belastingen', 'Sport', 'Kinderen', 'Reizen/Vakantie',
-  'Leuke dingen/Uitjes', 'Persoonlijke verzorging', 'Goede doelen', 'Contant geld', 'Overig',
+  'Leuke dingen/Uitjes', 'Persoonlijke verzorging', 'Goede doelen', 'Contant geld', 'Onderling', 'Overig',
 ]
 const INCOME_LABELS: Record<string, string> = {
   loon: 'Loon / salaris',
@@ -238,7 +238,7 @@ export default function OverigCleanup() {
             type="button"
             onClick={runAi}
             disabled={aiBusy || !groups.length}
-            className="pill justify-center bg-violet-50 px-3 py-2 text-sm font-semibold text-violet-700 ring-1 ring-violet-200 hover:bg-violet-100 disabled:opacity-50"
+            className="pill justify-center bg-violet-50 px-3 py-2 text-sm font-semibold text-violet-700 ring-1 ring-violet-200 hover:bg-violet-100 disabled:opacity-50 dark:text-violet-300 dark:ring-violet-800/50"
           >
             <Sparkles className={`h-4 w-4 ${aiBusy ? 'animate-pulse' : ''}`} />
             {aiBusy ? 'AI denkt na…' : 'Laat AI een voorstel doen'}

@@ -98,13 +98,17 @@ export function merchantKey(label: string): string {
     /NAAM:\s*(.+?)(?:\s+(?:MACHTIGING|OMSCHRIJVING|OMSCHR|IBAN|KENMERK|BIC|RCUR)\b|$)/i.exec(original)?.[1] ??
     original
   s = s.toLowerCase()
+  s = s.replace(/\bnr:?\s*[a-z0-9]+/g, ' ') // betaalautomaat-referentie (NR:CT966236)
   s = s.replace(/\b[a-z&]{2,5}\*/g, ' ') // betaalverwerker-prefix (bck* ccv* c&m*)
   s = s.replace(/nl\d{2}[a-z]{4}\d{6,}/g, ' ') // IBAN
   s = s.replace(/\d{1,2}[.\/-]\d{1,2}[.\/-]\d{2,4}/g, ' ') // datums
   s = s.replace(/\d{1,2}:\d{2}/g, ' ') // tijden
   s = s.replace(/[^a-z0-9&\s]/g, ' ') // leestekens
   s = s.replace(/\d[\d.,]*/g, ' ') // getallen/bedragen
-  const words = s.split(/\s+/).filter((w) => w.length >= 2 && !MERCHANT_NOISE.has(w))
+  const words = s
+    .split(/\s+/)
+    .filter((w) => w.length >= 2 && !MERCHANT_NOISE.has(w))
+    .filter((w, i, arr) => w !== arr[i - 1]) // dubbele woorden achter elkaar weg
   return words.slice(0, 3).join(' ').slice(0, 32)
 }
 

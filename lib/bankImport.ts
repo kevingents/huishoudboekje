@@ -45,6 +45,9 @@ export function parseDate(raw: string): string {
 /* -------------------------------------------------------------------------- */
 
 const CATEGORY_RULES: [RegExp, string][] = [
+  // Aflossingen/schulden — eerst, zodat een betalingsregeling bij een verzekeraar
+  // niet als verzekering telt. ICS = creditcard-afschrijving (betaling aan ICS).
+  [/betalingsregeling|deurwaarder|incassobureau|international card service|\baflos\b/i, 'Aflossingen'],
   // Boodschappen / supermarkt / drogist / bakker
   [/albert heijn|\bah\b|ah to go|jumbo|\blidl\b|\baldi\b|\bplus\b|\bdirk\b|dekamarkt|vomar|picnic|\bspar\b|\bcoop\b|hoogvliet|\bdeen\b|poiesz|nettorama|\bboni\b|jan linders|\bmarqt\b|ekoplaza|\bcrisp\b|gorillas|\bflink\b|\bgetir\b|\btoko\b|supermarkt|kruidvat|\betos\b|drogist|bakker|bakkerij|slagerij|slager|groente|versmarkt/i, 'Boodschappen'],
   // Horeca / uit eten / bezorgen
@@ -63,21 +66,23 @@ const CATEGORY_RULES: [RegExp, string][] = [
   // Apotheek / medisch / optiek
   [/apotheek|huisarts|tandarts|\bfysio|ziekenhuis|\bmedisch|drogisterij|optiek|pearle|hans anders|specsavers|eye wish|\bkliniek\b|psycholoog|\bggz\b|mondhygien/i, 'Apotheek/Medisch'],
   // Persoonlijke verzorging / kapper / beauty
-  [/kapper|kapsalon|barbier|nagelstudio|schoonheidssalon|\bbeauty\b|massage|parfum|ici paris|\bdouglas\b|\brituals\b/i, 'Persoonlijke verzorging'],
+  [/kapper|kapsalon|barbier|barberstudio|\bbarber\b|\bnails\b|nagelstudio|schoonheidssalon|\bbeauty\b|sally beauty|massage|parfum|ici paris|\bdouglas\b|\brituals\b/i, 'Persoonlijke verzorging'],
   // Aflossingen / krediet / koop-op-afbetaling
   [/hypotheek|aflossing|creditcard|credit card|\blening\b|krediet|\bobvion\b|\bklarna\b|afterpay|\briverty\b|billink|\bduo\b/i, 'Aflossingen'],
   // Belastingen / overheid
   [/gemeente|belastingdienst|waterschap|\bcjib\b|\bozb\b|afvalstoffen|hoogheemraadschap|rioolheffing|motorrijtuig|wegenbelasting|\brdw\b|kadaster|\bkvk\b|gemeentebelasting/i, 'Belastingen'],
   // Sport
-  [/\bsport\b|\bgym\b|fitness|basic-?fit|sportschool|sportcity|fit for free|anytime fitness|\bzwembad\b|\btennis\b|voetbal|hockey|korfbal|sportverenig|\byoga\b|pilates|crossfit|\bpadel\b|\bmanege\b|more impact/i, 'Sport'],
+  [/\bsport\b|\bgym\b|fitness|basic-?fit|sportschool|sportcity|fit for free|anytime fitness|sportcomplex|sportcafe|club nemo|tetterode|houtvaart|geel-?wit|\bzwembad\b|\btennis\b|voetbal|hockey|korfbal|sportverenig|\byoga\b|pilates|crossfit|\bpadel\b|\bmanege\b|more impact/i, 'Sport'],
   // Kinderen / opvang / school
-  [/kinderopvang|\bkdv\b|\bbso\b|gastouder|\bcreche\b|crèche|peuterspeel|ouderbijdrage|schoolreis|babypark|prenatal|zwemles|\boppas\b/i, 'Kinderen'],
+  [/kinderopvang|kindercentr|wonderberk|\bhero\b|\bkdv\b|\bbso\b|gastouder|\bcreche\b|crèche|peuterspeel|ouderbijdrage|schoolreis|babypark|prenatal|zwemles|\boppas\b/i, 'Kinderen'],
   // Reizen / vakantie / verblijf
   [/booking\.com|airbnb|\bhotel\b|vakantie|transavia|\bklm\b|ryanair|\btui\b|sunweb|d-?reizen|center parcs|\blandal\b|roompot|\beasyjet\b|corendon/i, 'Reizen/Vakantie'],
   // Leuke dingen / uitjes / entertainment / loterij
   [/pathe|pathé|bioscoop|kinepolis|\bvue\b|efteling|dierentuin|museum|\buitje|pretpark|attractiepark|walibi|duinrell|madurodam|\bartis\b|dolfinarium|\bconcert\b|ticketmaster|festival|theater|escape room|bowlen|lasergame|\bnemo\b|speeltuin|klimbos|\bloten\b|staatslot|\blotto\b/i, 'Leuke dingen/Uitjes'],
   // Goede doelen / donaties
   [/unicef|rode kruis|\bkwf\b|greenpeace|\bwnf\b|artsen zonder|cliniclowns|donatie|\bkerk\b|\bcollecte\b|\boxfam\b|hartstichting|longfonds|dierenbescherming/i, 'Goede doelen'],
+  // Onderling / Tikkie / betaalverzoek (geld naar of van personen — splitten, p2p)
+  [/via tikkie|tikkie id|betaalverzoek|\btikkie\b/i, 'Onderling'],
   // Contant geld (geldautomaat)
   [/geldautomaat|geldopname|\bgea\b|opname automaat|\batm\b/i, 'Contant geld'],
 ]
@@ -212,11 +217,11 @@ function parseMt940(text: string): BankTx[] {
     } else if (line.startsWith(':86:') && cur) {
       cur.description += (cur.description ? ' ' : '') + line.slice(4)
     } else if (cur && line && !line.startsWith(':')) {
-      // Gestructureerde ABN :86: (/TRTP/.../NAME/..) wordt op 65 tekens afgebroken
+      // Gestructureerde ABN :86: (begint met /TRTP/..) wordt op 65 tekens afgebroken
       // ZONDER spatie → zonder spatie samenvoegen herstelt afgebroken woorden
       // (INTERN\nATIONAL -> INTERNATIONAL, BOL.CO\nM -> BOL.COM). Ongestructureerde
-      // regels (BEA + losse velden) juist mét spatie.
-      cur.description += cur.description.includes('/') ? line : ' ' + line
+      // regels (BEA, die ook een / in de tijd hebben) juist mét spatie.
+      cur.description += cur.description.trimStart().startsWith('/') ? line : ' ' + line
     }
 
   }

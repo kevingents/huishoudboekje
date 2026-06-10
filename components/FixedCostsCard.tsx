@@ -96,7 +96,7 @@ export default function FixedCostsCard({ className = '' }: { className?: string 
         <button
           type="button"
           onClick={openAdd}
-          className="pill bg-sky-50 px-3 py-1.5 text-xs text-sky-600 hover:bg-sky-100"
+          className="pill bg-sky-50 px-3 py-1.5 text-xs text-sky-600 hover:bg-sky-100 dark:text-sky-300"
         >
           <Plus className="h-3.5 w-3.5" />
           Vaste last
@@ -117,7 +117,7 @@ export default function FixedCostsCard({ className = '' }: { className?: string 
                       {c.category ?? 'Overig'}
                     </span>
                     {c.isSubscription && (
-                      <span className="rounded-full bg-sky-100 px-1.5 py-0.5 font-medium text-sky-600">
+                      <span className="rounded-full bg-sky-100 px-1.5 py-0.5 font-medium text-sky-600 dark:text-sky-300">
                         abonnement · {c.subscriptionInterval === '12 months' ? 'jaarlijks' : 'maandelijks'}
                         {c.subscriptionCancelable
                           ? ' · opzegbaar'

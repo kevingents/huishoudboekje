@@ -187,6 +187,43 @@ html.dark .shadow-soft {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4) !important;
 }
 
+/* Pastel-achtergronden (-50/-100) → semi-transparante dark-varianten, zodat
+   knoppen, badges, info-boxen en formuliervlakken leesbaar blijven in dark mode. */
+html.dark .bg-emerald-50,
+html.dark .bg-emerald-100 {
+  background-color: rgba(16, 185, 129, 0.18) !important;
+}
+html.dark .bg-sky-50,
+html.dark .bg-sky-100 {
+  background-color: rgba(14, 165, 233, 0.18) !important;
+}
+html.dark .bg-violet-50,
+html.dark .bg-violet-100 {
+  background-color: rgba(139, 92, 246, 0.18) !important;
+}
+html.dark .bg-amber-50,
+html.dark .bg-amber-100 {
+  background-color: rgba(245, 158, 11, 0.18) !important;
+}
+html.dark .bg-rose-50,
+html.dark .bg-rose-100 {
+  background-color: rgba(244, 63, 94, 0.18) !important;
+}
+/* Opacity-boxen van de Maandprognose. */
+html.dark .bg-emerald-500\/10 {
+  background-color: rgba(16, 185, 129, 0.18) !important;
+}
+html.dark .bg-rose-500\/10 {
+  background-color: rgba(244, 63, 94, 0.18) !important;
+}
+html.dark .bg-slate-400\/10 {
+  background-color: rgba(148, 163, 184, 0.12) !important;
+}
+/* Hover-state van verwijder-knoppen. */
+html.dark .hover\:bg-rose-50:hover {
+  background-color: rgba(244, 63, 94, 0.2) !important;
+}
+
 @layer components {
   /* Shared pill / button base. Colours + padding are supplied per usage. */
   .pill {

@@ -97,10 +97,10 @@ export default function SpendingChart({ transactions }: { transactions: Transact
 
   return (
     <DashboardCard title="Waar gaat het heen?" icon={PieChart} iconClassName="text-violet-500" className="lg:col-span-2">
-      <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-start">
-        <div className="relative h-40 w-40 shrink-0">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6">
+        <div className="relative mx-auto h-32 w-32 shrink-0 sm:mx-0 sm:h-40 sm:w-40">
           <svg viewBox="0 0 128 128" className="h-full w-full -rotate-90">
-            <circle cx="64" cy="64" r={radius} fill="none" stroke="#EBF1F4" strokeWidth="16" />
+            <circle cx="64" cy="64" r={radius} fill="none" stroke="currentColor" className="text-[#EBF1F4] dark:text-slate-700" strokeWidth="16" />
             {segments.map(([cat, value], i) => {
               const frac = value / total
               const dash = frac * circ
@@ -138,11 +138,11 @@ export default function SpendingChart({ transactions }: { transactions: Transact
               const color = PALETTE[i % PALETTE.length]
               const inner = (
                 <>
-                  <div className="mb-1 flex items-center gap-2 text-sm">
+                  <div className="mb-1 flex items-center gap-1.5 overflow-hidden text-sm sm:gap-2">
                     <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: color }} />
                     <span className="min-w-0 flex-1 truncate text-slate-700">{cat}</span>
                     <span className="shrink-0 font-semibold text-slate-800">€{euro(value)}</span>
-                    <span className="w-10 shrink-0 text-right text-xs text-slate-400">{Math.round(pct)}%</span>
+                    <span className="min-w-10 shrink-0 text-right text-xs text-slate-400">{Math.round(pct)}%</span>
                     {clickable && <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-300" />}
                   </div>
                   <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">

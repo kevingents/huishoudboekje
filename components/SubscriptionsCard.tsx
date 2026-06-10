@@ -43,7 +43,7 @@ export default function SubscriptionsCard() {
     <button
       type="button"
       onClick={() => setOpen(true)}
-      className="pill bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-600 hover:bg-sky-100"
+      className="pill bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-600 hover:bg-sky-100 dark:text-sky-300"
     >
       <Plus className="h-3.5 w-3.5" />
       Abonnement
