@@ -73,6 +73,28 @@ function incomeBucket(cat: string): string {
   return 'overig'
 }
 
+/** Sleutel om een transactie te herkennen: datum + bedrag + (genormaliseerde) omschrijving. */
+function txKey(date: string, amount: number, label: string): string {
+  const l = label.toLowerCase().replace(/\s+/g, ' ').trim().slice(0, 80)
+  return `${date}|${amount.toFixed(2)}|${l}`
+}
+
+/** Telling (multiset) van bestaande transacties, zodat overlappende afschriften
+ *  precies ontdubbeld worden: een transactie die al N keer in het budget staat,
+ *  wordt N keer overgeslagen — echte dubbele binnen één afschrift blijven staan. */
+async function loadTxMultiset(hid: number): Promise<Map<string, number>> {
+  const existing = await prisma.transaction.findMany({
+    where: { householdId: hid },
+    select: { date: true, amount: true, label: true },
+  })
+  const m = new Map<string, number>()
+  for (const e of existing) {
+    const k = txKey(e.date, e.amount, e.label)
+    m.set(k, (m.get(k) ?? 0) + 1)
+  }
+  return m
+}
+
 export async function POST(req: Request) {
   const hid = await requireHousehold()
   if (hid instanceof Response) return hid
@@ -96,9 +118,26 @@ export async function POST(req: Request) {
         { status: 400 },
       )
     }
+    // Ontdubbelen tegen wat al in het budget staat (overlappende afschriften).
+    const seen = await loadTxMultiset(hid)
+    const fresh: { label: string; category: string; amount: number; date: string }[] = []
+    let skipped = 0
+    for (const d of debits) {
+      const label = (d.description || d.category).slice(0, 120)
+      const date = d.date || 'Geïmporteerd'
+      const k = txKey(date, d.amount, label)
+      const cnt = seen.get(k) ?? 0
+      if (cnt > 0) {
+        seen.set(k, cnt - 1)
+        skipped++
+        continue
+      }
+      fresh.push({ label, category: d.category, amount: d.amount, date })
+    }
+
     const existingCats = await prisma.budgetCategory.findMany({ where: { householdId: hid }, select: { name: true } })
     const haveCats = new Set(existingCats.map((c) => c.name.toLowerCase()))
-    const cats = [...new Set(debits.map((d) => d.category))]
+    const cats = [...new Set(fresh.map((d) => d.category))]
     let ci = 0
     for (const cat of cats) {
       if (haveCats.has(cat.toLowerCase())) continue
@@ -107,17 +146,14 @@ export async function POST(req: Request) {
       })
       ci++
     }
-    const slice = debits.slice(0, 5000)
-    await prisma.transaction.createMany({
-      data: slice.map((d) => ({
-        householdId: hid,
-        label: (d.description || d.category).slice(0, 120),
-        category: d.category,
-        amount: d.amount,
-        date: d.date || 'Geïmporteerd',
-      })),
-    })
-    return Response.json({ ok: true, source: 'bank', expenses: slice.length, incomes: 0, categories: cats.length })
+
+    const slice = fresh.slice(0, 5000)
+    if (slice.length) {
+      await prisma.transaction.createMany({
+        data: slice.map((d) => ({ householdId: hid, label: d.label, category: d.category, amount: d.amount, date: d.date })),
+      })
+    }
+    return Response.json({ ok: true, source: 'bank', expenses: slice.length, incomes: 0, categories: cats.length, skipped })
   }
 
   let wb: XLSX.WorkBook
@@ -152,20 +188,31 @@ export async function POST(req: Request) {
     colorI++
   }
 
-  // Uitgaven → transacties.
-  if (expenses.length) {
+  // Uitgaven → transacties (ontdubbeld tegen wat al in het budget staat).
+  const seen = await loadTxMultiset(hid)
+  const freshExp: { label: string; category: string; amount: number; date: string }[] = []
+  let skipped = 0
+  for (const e of expenses) {
+    const label = e.label.slice(0, 120)
+    const date = e.date || 'Geïmporteerd'
+    const k = txKey(date, e.amount, label)
+    const cnt = seen.get(k) ?? 0
+    if (cnt > 0) {
+      seen.set(k, cnt - 1)
+      skipped++
+      continue
+    }
+    freshExp.push({ label, category: e.category, amount: e.amount, date })
+  }
+  if (freshExp.length) {
     await prisma.transaction.createMany({
-      data: expenses.map((e) => ({
-        householdId: hid,
-        label: e.label.slice(0, 120),
-        category: e.category,
-        amount: e.amount,
-        date: e.date || 'Geïmporteerd',
-      })),
+      data: freshExp.map((e) => ({ householdId: hid, label: e.label, category: e.category, amount: e.amount, date: e.date })),
     })
   }
 
-  // Inkomsten → maandgemiddelde per categorie als terugkerend inkomen.
+  // Inkomsten → maandgemiddelde per categorie (bestaande labels overslaan).
+  const existingIncome = await prisma.income.findMany({ where: { householdId: hid }, select: { label: true } })
+  const haveIncome = new Set(existingIncome.map((i) => i.label.toLowerCase()))
   const incByCat = new Map<string, { total: number; months: Set<string> }>()
   for (const inc of incomes) {
     const g = incByCat.get(inc.category) ?? { total: 0, months: new Set<string>() }
@@ -176,7 +223,7 @@ export async function POST(req: Request) {
   let incomeCreated = 0
   for (const [cat, g] of incByCat) {
     const monthly = Math.round((g.total / Math.max(1, g.months.size)) * 100) / 100
-    if (monthly <= 0) continue
+    if (monthly <= 0 || haveIncome.has(cat.toLowerCase())) continue
     await prisma.income.create({
       data: { householdId: hid, label: cat, amount: monthly, category: incomeBucket(cat), interval: '1 month' },
     })
@@ -185,8 +232,9 @@ export async function POST(req: Request) {
 
   return Response.json({
     ok: true,
-    expenses: expenses.length,
+    expenses: freshExp.length,
     incomes: incomeCreated,
     categories: expCats.length,
+    skipped,
   })
 }

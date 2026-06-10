@@ -27,19 +27,25 @@ export default function BudgetImport() {
         expenses: number
         incomes: number
         categories: number
+        skipped?: number
       }
       await Promise.all([
         mutate('/api/budget/transactions'),
         mutate('/api/budget/categories'),
         mutate('/api/income'),
       ])
-      setMsg({
-        ok: true,
-        text:
-          res.source === 'bank'
-            ? `Bankafschrift geïmporteerd: ${res.expenses} afschrijvingen in ${res.categories} categorieën.`
-            : `Geïmporteerd: ${res.expenses} uitgaven, ${res.incomes} inkomstenposten en ${res.categories} categorieën.`,
-      })
+      const skip = res.skipped ?? 0
+      let text: string
+      if (res.expenses === 0 && skip > 0) {
+        text = `Niets nieuws — alle ${skip} transacties stonden al in je budget.`
+      } else if (res.source === 'bank') {
+        text = `Bankafschrift geïmporteerd: ${res.expenses} nieuwe afschrijvingen${
+          skip ? `, ${skip} al aanwezig (overgeslagen)` : ''
+        } in ${res.categories} categorieën.`
+      } else {
+        text = `Geïmporteerd: ${res.expenses} nieuwe uitgaven${skip ? `, ${skip} al aanwezig` : ''}, ${res.incomes} inkomstenposten en ${res.categories} categorieën.`
+      }
+      setMsg({ ok: true, text })
     } catch (e) {
       setMsg({ ok: false, text: e instanceof Error ? e.message : 'Import mislukt.' })
     } finally {
@@ -80,7 +86,8 @@ export default function BudgetImport() {
         <p className={`mt-2 text-sm font-medium ${msg.ok ? 'text-emerald-600' : 'text-rose-600'}`}>{msg.text}</p>
       )}
       <p className="mt-2 text-[11px] text-slate-400">
-        Tip: importeer één keer — meerdere keren geeft dubbele transacties.
+        Dubbele transacties worden automatisch herkend en overgeslagen — een overlappend afschrift
+        uploaden (bijv. de 10e en later de 10e–11e) is dus geen probleem.
       </p>
     </DashboardCard>
   )
