@@ -121,20 +121,21 @@ export async function POST() {
 
   let incomeCreated = 0
   if (incAgg.size) {
-    const existingIncome = await prisma.income.findMany({ where: { householdId: hid }, select: { label: true } })
-    const haveIncome = new Set(existingIncome.map((i) => i.label.toLowerCase()))
+    const existingIncome = await prisma.income.findMany({ where: { householdId: hid }, select: { id: true, label: true } })
+    const byLabel = new Map(existingIncome.map((i) => [i.label.toLowerCase(), i.id]))
     for (const g of incAgg.values()) {
-      if (!g.count || haveIncome.has(g.name.toLowerCase())) continue
-      await prisma.income.create({
-        data: {
-          householdId: hid,
-          label: g.name,
-          amount: Math.round((g.sum / monthsInPeriod) * 100) / 100,
-          category: g.subtype,
-          interval: '1 month',
-        },
-      })
-      haveIncome.add(g.name.toLowerCase())
+      if (!g.count) continue
+      const amount = Math.round((g.sum / monthsInPeriod) * 100) / 100
+      const id = byLabel.get(g.name.toLowerCase())
+      if (id) {
+        // Bestaande inkomst bijwerken (soort + bedrag) — zo blijft je keuze onthouden.
+        await prisma.income.update({ where: { id }, data: { amount, category: g.subtype, interval: '1 month' } })
+      } else {
+        await prisma.income.create({
+          data: { householdId: hid, label: g.name, amount, category: g.subtype, interval: '1 month' },
+        })
+        byLabel.set(g.name.toLowerCase(), -1)
+      }
       incomeCreated++
     }
   }

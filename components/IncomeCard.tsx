@@ -16,6 +16,25 @@ function euro(value: number) {
   return value.toLocaleString('nl-NL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
+const MONTHS_NL = ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec']
+function pad(n: number) {
+  return String(n).padStart(2, '0')
+}
+function ymOf(t: { date?: string; createdAt?: string }): string {
+  const m = /^(\d{4})-(\d{2})/.exec(t.date || '')
+  if (m) return `${m[1]}-${m[2]}`
+  if (t.createdAt) {
+    const d = new Date(t.createdAt)
+    if (!isNaN(d.getTime())) return `${d.getFullYear()}-${pad(d.getMonth() + 1)}`
+  }
+  return 'onbekend'
+}
+function monthLabel(ym: string) {
+  if (ym === 'onbekend') return 'Onbekend'
+  const [y, mo] = ym.split('-')
+  return `${MONTHS_NL[Number(mo) - 1] ?? ''} ${y}`
+}
+
 const CATS: { value: string; label: string }[] = [
   { value: 'loon', label: 'Loon / salaris' },
   { value: 'kinderbijslag', label: 'Kinderbijslag' },
@@ -281,27 +300,37 @@ export default function IncomeCard({ className = '' }: { className?: string }) {
           (() => {
             const credits = creditsFor(detail)
             const total = credits.reduce((s, t) => s + (Number(t.amount) || 0), 0)
+            const byMonth = new Map<string, { sum: number; n: number }>()
+            for (const t of credits) {
+              const ym = ymOf(t)
+              const g = byMonth.get(ym) ?? { sum: 0, n: 0 }
+              g.sum += Number(t.amount) || 0
+              g.n += 1
+              byMonth.set(ym, g)
+            }
+            const months = [...byMonth.entries()].sort((a, b) => (a[0] < b[0] ? 1 : -1))
+            const max = Math.max(1, ...months.map(([, g]) => g.sum))
             return (
               <div className="flex flex-col gap-3">
                 <p className="text-sm text-slate-500">
-                  {credits.length} bijschrijvingen, totaal{' '}
-                  <span className="font-bold text-emerald-600">+€{euro(total)}</span>. Het maandbedrag is dit
-                  totaal gedeeld door het aantal maanden in je afschrift.
+                  Totaal <span className="font-bold text-emerald-600">+€{euro(total)}</span> over {credits.length}{' '}
+                  {credits.length === 1 ? 'bijschrijving' : 'bijschrijvingen'}. Het maandbedrag is dit totaal
+                  gedeeld door het aantal maanden in je data.
                 </p>
-                {credits.length === 0 ? (
+                {months.length === 0 ? (
                   <p className="text-sm text-slate-500">
-                    Geen gekoppelde bijschrijvingen gevonden — deze inkomst is handmatig toegevoegd of de
-                    omschrijving wijkt af.
+                    Geen gekoppelde bijschrijvingen gevonden — handmatig toegevoegd of de omschrijving wijkt af.
                   </p>
                 ) : (
-                  <ul className="max-h-72 overflow-y-auto pr-1">
-                    {credits.map((t) => (
-                      <li key={t.id} className="flex items-center gap-3 py-1.5 text-sm">
-                        <span className="w-20 shrink-0 text-xs text-slate-400">{t.date}</span>
-                        <span className="min-w-0 flex-1 truncate text-slate-600">{t.label}</span>
-                        <span className="shrink-0 font-semibold text-emerald-600">
-                          +€{euro(Number(t.amount) || 0)}
-                        </span>
+                  <ul className="flex flex-col gap-2">
+                    {months.map(([ym, g]) => (
+                      <li key={ym} className="flex items-center gap-2 text-sm">
+                        <span className="w-20 shrink-0 capitalize text-slate-600">{monthLabel(ym)}</span>
+                        <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
+                          <div className="h-full rounded-full bg-emerald-500" style={{ width: `${(g.sum / max) * 100}%` }} />
+                        </div>
+                        <span className="w-24 shrink-0 text-right font-semibold text-emerald-600">+€{euro(g.sum)}</span>
+                        <span className="w-7 shrink-0 text-right text-xs text-slate-400">{g.n}×</span>
                       </li>
                     ))}
                   </ul>

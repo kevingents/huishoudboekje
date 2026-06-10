@@ -138,16 +138,26 @@ export default function OverigCleanup() {
     setMsg(null)
     try {
       await apiPost('/api/budget/rules', { rules })
-      const res = (await apiPost('/api/budget/recategorize', {})) as { updated: number; overigAfter: number }
+      const res = (await apiPost('/api/budget/recategorize', {})) as {
+        updated: number
+        overigAfter: number
+        incomeCreated?: number
+        fixedCreated?: number
+      }
       await Promise.all([
         globalMutate('/api/budget/transactions'),
         globalMutate('/api/budget/categories'),
         globalMutate('/api/income'),
         globalMutate('/api/fixed-costs'),
+        globalMutate('/api/loans'),
         mutate(),
       ])
       setChoices({})
-      setMsg(`Klaar — ${res.updated} transacties ingedeeld en onthouden. Nog ${res.overigAfter} in Overig.`)
+      const parts = [`${rules.length} onthouden`]
+      if (res.updated) parts.push(`${res.updated} uitgaven ingedeeld`)
+      if (res.incomeCreated) parts.push(`${res.incomeCreated} inkomsten bijgewerkt`)
+      if (res.fixedCreated) parts.push(`${res.fixedCreated} vaste lasten`)
+      setMsg(`Klaar — ${parts.join(', ')}. Nog ${res.overigAfter} in Overig.`)
     } catch {
       setMsg('Toepassen mislukt. Probeer het opnieuw.')
     } finally {
