@@ -14,6 +14,8 @@ interface Group {
   example: string
   total: number
   count: number
+  currentCategory?: string
+  hasRule?: boolean
 }
 interface Bucket {
   total: number
@@ -68,6 +70,7 @@ export default function OverigCleanup() {
   const [tab, setTab] = useState<'expenses' | 'income'>('expenses')
   const [choices, setChoices] = useState<Record<string, string>>({})
   const [showAll, setShowAll] = useState(false)
+  const [search, setSearch] = useState('')
   const [aiBusy, setAiBusy] = useState(false)
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
@@ -80,7 +83,11 @@ export default function OverigCleanup() {
 
   const bucket = data?.[tab]
   const groups = bucket?.groups ?? []
-  const shown = showAll ? groups : groups.slice(0, 20)
+  const q = search.trim().toLowerCase()
+  const filtered = q
+    ? groups.filter((g) => g.key.toLowerCase().includes(q) || g.example.toLowerCase().includes(q))
+    : groups
+  const shown = showAll ? filtered : filtered.slice(0, 20)
 
   const expCount = data?.expenses.count ?? 0
   const incCount = data?.income.count ?? 0
@@ -177,10 +184,9 @@ export default function OverigCleanup() {
       ) : (
         <>
           <p className="text-sm text-slate-500">
-            Loop de posten in <span className="font-semibold">Overig</span> en je{' '}
-            <span className="font-semibold">bijschrijvingen</span> langs, vertel één keer wat het is, en Fam
-            <span className="font-semibold"> onthoudt</span> het — ook voor volgende imports. Of laat de{' '}
-            <span className="font-semibold">AI</span> een voorstel doen.
+            Loop al je uitgaven per winkel langs (ook hypotheek, vaste lasten en wat in Overig staat),
+            vertel één keer wat het is, en Fam <span className="font-semibold">onthoudt</span> het — ook voor
+            volgende imports. Of laat de <span className="font-semibold">AI</span> een voorstel doen.
           </p>
           <button
             type="button"
@@ -188,34 +194,45 @@ export default function OverigCleanup() {
             className="pill mt-3 bg-brand px-4 py-2.5 text-white shadow-sm shadow-brand/20 hover:bg-brand-dark"
           >
             <Wand2 className="h-4 w-4" />
-            Opschonen — €{Math.round(expTotal)} in {expCount} posten
+            Opschonen — {expCount} posten
           </button>
         </>
       )}
 
       <Modal open={open} onClose={() => setOpen(false)} title="Budget opschonen">
         <div className="flex flex-col gap-3">
-          {/* Tabs */}
-          <div className="flex gap-1 rounded-xl bg-slate-100 p-1">
-            <button
-              type="button"
-              onClick={() => setTab('expenses')}
-              className={`flex-1 rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors ${
-                tab === 'expenses' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'
-              }`}
-            >
-              Uitgaven ({expCount})
-            </button>
-            <button
-              type="button"
-              onClick={() => setTab('income')}
-              className={`flex-1 rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors ${
-                tab === 'income' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'
-              }`}
-            >
-              Bijschrijvingen ({incCount})
-            </button>
-          </div>
+          {/* Tabs (bijschrijvingen alleen als die er zijn) */}
+          {incCount > 0 && (
+            <div className="flex gap-1 rounded-xl bg-slate-100 p-1">
+              <button
+                type="button"
+                onClick={() => setTab('expenses')}
+                className={`flex-1 rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors ${
+                  tab === 'expenses' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'
+                }`}
+              >
+                Uitgaven ({expCount})
+              </button>
+              <button
+                type="button"
+                onClick={() => setTab('income')}
+                className={`flex-1 rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors ${
+                  tab === 'income' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'
+                }`}
+              >
+                Bijschrijvingen ({incCount})
+              </button>
+            </div>
+          )}
+
+          {/* Zoeken */}
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Zoek een winkel…"
+            className="w-full rounded-lg border border-cardborder bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-brand/40 focus:ring-2 focus:ring-brand/20"
+          />
 
           <button
             type="button"
@@ -229,8 +246,8 @@ export default function OverigCleanup() {
 
           {isLoading ? (
             <p className="text-sm text-slate-400">Laden…</p>
-          ) : groups.length === 0 ? (
-            <p className="text-sm text-slate-500">Niets in te delen hier.</p>
+          ) : filtered.length === 0 ? (
+            <p className="text-sm text-slate-500">{q ? 'Geen winkel gevonden.' : 'Niets in te delen hier.'}</p>
           ) : (
             <ul className="flex flex-col divide-y divide-cardborder">
               {shown.map((g) => (
@@ -242,7 +259,12 @@ export default function OverigCleanup() {
                     <span className="shrink-0 text-sm font-bold text-slate-800">€{euro(g.total)}</span>
                     <span className="shrink-0 text-xs text-slate-400">{g.count}×</span>
                   </div>
-                  <p className="mb-1.5 truncate text-[11px] text-slate-400">{g.example}</p>
+                  <p className="truncate text-[11px] text-slate-400" title={g.example}>{g.example}</p>
+                  {g.currentCategory && (
+                    <p className="mb-1.5 text-[11px] text-slate-400">
+                      Nu in: <span className="font-semibold text-slate-500">{g.currentCategory}</span>
+                    </p>
+                  )}
                   <select
                     value={choiceOf(g.key)}
                     onChange={(e) => setChoice(g.key, e.target.value)}
@@ -259,6 +281,7 @@ export default function OverigCleanup() {
                         <optgroup label="Vaste lasten">
                           <option value="fixed:">Vaste last (huur, energie…)</option>
                           <option value="fixed:Abonnement">Abonnement (Netflix, krant…)</option>
+                          <option value="fixed:Aflossingen">Aflossing / schuld (hypotheek, lening…)</option>
                         </optgroup>
                         <optgroup label="Anders">
                           <option value="once:">Eenmalige inkomst / teruggave</option>
@@ -285,13 +308,13 @@ export default function OverigCleanup() {
             </ul>
           )}
 
-          {groups.length > 20 && (
+          {filtered.length > 20 && (
             <button
               type="button"
               onClick={() => setShowAll((s) => !s)}
               className="text-sm font-semibold text-brand hover:underline"
             >
-              {showAll ? 'Toon minder' : `Toon alle ${groups.length}`}
+              {showAll ? 'Toon minder' : `Toon alle ${filtered.length}`}
             </button>
           )}
 
