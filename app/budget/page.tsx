@@ -9,6 +9,7 @@ import ModuleGate from '@/components/ModuleGate'
 import SavingsGoalsCard from '@/components/SavingsGoalsCard'
 import FixedCostsCard from '@/components/FixedCostsCard'
 import IncomeCard from '@/components/IncomeCard'
+import SpendingChart from '@/components/SpendingChart'
 import { useBudget, useSettings, useFixedCosts, useSubscriptions, useHousehold, useIncome } from '@/lib/hooks'
 import { apiPost } from '@/lib/api'
 import { resolveIcon } from '@/lib/icons'
@@ -335,6 +336,9 @@ export default function BudgetPage() {
         </div>
         </ModuleGate>
         </div>
+
+        {/* Waar gaat het heen? */}
+        <SpendingChart transactions={transactions} />
 
         {/* Recent transactions (full width) */}
         <DashboardCard title="Recente uitgaven" className="lg:col-span-2">
