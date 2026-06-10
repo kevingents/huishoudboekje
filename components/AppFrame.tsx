@@ -40,7 +40,7 @@ export default function AppFrame({ children }: { children: ReactNode }) {
       <SwipeBack />
       <div className="mx-auto flex h-full max-w-[1440px] overflow-hidden bg-white shadow-card lg:rounded-[28px]">
         <Sidebar />
-        <main className="scrollbar-thin flex-1 overflow-y-auto px-4 pb-28 pt-6 sm:px-6 lg:px-8 lg:pb-8">
+        <main className="scrollbar-thin min-w-0 flex-1 overflow-y-auto overflow-x-hidden px-4 pb-28 pt-6 sm:px-6 lg:px-8 lg:pb-8">
           <div className="mx-auto max-w-6xl">{children}</div>
         </main>
       </div>

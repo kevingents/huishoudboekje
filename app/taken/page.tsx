@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { ListTodo, Plus, Check, X, Trophy, Trash2, Clock, Star } from 'lucide-react'
+import { ListTodo, Plus, Check, X, Trophy, Trash2, Clock, Star, Repeat } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
 import DashboardCard from '@/components/DashboardCard'
 import Modal from '@/components/Modal'
@@ -16,7 +16,14 @@ export default function TakenPage() {
   const { members } = useFamily()
 
   const [open, setOpen] = useState(false)
-  const [form, setForm] = useState({ title: '', assignedTo: '', points: '10', dueDate: '', description: '' })
+  const [form, setForm] = useState({
+    title: '',
+    assignedTo: '',
+    points: '10',
+    dueDate: '',
+    description: '',
+    recurrence: 'geen',
+  })
 
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get('nieuw')) setOpen(true)
@@ -31,8 +38,9 @@ export default function TakenPage() {
       points: Number(form.points) || 0,
       dueDate: form.dueDate || null,
       description: form.description.trim() || null,
+      recurrence: form.recurrence,
     })
-    setForm({ title: '', assignedTo: '', points: '10', dueDate: '', description: '' })
+    setForm({ title: '', assignedTo: '', points: '10', dueDate: '', description: '', recurrence: 'geen' })
     setOpen(false)
   }
 
@@ -74,6 +82,12 @@ export default function TakenPage() {
               <span className="inline-flex items-center gap-0.5">
                 <Clock className="h-3 w-3" />
                 {task.dueDate}
+              </span>
+            )}
+            {task.recurrence && task.recurrence !== 'geen' && (
+              <span className="inline-flex items-center gap-0.5 text-sky-500">
+                <Repeat className="h-3 w-3" />
+                {task.recurrence}
               </span>
             )}
           </p>
@@ -240,15 +254,30 @@ export default function TakenPage() {
               />
             </label>
           </div>
-          <label className="text-xs font-semibold text-slate-500">
-            Deadline (optioneel)
-            <input
-              type="date"
-              value={form.dueDate}
-              onChange={(e) => setForm({ ...form, dueDate: e.target.value })}
-              className={`mt-1 ${inputClass}`}
-            />
-          </label>
+          <div className="flex gap-3">
+            <label className="flex-1 text-xs font-semibold text-slate-500">
+              Deadline (optioneel)
+              <input
+                type="date"
+                value={form.dueDate}
+                onChange={(e) => setForm({ ...form, dueDate: e.target.value })}
+                className={`mt-1 ${inputClass}`}
+              />
+            </label>
+            <label className="flex-1 text-xs font-semibold text-slate-500">
+              Herhaling
+              <select
+                value={form.recurrence}
+                onChange={(e) => setForm({ ...form, recurrence: e.target.value })}
+                className={`mt-1 ${inputClass}`}
+              >
+                <option value="geen">Eenmalig</option>
+                <option value="dagelijks">Dagelijks</option>
+                <option value="wekelijks">Wekelijks</option>
+                <option value="maandelijks">Maandelijks</option>
+              </select>
+            </label>
+          </div>
           <button
             type="submit"
             className="pill mt-1 bg-brand px-4 py-2.5 text-white shadow-sm shadow-brand/20 hover:bg-brand-dark"

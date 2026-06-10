@@ -150,13 +150,31 @@ export default function BudgetPage() {
     setEditCat(null)
   }
 
+  // Gemiddelde uitgave per maand per categorie (uit de historie). Hierop baseren
+  // we "Per categorie", het maandtotaal én de prognose — niet op het 'spent'-veld
+  // (dat blijft 0 bij import en gaf lege balken).
+  const spendingTx = transactions.filter((t) => isSpendingCategory(t.category) && (Number(t.amount) || 0) > 0)
+  const spendMonths = new Set<string>()
+  const sumByCat = new Map<string, number>()
+  for (const t of spendingTx) {
+    const m = /^(\d{4})-(\d{2})/.exec(t.date || '')
+    if (m) spendMonths.add(`${m[1]}-${m[2]}`)
+    const k = t.category || 'Overig'
+    sumByCat.set(k, (sumByCat.get(k) ?? 0) + (Number(t.amount) || 0))
+  }
+  const monthsCount = Math.max(1, spendMonths.size)
+  const avgByCat = new Map<string, number>()
+  for (const [k, v] of sumByCat) avgByCat.set(k, v / monthsCount)
+  const avgOf = (name: string) => avgByCat.get(name) ?? 0
+  const recent = spendingTx.slice(0, 40)
+
   // Alleen echte uitgaven-categorieën (geen Inkomsten/Negeren), en lege verbergen.
   const spendingCats = categories.filter((c) => isSpendingCategory(c.name))
-  const nonEmptyCats = spendingCats.filter((c) => c.limit > 0 || c.spent > 0)
+  const nonEmptyCats = spendingCats.filter((c) => c.limit > 0 || avgOf(c.name) > 0)
   const visibleCats = showAllCats ? spendingCats : nonEmptyCats.length ? nonEmptyCats : spendingCats.slice(0, 6)
   const hiddenCount = spendingCats.length - visibleCats.length
 
-  const totalSpent = Math.round(spendingCats.reduce((sum, c) => sum + c.spent, 0))
+  const totalSpent = Math.round(spendingCats.reduce((sum, c) => sum + avgOf(c.name), 0))
   const totalLimit = Math.round(spendingCats.reduce((sum, c) => sum + c.limit, 0))
   const remaining = totalLimit - totalSpent
 
@@ -169,18 +187,13 @@ export default function BudgetPage() {
   const incomeMonthly = incomes.reduce((sum, i) => sum + monthlyEquivalent(i.amount, i.interval), 0)
   const netto = incomeMonthly - forecastTotal
 
-  // Gemiddelde variabele uitgaven per maand (uit historische transacties) → prognose volgende maand.
-  const spendingTx = transactions.filter((t) => isSpendingCategory(t.category) && (Number(t.amount) || 0) > 0)
-  const spendMonths = new Set<string>()
-  let spendSum = 0
-  for (const t of spendingTx) {
-    const m = /^(\d{4})-(\d{2})/.exec(t.date || '')
-    if (m) spendMonths.add(`${m[1]}-${m[2]}`)
-    spendSum += Number(t.amount) || 0
-  }
-  const avgVariableMonthly = spendMonths.size ? spendSum / spendMonths.size : 0
-  const nextMonthNet = incomeMonthly - fixedTotal - subsMonthly - avgVariableMonthly
-  const recent = spendingTx.slice(0, 40)
+  // Verwachte variabele kosten per categorie (zónder vaste lasten/aflossingen) → prognose.
+  const NON_VARIABLE_CATS = new Set(['Vaste lasten', 'Aflossingen'])
+  const variableForecast = [...avgByCat.entries()]
+    .filter(([k]) => !NON_VARIABLE_CATS.has(k))
+    .sort((a, b) => b[1] - a[1])
+  const variableAvg = variableForecast.reduce((s, [, v]) => s + v, 0)
+  const nextMonthNet = incomeMonthly - fixedTotal - subsMonthly - variableAvg
 
   // Vaste lasten gegroepeerd per categorie (voor de prognose-uitsplitsing).
   const costsByCategory = Object.entries(
@@ -230,7 +243,7 @@ export default function BudgetPage() {
 
       <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
         {/* Overview ring */}
-        <DashboardCard title="Totaal deze maand">
+        <DashboardCard title="Gemiddeld per maand">
           <div className="flex items-center gap-5">
             <div className="relative h-36 w-36 shrink-0">
               <svg viewBox="0 0 128 128" className="h-full w-full -rotate-90">
@@ -271,7 +284,8 @@ export default function BudgetPage() {
           <ul className="flex flex-col gap-4">
             {visibleCats.map((cat) => {
               const colors = colorClasses[cat.color] ?? colorClasses.emerald
-              const pct = cat.limit ? Math.min(Math.round((cat.spent / cat.limit) * 100), 100) : 0
+              const spent = avgOf(cat.name)
+              const pct = cat.limit ? Math.min(Math.round((spent / cat.limit) * 100), 100) : 0
               const Icon = resolveIcon(cat.icon)
               return (
                 <li key={cat.id} className="group">
@@ -281,7 +295,7 @@ export default function BudgetPage() {
                     </span>
                     <span className="flex-1 text-sm font-semibold text-slate-700">{cat.name}</span>
                     <span className="text-sm text-slate-500">
-                      €{Math.round(cat.spent)} <span className="text-slate-400">/ €{Math.round(cat.limit)}</span>
+                      €{Math.round(spent)} <span className="text-slate-400">/ €{Math.round(cat.limit)}</span>
                     </span>
                     <button
                       type="button"
@@ -366,11 +380,10 @@ export default function BudgetPage() {
             <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
               Prognose volgende maand
             </p>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="grid grid-cols-3 gap-3">
               {[
                 { label: 'Verwachte inkomsten', value: incomeMonthly, tone: 'pos' as const },
                 { label: 'Vaste lasten + abo', value: fixedTotal + subsMonthly, tone: 'default' as const },
-                { label: 'Gem. variabel p/m', value: avgVariableMonthly, tone: 'default' as const },
                 {
                   label: 'Verwacht over',
                   value: nextMonthNet,
@@ -391,10 +404,29 @@ export default function BudgetPage() {
                 )
               })}
             </div>
+
+            {variableForecast.length > 0 && (
+              <div className="mt-3">
+                <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                  Verwachte variabele kosten per categorie (€{Math.round(variableAvg)} p/m)
+                </p>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 sm:grid-cols-3">
+                  {variableForecast.slice(0, 9).map(([cat, v]) => (
+                    <div key={cat} className="flex items-center justify-between text-sm">
+                      <span className="min-w-0 truncate text-slate-600">{cat}</span>
+                      <span className="shrink-0 font-semibold text-slate-800">€{euro(v)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <p className="mt-2 text-xs text-slate-400">
-              Op basis van je terugkerende inkomsten en je gemiddelde variabele uitgaven per maand
-              {spendMonths.size > 0 ? ` (over ${spendMonths.size} maanden)` : ''}. Eenmalige posten tellen
-              niet mee.
+              Op basis van je terugkerende inkomsten en je gemiddelde uitgaven per categorie
+              {spendMonths.size > 0
+                ? ` (over ${spendMonths.size} ${spendMonths.size === 1 ? 'maand' : 'maanden'})`
+                : ''}
+              . Eenmalige posten tellen niet mee.
             </p>
           </div>
         </DashboardCard>

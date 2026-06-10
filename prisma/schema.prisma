@@ -306,6 +306,8 @@ model Task {
   points      Int      @default(0)
   status      String   @default("todo") // open (wacht op accept) | todo | klaar | geweigerd
   dueDate     String? // yyyy-mm-dd
+  // geen | dagelijks | wekelijks | maandelijks — bij afronden wordt een nieuwe gemaakt
+  recurrence  String   @default("geen")
   createdAt   DateTime @default(now())
 
   @@index([householdId])

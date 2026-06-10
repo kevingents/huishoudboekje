@@ -845,6 +845,7 @@ export interface Task {
   points: number
   status: string
   dueDate: string | null
+  recurrence?: string
 }
 
 export function useTasks() {
@@ -858,6 +859,7 @@ export function useTasks() {
       assignedTo?: string | null
       points?: number
       dueDate?: string | null
+      recurrence?: string
     }) =>
       c.create(payload as Record<string, unknown>, {
         title: payload.title,
@@ -866,6 +868,7 @@ export function useTasks() {
         points: payload.points ?? 0,
         status: payload.assignedTo ? 'open' : 'todo',
         dueDate: payload.dueDate ?? null,
+        recurrence: payload.recurrence ?? 'geen',
       }),
     setStatus: (id: number, status: string) => c.update(id, { status }),
     removeTask: (id: number) => c.remove(id),

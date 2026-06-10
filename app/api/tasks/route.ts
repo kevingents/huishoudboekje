@@ -28,6 +28,7 @@ export async function POST(req: Request) {
       assignedTo,
       points,
       dueDate: body?.dueDate ? String(body.dueDate) : null,
+      recurrence: body?.recurrence ? String(body.recurrence) : 'geen',
       // Toegewezen taak wacht op acceptatie; een gezins-taak staat meteen op "te doen".
       status: assignedTo ? 'open' : 'todo',
     },
