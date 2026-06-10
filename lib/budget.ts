@@ -162,6 +162,17 @@ export function periodKeyOf(dateStr: string | null | undefined, startDay = 1): s
   return `${y}-${String(mo).padStart(2, '0')}`
 }
 
+/** Begin- en einddatum (lokale Date, middernacht) van de budgetperiode die `date`
+ *  bevat, gegeven de startdag (1 = kalendermaand). Periodes lopen door over
+ *  maandgrenzen: bij startdag 25 loopt de periode van de 25e t/m de 24e. */
+export function periodRangeOf(date: Date, startDay = 1): { start: Date; end: Date } {
+  let m = date.getMonth()
+  if (startDay > 1 && date.getDate() < startDay) m -= 1 // hoort nog bij de vorige periode
+  const start = new Date(date.getFullYear(), m, startDay)
+  const end = new Date(date.getFullYear(), m + 1, startDay - 1) // dag vóór de volgende start
+  return { start, end }
+}
+
 /** Aantal maanden dat een reeks datums (yyyy-mm-dd) beslaat — de spanwijdte van
  *  eerste t/m laatste maand (jan–dec = 12), ook als tussenliggende maanden leeg
  *  zijn. Gebruikt om inkomsten naar een eerlijk maandbedrag te delen. */

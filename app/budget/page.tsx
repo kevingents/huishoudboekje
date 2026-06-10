@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { BarChart3, TrendingUp, Plus, Trash2, Pencil, LineChart, ScanLine, Sparkles, FolderPlus, ArrowRightLeft } from 'lucide-react'
+import { BarChart3, Plus, Trash2, Pencil, LineChart, ScanLine, Sparkles, FolderPlus, ArrowRightLeft } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
 import DashboardCard from '@/components/DashboardCard'
 import Modal from '@/components/Modal'
@@ -25,7 +25,10 @@ import {
   merchantKey,
   monthlyEquivalent,
   periodKeyOf,
+  periodRangeOf,
 } from '@/lib/budget'
+import BudgetProgressCard from '@/components/budget/BudgetProgressCard'
+import AiCoachCard from '@/components/budget/AiCoachCard'
 import type { BudgetCategory } from '@/lib/types'
 
 const colorClasses: Record<string, { bar: string; iconBg: string; iconText: string }> = {
@@ -229,23 +232,40 @@ export default function BudgetPage() {
   const monthsCount = Math.max(1, spendMonths.size)
   const avgByCat = new Map<string, number>()
   for (const [k, v] of sumByCat) avgByCat.set(k, v / monthsCount)
-  const avgOf = (name: string) => avgByCat.get(name) ?? 0
   const recent = spendingTx.slice(0, 40)
+
+  // Huidige periode (deze maand/pay-cycle): actuele uitgaven per categorie + totaal,
+  // en een prognose voor het einde van de periode (al uitgegeven + gemiddeld tempo
+  // over het resterende deel).
+  const now = new Date()
+  const periodNow = periodRangeOf(now, periodStart)
+  const currentKey = `${periodNow.start.getFullYear()}-${String(periodNow.start.getMonth() + 1).padStart(2, '0')}`
+  const currentByCat = new Map<string, number>()
+  let currentSpent = 0
+  for (const t of spendingTx) {
+    if (periodKeyOf(t.date, periodStart) !== currentKey) continue
+    const a = Number(t.amount) || 0
+    currentByCat.set(t.category || 'Overig', (currentByCat.get(t.category || 'Overig') ?? 0) + a)
+    currentSpent += a
+  }
+  const curOf = (name: string) => currentByCat.get(name) ?? 0
+  const MS_DAY = 86400000
+  const daysTotal = Math.max(1, Math.round((periodNow.end.getTime() - periodNow.start.getTime()) / MS_DAY) + 1)
+  const daysElapsed = Math.min(daysTotal, Math.max(1, Math.round((now.getTime() - periodNow.start.getTime()) / MS_DAY) + 1))
+  const fraction = daysElapsed / daysTotal
+  const avgTotalAll = [...avgByCat.values()].reduce((s, v) => s + v, 0)
+  const projected = currentSpent + Math.max(0, avgTotalAll * (1 - fraction))
 
   // Alleen echte uitgaven-categorieën (geen Inkomsten/Negeren), en lege verbergen.
   const spendingCats = categories.filter((c) => isSpendingCategory(c.name))
-  const nonEmptyCats = spendingCats.filter((c) => c.limit > 0 || avgOf(c.name) > 0)
+  const nonEmptyCats = spendingCats.filter((c) => c.limit > 0 || curOf(c.name) > 0)
   const visibleCats = showAllCats ? spendingCats : nonEmptyCats.length ? nonEmptyCats : spendingCats.slice(0, 6)
   const hiddenCount = spendingCats.length - visibleCats.length
 
-  const totalSpent = Math.round(spendingCats.reduce((sum, c) => sum + avgOf(c.name), 0))
   const totalLimit = Math.round(spendingCats.reduce((sum, c) => sum + c.limit, 0))
-  // Geen categorie-limieten ingesteld? Val terug op de maandtarget zodat de ring
-  // en "te besteden" zinnig blijven (i.p.v. "van €0" en een negatief bedrag).
+  // Geen categorie-limieten ingesteld? Val terug op de maandtarget als referentie.
   const hasLimits = totalLimit > 0
   const budgetRef = hasLimits ? totalLimit : target
-  const remaining = budgetRef - totalSpent
-  const overBudget = remaining < 0
 
   // Aflossingen/schulden apart van vaste lasten houden (hypotheek + leningen).
   const isAflossing = (cat?: string) => /afloss|lening|hypothe|schuld|krediet/i.test(cat || '')
@@ -278,11 +298,6 @@ export default function BudgetPage() {
         return acc
       }, {}),
   ).sort((a, b) => b[1] - a[1])
-
-  const radius = 54
-  const circumference = 2 * Math.PI * radius
-  const progress = budgetRef ? Math.min(totalSpent / budgetRef, 1) : 0
-  const offset = circumference * (1 - progress)
 
   // Transacties van de te beheren categorie, gegroepeerd per winkel — zodat je een
   // hele winkel in één keer naar een andere categorie kunt verplaatsen (onthouden).
@@ -338,73 +353,33 @@ export default function BudgetPage() {
       />
 
       <div className="grid grid-cols-1 items-stretch gap-5 lg:grid-cols-2">
-        {/* Overview ring */}
-        <DashboardCard title={`Gemiddeld per ${periodWord}`}>
-          <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-start sm:gap-5">
-            <div className="relative h-28 w-28 shrink-0 sm:h-36 sm:w-36">
-              <svg viewBox="0 0 128 128" className="h-full w-full -rotate-90">
-                <circle cx="64" cy="64" r={radius} fill="none" stroke="currentColor" className="text-[#EBF1F4] dark:text-slate-700" strokeWidth="13" />
-                <circle
-                  cx="64"
-                  cy="64"
-                  r={radius}
-                  fill="none"
-                  stroke="#35B558"
-                  strokeWidth="13"
-                  strokeLinecap="round"
-                  strokeDasharray={circumference}
-                  strokeDashoffset={offset}
-                  className="transition-[stroke-dashoffset] duration-700 ease-out"
-                />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                <span className="text-2xl font-extrabold text-slate-800">€{totalSpent}</span>
-                <span className="text-xs text-slate-500">van €{budgetRef}</span>
-              </div>
-            </div>
-
-            <div className="min-w-0">
-              <p className="text-sm text-slate-500">{overBudget ? 'Je zit' : 'Je hebt nog'}</p>
-              <p
-                className={`text-3xl font-extrabold ${
-                  overBudget ? 'text-rose-600 dark:text-rose-400' : 'text-slate-800'
-                }`}
-              >
-                €{Math.abs(remaining)}
-              </p>
-              <p className="text-sm text-slate-500">{overBudget ? 'boven budget' : 'te besteden'}</p>
-              <p className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-brand-light px-3 py-1 text-xs font-semibold text-brand">
-                <TrendingUp className="h-3.5 w-3.5" />
-                Maandtarget €{target}
-              </p>
-              {!hasLimits && (
-                <p className="mt-2 text-[11px] text-slate-400">
-                  Nog geen limiet per categorie. Stel er een in via het potlood of de beheerknop.
-                </p>
-              )}
-            </div>
-          </div>
-        </DashboardCard>
+        {/* Budgetvoortgang — gauge van deze periode */}
+        <BudgetProgressCard spent={currentSpent} budget={budgetRef} projected={projected} periodWord={periodWord} />
 
         {/* Categories */}
         <DashboardCard
-          title="Per categorie"
+          title="Uitgaven per categorie"
           headerRight={
-            <button
-              type="button"
-              onClick={() => setAddCatOpen(true)}
-              className="pill bg-brand-light px-3 py-1.5 text-xs font-semibold text-brand hover:bg-brand/15"
-            >
-              <FolderPlus className="h-3.5 w-3.5" />
-              Categorie
-            </button>
+            <div className="flex items-center gap-2">
+              <span className="hidden text-xs font-medium text-slate-400 sm:inline">
+                {periodWord === 'periode' ? 'Deze periode' : 'Deze maand'}
+              </span>
+              <button
+                type="button"
+                onClick={() => setAddCatOpen(true)}
+                className="pill bg-brand-light px-3 py-1.5 text-xs font-semibold text-brand hover:bg-brand/15"
+              >
+                <FolderPlus className="h-3.5 w-3.5" />
+                Categorie
+              </button>
+            </div>
           }
         >
           <ul className="flex flex-col gap-4">
             {visibleCats.map((cat) => {
               const colors = colorClasses[cat.color] ?? colorClasses.emerald
-              const spent = avgOf(cat.name)
-              const pct = cat.limit ? Math.min(Math.round((spent / cat.limit) * 100), 100) : 0
+              const spent = curOf(cat.name)
+              const pct = currentSpent > 0 ? (spent / currentSpent) * 100 : 0
               const Icon = resolveIcon(cat.icon)
               return (
                 <li key={cat.id} className="group">
@@ -424,9 +399,11 @@ export default function BudgetPage() {
                     >
                       {cat.name}
                     </button>
-                    <span className="shrink-0 text-sm text-slate-500">
-                      €{Math.round(spent)}
-                      {cat.limit > 0 && <span className="text-slate-400"> / €{Math.round(cat.limit)}</span>}
+                    <span className="shrink-0 text-right">
+                      <span className="block text-sm font-bold text-slate-800 dark:text-slate-100">
+                        €{Math.round(spent)}
+                      </span>
+                      <span className="block text-[11px] text-slate-400">{Math.round(pct)}%</span>
                     </span>
                     <button
                       type="button"
@@ -437,10 +414,10 @@ export default function BudgetPage() {
                       <Pencil className="h-3.5 w-3.5" />
                     </button>
                   </div>
-                  <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
                     <div
                       className={`h-full rounded-full ${colors.bar} transition-all duration-500`}
-                      style={{ width: `${pct}%` }}
+                      style={{ width: `${Math.max(spent > 0 ? 4 : 0, pct)}%` }}
                     />
                   </div>
                 </li>
@@ -457,6 +434,15 @@ export default function BudgetPage() {
             </button>
           )}
         </DashboardCard>
+
+        {/* AI Budget Coach — inzichten uit je eigen cijfers (deze periode vs gemiddeld) */}
+        <AiCoachCard
+          currentByCat={currentByCat}
+          avgByCat={avgByCat}
+          projected={projected}
+          budget={budgetRef}
+          periodWord={periodWord}
+        />
 
         {/* Budgetplanner-module: prognose, spaardoelen, vaste lasten */}
         <div className="lg:col-span-2">
