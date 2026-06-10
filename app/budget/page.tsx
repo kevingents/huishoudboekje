@@ -12,10 +12,11 @@ import IncomeCard from '@/components/IncomeCard'
 import SpendingChart from '@/components/SpendingChart'
 import MonthlyOverview from '@/components/MonthlyOverview'
 import BudgetImport from '@/components/BudgetImport'
+import OverigCleanup from '@/components/OverigCleanup'
 import { useBudget, useSettings, useFixedCosts, useSubscriptions, useHousehold, useIncome } from '@/lib/hooks'
 import { apiPost } from '@/lib/api'
 import { resolveIcon } from '@/lib/icons'
-import { monthlyEquivalent } from '@/lib/budget'
+import { isSpendingCategory, monthlyEquivalent } from '@/lib/budget'
 import type { BudgetCategory } from '@/lib/types'
 
 const colorClasses: Record<string, { bar: string; iconBg: string; iconText: string }> = {
@@ -87,6 +88,7 @@ export default function BudgetPage() {
 
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState({ label: '', category: '', amount: '' })
+  const [showAllCats, setShowAllCats] = useState(false)
 
   // Bon/factuur scannen
   const cameraRef = useRef<HTMLInputElement>(null)
@@ -146,8 +148,14 @@ export default function BudgetPage() {
     setEditCat(null)
   }
 
-  const totalSpent = Math.round(categories.reduce((sum, c) => sum + c.spent, 0))
-  const totalLimit = Math.round(categories.reduce((sum, c) => sum + c.limit, 0))
+  // Alleen echte uitgaven-categorieën (geen Inkomsten/Negeren), en lege verbergen.
+  const spendingCats = categories.filter((c) => isSpendingCategory(c.name))
+  const nonEmptyCats = spendingCats.filter((c) => c.limit > 0 || c.spent > 0)
+  const visibleCats = showAllCats ? spendingCats : nonEmptyCats.length ? nonEmptyCats : spendingCats.slice(0, 6)
+  const hiddenCount = spendingCats.length - visibleCats.length
+
+  const totalSpent = Math.round(spendingCats.reduce((sum, c) => sum + c.spent, 0))
+  const totalLimit = Math.round(spendingCats.reduce((sum, c) => sum + c.limit, 0))
   const remaining = totalLimit - totalSpent
 
   // Maandprognose: vaste lasten + abonnementen (maandequivalent) + variabel budget
@@ -158,6 +166,19 @@ export default function BudgetPage() {
   const forecastTotal = fixedTotal + subsMonthly + totalLimit
   const incomeMonthly = incomes.reduce((sum, i) => sum + monthlyEquivalent(i.amount, i.interval), 0)
   const netto = incomeMonthly - forecastTotal
+
+  // Gemiddelde variabele uitgaven per maand (uit historische transacties) → prognose volgende maand.
+  const spendingTx = transactions.filter((t) => isSpendingCategory(t.category) && (Number(t.amount) || 0) > 0)
+  const spendMonths = new Set<string>()
+  let spendSum = 0
+  for (const t of spendingTx) {
+    const m = /^(\d{4})-(\d{2})/.exec(t.date || '')
+    if (m) spendMonths.add(`${m[1]}-${m[2]}`)
+    spendSum += Number(t.amount) || 0
+  }
+  const avgVariableMonthly = spendMonths.size ? spendSum / spendMonths.size : 0
+  const nextMonthNet = incomeMonthly - fixedTotal - subsMonthly - avgVariableMonthly
+  const recent = spendingTx.slice(0, 40)
 
   // Vaste lasten gegroepeerd per categorie (voor de prognose-uitsplitsing).
   const costsByCategory = Object.entries(
@@ -246,7 +267,7 @@ export default function BudgetPage() {
         {/* Categories */}
         <DashboardCard title="Per categorie">
           <ul className="flex flex-col gap-4">
-            {categories.map((cat) => {
+            {visibleCats.map((cat) => {
               const colors = colorClasses[cat.color] ?? colorClasses.emerald
               const pct = cat.limit ? Math.min(Math.round((cat.spent / cat.limit) * 100), 100) : 0
               const Icon = resolveIcon(cat.icon)
@@ -279,6 +300,15 @@ export default function BudgetPage() {
               )
             })}
           </ul>
+          {(hiddenCount > 0 || showAllCats) && (
+            <button
+              type="button"
+              onClick={() => setShowAllCats((s) => !s)}
+              className="mt-3 text-sm font-semibold text-brand hover:underline"
+            >
+              {showAllCats ? 'Minder tonen' : `Toon alle categorieën (${spendingCats.length})`}
+            </button>
+          )}
         </DashboardCard>
 
         {/* Budgetplanner-module: prognose, spaardoelen, vaste lasten */}
@@ -329,6 +359,42 @@ export default function BudgetPage() {
               </div>
             </div>
           )}
+
+          <div className="mt-4 border-t border-cardborder pt-3">
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+              Prognose volgende maand
+            </p>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {[
+                { label: 'Verwachte inkomsten', value: incomeMonthly, tone: 'pos' as const },
+                { label: 'Vaste lasten + abo', value: fixedTotal + subsMonthly, tone: 'default' as const },
+                { label: 'Gem. variabel p/m', value: avgVariableMonthly, tone: 'default' as const },
+                {
+                  label: 'Verwacht over',
+                  value: nextMonthNet,
+                  tone: nextMonthNet >= 0 ? ('pos' as const) : ('neg' as const),
+                },
+              ].map((item) => {
+                const box =
+                  item.tone === 'pos' ? 'bg-emerald-50' : item.tone === 'neg' ? 'bg-rose-50' : 'bg-slate-50'
+                const txt =
+                  item.tone === 'pos' ? 'text-emerald-600' : item.tone === 'neg' ? 'text-rose-600' : 'text-slate-800'
+                return (
+                  <div key={item.label} className={`rounded-2xl p-3 ${box}`}>
+                    <p className="text-xs text-slate-500">{item.label}</p>
+                    <p className={`text-lg font-extrabold ${txt}`}>
+                      {item.value < 0 ? '−' : ''}€{euro(Math.abs(item.value))}
+                    </p>
+                  </div>
+                )
+              })}
+            </div>
+            <p className="mt-2 text-xs text-slate-400">
+              Op basis van je terugkerende inkomsten en je gemiddelde variabele uitgaven per maand
+              {spendMonths.size > 0 ? ` (over ${spendMonths.size} maanden)` : ''}. Eenmalige posten tellen
+              niet mee.
+            </p>
+          </div>
         </DashboardCard>
 
         {/* Inkomsten, vaste lasten, spaardoelen */}
@@ -338,6 +404,9 @@ export default function BudgetPage() {
         </div>
         </ModuleGate>
         </div>
+
+        {/* Budget opschonen: Overig + bijschrijvingen indelen (met geheugen + AI) */}
+        <OverigCleanup />
 
         {/* Waar gaat het heen? */}
         <SpendingChart transactions={transactions} />
@@ -352,11 +421,11 @@ export default function BudgetPage() {
         <DashboardCard title="Recente uitgaven" className="lg:col-span-2">
           {isLoading && transactions.length === 0 ? (
             <p className="text-sm text-slate-400">Laden…</p>
-          ) : transactions.length === 0 ? (
+          ) : recent.length === 0 ? (
             <p className="text-sm text-slate-500">Nog geen uitgaven geregistreerd.</p>
           ) : (
             <ul className="flex flex-col">
-              {transactions.map((tx, index) => (
+              {recent.map((tx, index) => (
                 <li key={tx.id}>
                   <div className="group flex items-center gap-3 py-3">
                     <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-slate-100 text-sm font-bold text-slate-500">
@@ -378,7 +447,7 @@ export default function BudgetPage() {
                       <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
-                  {index < transactions.length - 1 && <hr className="border-cardborder" />}
+                  {index < recent.length - 1 && <hr className="border-cardborder" />}
                 </li>
               ))}
             </ul>

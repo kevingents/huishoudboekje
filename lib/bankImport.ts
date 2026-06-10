@@ -45,19 +45,41 @@ export function parseDate(raw: string): string {
 /* -------------------------------------------------------------------------- */
 
 const CATEGORY_RULES: [RegExp, string][] = [
-  [/albert heijn|\bah\b|jumbo|lidl|aldi|\bplus\b|dirk|dekamarkt|vomar|picnic|\bspar\b|\bcoop\b|hoogvliet|\bdeen\b|kruidvat|etos|drogist|bakker|slager|supermarkt/i, 'Boodschappen'],
-  [/mcdonald|burger king|\bkfc\b|thuisbezorgd|uber\s?eats|deliveroo|dominos|new york pizza|pizza|restaurant|\bcafe|café|\bbar\b|coffee|koffie|starbucks|febo|snackbar|horeca|stach|maeva/i, 'Horeca'],
-  [/shell|\bbp\b|esso|tinq|tango|tankstation|\bq8\b|texaco|total|benzine|diesel|\bns\b|trein|ov-?chip|9292|\bret\b|\bgvb\b|\bhtm\b|connexxion|arriva|greenwheels|parkeren|parkmobile|q-?park|yourparking|anwb/i, 'Vervoer'],
-  [/vattenfall|eneco|essent|greenchoice|budget energie|energiedirect|tibber|\bgas\b|stroom|elektra/i, 'Gas/Elektra/Water'],
-  [/\bpwn\b|vitens|dunea|waternet|evides|brabant water|drinkwater/i, 'Gas/Elektra/Water'],
-  [/zorgverzeker|\bcz\b|\bvgz\b|zilveren kruis|menzis|achmea|nationale-?nederlanden|aegon|\basr\b|\bfbto\b|univé|unive|inshared|centraal beheer|verzeker/i, 'Verzekeringen'],
-  [/ziggo|\bkpn\b|vodafone|odido|t-?mobile|tele2|simyo|youfone|hollandsnieuwe|netflix|spotify|disney|videoland|\bhbo\b|prime video|abonnement/i, 'Internet/TV/Telefoon'],
-  [/\bzara\b|h&m|\bhema\b|action|primark|c&a|wehkamp|zalando|aboutyou|vinted|bol\.com|coolblue|mediamarkt|\bikea\b|zeeman|intertoys|jamin|kleding|schoenen|winkel/i, 'Winkels'],
-  [/apotheek|huisarts|tandarts|fysio|ziekenhuis|medisch|drogist/i, 'Apotheek/Medisch'],
-  [/hypotheek|aflossing|creditcard|\blening\b|krediet/i, 'Aflossingen'],
-  [/gemeente|belastingdienst|waterschap|\bcjib\b|\bozb\b|afvalstoffen|hoogheemraadschap/i, 'Belastingen'],
-  [/\bsport\b|\bgym\b|fitness|basic-?fit|sportschool|more impact/i, 'Sport'],
-  [/pathe|pathé|bioscoop|efteling|dierentuin|museum|\buitje|pretpark|loten|staatsloterij/i, 'Leuke dingen/Uitjes'],
+  // Boodschappen / supermarkt / drogist / bakker
+  [/albert heijn|\bah\b|ah to go|jumbo|\blidl\b|\baldi\b|\bplus\b|\bdirk\b|dekamarkt|vomar|picnic|\bspar\b|\bcoop\b|hoogvliet|\bdeen\b|poiesz|nettorama|\bboni\b|jan linders|\bmarqt\b|ekoplaza|\bcrisp\b|gorillas|\bflink\b|\bgetir\b|\btoko\b|supermarkt|kruidvat|\betos\b|drogist|bakker|bakkerij|slagerij|slager|groente|versmarkt/i, 'Boodschappen'],
+  // Horeca / uit eten / bezorgen
+  [/mcdonald|burger king|\bkfc\b|thuisbezorgd|uber\s?eats|deliveroo|dominos|new york pizza|\bpizza\b|restaurant|eetcafe|\bcafe|café|brasserie|bistro|coffee|koffie|starbucks|\bfebo\b|snackbar|cafetaria|horeca|lunchroom|ijssalon|la place|vapiano|\bwok\b|sushi|shoarma|kebab|subway|stach|broodje/i, 'Horeca'],
+  // Vervoer / brandstof / OV / parkeren / deelmobiliteit
+  [/shell|\bbp\b|\besso\b|\btinq\b|tango|tankstation|\bq8\b|texaco|totalenergies|firezone|\bgulf\b|\bavia\b|benzine|diesel|\bns\b|\btrein\b|ov-?chip|ovpay|9292|\bret\b|\bgvb\b|\bhtm\b|connexxion|arriva|qbuzz|flixbus|blablacar|greenwheels|\bfelyx\b|go sharing|donkey republic|swapfiets|parkeren|parkmobile|parkeer|q-?park|yourparking|\banwb\b|\bapk\b|garage|kwik.?fit|euromaster|fastned|allego|laadpas|shell recharge/i, 'Vervoer'],
+  // Energie + water
+  [/vattenfall|\beneco\b|essent|greenchoice|budget energie|energiedirect|\btibber\b|\boxxio\b|vandebron|pure energie|frank energie|\bengie\b|\bnuon\b|\bgas\b|stroom|elektra|\benergie\b/i, 'Gas/Elektra/Water'],
+  [/\bpwn\b|vitens|\bdunea\b|waternet|evides|brabant water|drinkwater|waterbedrijf|\bwml\b|\boasen\b|waterleiding/i, 'Gas/Elektra/Water'],
+  // Verzekeringen
+  [/zorgverzeker|\bcz\b|\bvgz\b|zilveren kruis|menzis|\bachmea\b|nationale-?nederlanden|\baegon\b|\basr\b|\bfbto\b|univé|unive|inshared|centraal beheer|\bditzo\b|interpolis|\bohra\b|\breaal\b|allianz|klaverblad|promovendum|\baevitae\b|\bpolis\b|verzeker|\bpremie\b/i, 'Verzekeringen'],
+  // Internet / TV / Telefoon / streaming / digitaal
+  [/\bziggo\b|\bkpn\b|vodafone|\bodido\b|t-?mobile|tele2|simyo|youfone|hollandsnieuwe|\blebara\b|online\.nl|caiway|netflix|spotify|disney|videoland|\bhbo\b|prime video|viaplay|nlziet|storytel|audible|\bicloud\b|dropbox|microsoft|adobe|playstation|\bxbox\b|nintendo|\bsteam\b|patreon|youtube premium|abonnement/i, 'Internet/TV/Telefoon'],
+  // Winkels / online / warenhuis / wonen / klussen / kleding
+  [/\bzara\b|h&m|\bhema\b|\baction\b|primark|c&a|wehkamp|zalando|aboutyou|vinted|bol\.com|coolblue|mediamarkt|\bbcc\b|\bikea\b|zeeman|\bwibra\b|big bazar|flying tiger|kwantum|leen bakker|\bgamma\b|karwei|praxis|hornbach|bauhaus|intratuin|tuincentrum|decathlon|\bbever\b|scapino|van haren|\bomoda\b|\bsacha\b|shoeby|we fashion|bershka|\bnike\b|adidas|\bjysk\b|amazon|aliexpress|\btemu\b|\bshein\b|marktplaats|\betsy\b|xenos|blokker|bijenkorf|kleding|schoenen|speelgoed|intertoys|\bjamin\b|\bwinkel\b/i, 'Winkels'],
+  // Apotheek / medisch / optiek
+  [/apotheek|huisarts|tandarts|\bfysio|ziekenhuis|\bmedisch|drogisterij|optiek|pearle|hans anders|specsavers|eye wish|\bkliniek\b|psycholoog|\bggz\b|mondhygien/i, 'Apotheek/Medisch'],
+  // Persoonlijke verzorging / kapper / beauty
+  [/kapper|kapsalon|barbier|nagelstudio|schoonheidssalon|\bbeauty\b|massage|parfum|ici paris|\bdouglas\b|\brituals\b/i, 'Persoonlijke verzorging'],
+  // Aflossingen / krediet / koop-op-afbetaling
+  [/hypotheek|aflossing|creditcard|credit card|\blening\b|krediet|\bobvion\b|\bklarna\b|afterpay|\briverty\b|billink|\bduo\b/i, 'Aflossingen'],
+  // Belastingen / overheid
+  [/gemeente|belastingdienst|waterschap|\bcjib\b|\bozb\b|afvalstoffen|hoogheemraadschap|rioolheffing|motorrijtuig|wegenbelasting|\brdw\b|kadaster|\bkvk\b|gemeentebelasting/i, 'Belastingen'],
+  // Sport
+  [/\bsport\b|\bgym\b|fitness|basic-?fit|sportschool|sportcity|fit for free|anytime fitness|\bzwembad\b|\btennis\b|voetbal|hockey|korfbal|sportverenig|\byoga\b|pilates|crossfit|\bpadel\b|\bmanege\b|more impact/i, 'Sport'],
+  // Kinderen / opvang / school
+  [/kinderopvang|\bkdv\b|\bbso\b|gastouder|\bcreche\b|crèche|peuterspeel|ouderbijdrage|schoolreis|babypark|prenatal|zwemles|\boppas\b/i, 'Kinderen'],
+  // Reizen / vakantie / verblijf
+  [/booking\.com|airbnb|\bhotel\b|vakantie|transavia|\bklm\b|ryanair|\btui\b|sunweb|d-?reizen|center parcs|\blandal\b|roompot|\beasyjet\b|corendon/i, 'Reizen/Vakantie'],
+  // Leuke dingen / uitjes / entertainment / loterij
+  [/pathe|pathé|bioscoop|kinepolis|\bvue\b|efteling|dierentuin|museum|\buitje|pretpark|attractiepark|walibi|duinrell|madurodam|\bartis\b|dolfinarium|\bconcert\b|ticketmaster|festival|theater|escape room|bowlen|lasergame|\bnemo\b|speeltuin|klimbos|\bloten\b|staatslot|\blotto\b/i, 'Leuke dingen/Uitjes'],
+  // Goede doelen / donaties
+  [/unicef|rode kruis|\bkwf\b|greenpeace|\bwnf\b|artsen zonder|cliniclowns|donatie|\bkerk\b|\bcollecte\b|\boxfam\b|hartstichting|longfonds|dierenbescherming/i, 'Goede doelen'],
+  // Contant geld (geldautomaat)
+  [/geldautomaat|geldopname|\bgea\b|opname automaat|\batm\b/i, 'Contant geld'],
 ]
 
 export function categorizeTx(description: string): string {
@@ -160,10 +182,17 @@ function parseMt940(text: string): BankTx[] {
       cur.description = cur.description.replace(/\s+/g, ' ').trim()
       cur.category = categorizeTx(cur.description)
       out.push(cur)
+      cur = null
     }
   }
   for (const raw of lines) {
     const line = raw.trimStart()
+    // Einde van een dagafschrift ("-"): transactie afsluiten zodat de bankheader
+    // (ABNANL2A / 940) niet aan de vorige omschrijving blijft plakken.
+    if (line === '-') {
+      flush()
+      continue
+    }
     if (line.startsWith(':61:')) {
       flush()
       // valutadatum(6) [boekdatum(4)] D/C-merk(C|D|RC|RD) [fondscode(1 letter)] bedrag

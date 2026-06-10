@@ -35,8 +35,113 @@ export function suggestCostCategory(name: string): string {
   return 'Overig'
 }
 
-/** Zet een bedrag met willekeurig interval om naar een maandbedrag. */
+/* -------------------------------------------------------------------------- */
+/*  Categorisatie met geheugen (geleerde regels) + uitgesloten categorieën     */
+/* -------------------------------------------------------------------------- */
+
+/** Categorie waaronder vaste lasten in de uitgaven-grafiek vallen. */
+export const FIXED_CATEGORY = 'Vaste lasten'
+
+/** Gereserveerde categorieën die NIET als uitgave meetellen (telt als €0):
+ *  inkomsten en bewust genegeerde posten (sparen/overboeking eigen rekening). */
+export const EXCLUDED_CATEGORIES = ['Inkomsten', 'Negeren'] as const
+
+/** Telt deze categorie mee als uitgave? (Inkomsten/Negeren = nee.) */
+export function isSpendingCategory(name: string): boolean {
+  return !EXCLUDED_CATEGORIES.includes((name || '') as (typeof EXCLUDED_CATEGORIES)[number])
+}
+
+// expense=uitgave in category · income=vaste inkomst · income_once=eenmalige
+// inkomst (terugbetaling/teruggave) · fixed=vaste last · ignore=eigen overboeking/sparen.
+export type RuleKind = 'expense' | 'income' | 'income_once' | 'fixed' | 'ignore'
+
+export const RULE_KINDS: RuleKind[] = ['expense', 'income', 'income_once', 'fixed', 'ignore']
+
+/** Inkomensoorten waaruit je kunt kiezen bij het indelen. */
+export const INCOME_TYPES = ['loon', 'kinderbijslag', 'toeslag', 'uitkering', 'alimentatie', 'overig'] as const
+
+export interface MerchantRuleLike {
+  pattern: string
+  category: string
+  kind: string
+}
+
+/** De uiteindelijke (transactie-)categorie horend bij een soort. */
+export function categoryForKind(kind: string, category: string, fallback = 'Overig'): string {
+  if (kind === 'income' || kind === 'income_once') return 'Inkomsten'
+  if (kind === 'ignore') return 'Negeren'
+  if (kind === 'fixed') return FIXED_CATEGORY
+  return category || fallback
+}
+
+// Ruiswoorden die op bankafschriften staan maar niets over de winkel zeggen.
+const MERCHANT_NOISE = new Set([
+  'bea', 'gea', 'betaalpas', 'geldautomaat', 'sepa', 'ideal', 'incasso', 'incassant', 'machtiging',
+  'overboeking', 'overschrijving', 'spoed', 'verzamelbetaling', 'kenmerk', 'omschrijving', 'omschr', 'naam',
+  'name', 'iban', 'bic', 'trtp', 'rtyp', 'ecom', 'wero', 'eref', 'mref', 'csid', 'pas', 'pasvolgnr', 'volgnr',
+  'reservering', 'factuur', 'factuurnummer', 'klantnr', 'contactloos', 'transactie', 'betaling', 'valuta',
+  'datum', 'kaart', 'kaartnummer', 'term', 'apple', 'pay', 'bck', 'ccv', 'terugkerend', 'algemeen',
+  'doorlopend', 'land', 'usa', 'loc', 'omzet', 'via', 'nr',
+])
+
+/**
+ * Destilleert een stabiele "winkel-sleutel" uit een omschrijving. Pakt bij voorkeur
+ * de tegenpartij-NAAM/NAME (overboeking/incasso/iDEAL); anders strip datums, tijden,
+ * IBAN's, bedragen, betaalverwerker-prefixes (BCK, CCV) en ruiswoorden en houd de
+ * eerste ~3 betekenisvolle woorden over. "BEA, APPLE PAY ALBERT HEIJN 1353 HAARLEM"
+ * en "ALBERT HEIJN VOS" geven allebei "albert heijn".
+ */
+export function merchantKey(label: string): string {
+  const original = label || ''
+  let s =
+    /\/NAME\/([^\/]{2,40})/i.exec(original)?.[1] ??
+    /NAAM:\s*(.+?)(?:\s+(?:MACHTIGING|OMSCHRIJVING|OMSCHR|IBAN|KENMERK|BIC|RCUR)\b|$)/i.exec(original)?.[1] ??
+    original
+  s = s.toLowerCase()
+  s = s.replace(/\b[a-z&]{2,5}\*/g, ' ') // betaalverwerker-prefix (bck* ccv* c&m*)
+  s = s.replace(/nl\d{2}[a-z]{4}\d{6,}/g, ' ') // IBAN
+  s = s.replace(/\d{1,2}[.\/-]\d{1,2}[.\/-]\d{2,4}/g, ' ') // datums
+  s = s.replace(/\d{1,2}:\d{2}/g, ' ') // tijden
+  s = s.replace(/[^a-z0-9&\s]/g, ' ') // leestekens
+  s = s.replace(/\d[\d.,]*/g, ' ') // getallen/bedragen
+  const words = s.split(/\s+/).filter((w) => w.length >= 2 && !MERCHANT_NOISE.has(w))
+  return words.slice(0, 3).join(' ').slice(0, 32)
+}
+
+/** Vindt de eerste (specifiekste) geleerde regel die op deze omschrijving past. */
+export function matchRule<T extends MerchantRuleLike>(description: string, rules: T[]): T | null {
+  const key = merchantKey(description)
+  const raw = (description || '').toLowerCase()
+  const sorted = [...rules].sort((a, b) => b.pattern.length - a.pattern.length)
+  for (const r of sorted) {
+    const p = (r.pattern || '').toLowerCase().trim()
+    if (p && (key.includes(p) || raw.includes(p))) return r
+  }
+  return null
+}
+
+/**
+ * Bepaalt categorie + soort voor een omschrijving: eerst de geleerde regels
+ * (langste/specifiekste trefwoord wint), anders de meegegeven standaardcategorie
+ * als gewone uitgave.
+ */
+export function classifyWithRules(
+  description: string,
+  rules: MerchantRuleLike[],
+  fallbackCategory: string,
+): { category: string; kind: RuleKind } {
+  const r = matchRule(description, rules)
+  if (r) {
+    const kind = (RULE_KINDS.includes(r.kind as RuleKind) ? r.kind : 'expense') as RuleKind
+    return { category: categoryForKind(kind, r.category, fallbackCategory), kind }
+  }
+  return { category: fallbackCategory || 'Overig', kind: 'expense' }
+}
+
+/** Zet een bedrag met willekeurig interval om naar een maandbedrag.
+ *  Eenmalige posten tellen niet mee in een maand-/toekomstprognose. */
 export function monthlyEquivalent(amount: number, interval: string): number {
+  if (/eenmalig|once|one-?time/i.test(interval)) return 0
   const m = /(\d+)\s*(day|week|month|year)/i.exec(interval)
   if (!m) return amount
   const n = Number(m[1]) || 1

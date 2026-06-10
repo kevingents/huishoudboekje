@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import { CalendarRange, ChevronLeft, ChevronRight } from 'lucide-react'
 import DashboardCard from './DashboardCard'
+import { isSpendingCategory } from '@/lib/budget'
 import type { Transaction } from '@/lib/types'
 
 const PALETTE = ['#35B558', '#0ea5e9', '#8b5cf6', '#f59e0b', '#f43f5e', '#14b8a6', '#6366f1', '#fb923c', '#94a3b8']
@@ -45,6 +46,7 @@ export default function MonthlyOverview({ transactions }: { transactions: Transa
   const byMonth = useMemo(() => {
     const m = new Map<string, Transaction[]>()
     for (const t of transactions) {
+      if (!isSpendingCategory(t.category)) continue // inkomsten/genegeerd niet meetellen
       const ym = ymOf(t)
       if (!ym) continue
       const list = m.get(ym) ?? []

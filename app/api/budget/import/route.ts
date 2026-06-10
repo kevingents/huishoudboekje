@@ -2,6 +2,7 @@ import * as XLSX from 'xlsx'
 import { prisma } from '@/lib/db'
 import { requireHousehold } from '@/lib/guard'
 import { parseBankStatement } from '@/lib/bankImport'
+import { classifyWithRules, isSpendingCategory, matchRule, merchantKey, suggestCostCategory } from '@/lib/budget'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -63,6 +64,14 @@ function parseLog(wb: XLSX.WorkBook, sheetName: string): Row[] {
     out.push({ date, category, label, amount, ym })
   }
   return out
+}
+
+function titleCase(s: string): string {
+  return s
+    .split(' ')
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ')
 }
 
 function incomeBucket(cat: string): string {
@@ -135,25 +144,136 @@ export async function POST(req: Request) {
       fresh.push({ label, category: d.category, amount: d.amount, date })
     }
 
+    // Geleerde regels toepassen: inkomsten/negeren overslaan, vaste lasten doorzetten.
+    const rules = await prisma.merchantRule.findMany({ where: { householdId: hid } })
+    const toStore: { label: string; category: string; amount: number; date: string }[] = []
+    const fixedAgg = new Map<string, { name: string; sum: number; count: number }>()
+    let skippedKind = 0
+    for (const d of fresh) {
+      const { category, kind } = classifyWithRules(d.label, rules, d.category)
+      if (kind === 'income' || kind === 'ignore') {
+        skippedKind++
+        continue
+      }
+      if (kind === 'fixed') {
+        const rule = matchRule(d.label, rules)
+        const name = titleCase(rule?.pattern || d.label).slice(0, 60)
+        const fa = fixedAgg.get(name) ?? { name, sum: 0, count: 0 }
+        fa.sum += d.amount
+        fa.count += 1
+        fixedAgg.set(name, fa)
+      }
+      toStore.push({ label: d.label, category, amount: d.amount, date: d.date })
+    }
+
     const existingCats = await prisma.budgetCategory.findMany({ where: { householdId: hid }, select: { name: true } })
     const haveCats = new Set(existingCats.map((c) => c.name.toLowerCase()))
-    const cats = [...new Set(fresh.map((d) => d.category))]
-    let ci = 0
+    const cats = [...new Set(toStore.map((d) => d.category))].filter(isSpendingCategory)
+    let ci = existingCats.length
     for (const cat of cats) {
       if (haveCats.has(cat.toLowerCase())) continue
       await prisma.budgetCategory.create({
         data: { householdId: hid, name: cat, color: COLORS[ci % COLORS.length], icon: 'ShoppingCart', limit: 0, spent: 0 },
       })
+      haveCats.add(cat.toLowerCase())
       ci++
     }
 
-    const slice = fresh.slice(0, 5000)
+    const slice = toStore.slice(0, 5000)
     if (slice.length) {
       await prisma.transaction.createMany({
         data: slice.map((d) => ({ householdId: hid, label: d.label, category: d.category, amount: d.amount, date: d.date })),
       })
     }
-    return Response.json({ ok: true, source: 'bank', expenses: slice.length, incomes: 0, categories: cats.length, skipped })
+
+    // Vaste lasten uit fixed-regels aanmaken (gemiddeld bedrag, geen dubbele namen).
+    let fixedCreated = 0
+    if (fixedAgg.size) {
+      const existingFixed = await prisma.fixedCost.findMany({ where: { householdId: hid }, select: { name: true } })
+      const haveFixed = new Set(existingFixed.map((f) => f.name.toLowerCase()))
+      for (const fa of fixedAgg.values()) {
+        if (!fa.count || haveFixed.has(fa.name.toLowerCase())) continue
+        await prisma.fixedCost.create({
+          data: {
+            householdId: hid,
+            name: fa.name,
+            amount: Math.round((fa.sum / fa.count) * 100) / 100,
+            category: suggestCostCategory(fa.name),
+          },
+        })
+        haveFixed.add(fa.name.toLowerCase())
+        fixedCreated++
+      }
+    }
+
+    // Bijschrijvingen → opslaan als (uitgesloten) 'Inkomsten'-transacties zodat ze
+    // indeelbaar zijn; herkenbare vaste inkomsten ook als terugkerende Income-post.
+    const credits = txs.filter((t) => t.isIncome && t.amount > 0)
+    const incomeTx: { label: string; amount: number; date: string }[] = []
+    const incAgg = new Map<string, { label: string; sum: number; count: number; subtype: string }>()
+    for (const c of credits) {
+      const label = (c.description || 'Inkomst').slice(0, 120)
+      const date = c.date || 'Geïmporteerd'
+      const k = txKey(date, c.amount, label)
+      const cnt = seen.get(k) ?? 0
+      if (cnt > 0) {
+        seen.set(k, cnt - 1)
+        skipped++
+        continue
+      }
+      const rule = matchRule(label, rules)
+      if (rule?.kind === 'ignore') continue // eigen overboeking/sparen → niet opslaan
+      incomeTx.push({ label, amount: c.amount, date })
+      const strong =
+        rule?.kind === 'income' ||
+        /salaris|\bloon\b|kinderbijslag|toeslag|\baow\b|pensioen|uitkering|sociale verzekeringsbank/i.test(label)
+      if (strong) {
+        const key = merchantKey(label) || label.toLowerCase().slice(0, 32)
+        const subtype = rule?.kind === 'income' && rule.category ? rule.category : incomeBucket(label)
+        const g = incAgg.get(key) ?? { label: titleCase(merchantKey(label) || 'Inkomst'), sum: 0, count: 0, subtype }
+        g.sum += c.amount
+        g.count += 1
+        g.subtype = subtype
+        incAgg.set(key, g)
+      }
+    }
+    if (incomeTx.length) {
+      await prisma.transaction.createMany({
+        data: incomeTx
+          .slice(0, 5000)
+          .map((d) => ({ householdId: hid, label: d.label, category: 'Inkomsten', amount: d.amount, date: d.date })),
+      })
+    }
+    let incomesCreated = 0
+    if (incAgg.size) {
+      const existingIncome = await prisma.income.findMany({ where: { householdId: hid }, select: { label: true } })
+      const haveIncome = new Set(existingIncome.map((i) => i.label.toLowerCase()))
+      for (const g of incAgg.values()) {
+        if (!g.count || haveIncome.has(g.label.toLowerCase())) continue
+        await prisma.income.create({
+          data: {
+            householdId: hid,
+            label: g.label,
+            amount: Math.round((g.sum / g.count) * 100) / 100,
+            category: g.subtype,
+            interval: '1 month',
+          },
+        })
+        haveIncome.add(g.label.toLowerCase())
+        incomesCreated++
+      }
+    }
+
+    return Response.json({
+      ok: true,
+      source: 'bank',
+      expenses: slice.length,
+      incomes: incomesCreated,
+      categories: cats.length,
+      skipped,
+      skippedKind,
+      fixedCreated,
+    })
   }
 
   let wb: XLSX.WorkBook

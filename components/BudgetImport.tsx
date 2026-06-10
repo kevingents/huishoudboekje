@@ -36,12 +36,12 @@ export default function BudgetImport() {
       ])
       const skip = res.skipped ?? 0
       let text: string
-      if (res.expenses === 0 && skip > 0) {
+      if (res.expenses === 0 && res.incomes === 0 && skip > 0) {
         text = `Niets nieuws — alle ${skip} transacties stonden al in je budget.`
       } else if (res.source === 'bank') {
-        text = `Bankafschrift geïmporteerd: ${res.expenses} nieuwe afschrijvingen${
-          skip ? `, ${skip} al aanwezig (overgeslagen)` : ''
-        } in ${res.categories} categorieën.`
+        text = `Bankafschrift geïmporteerd: ${res.expenses} afschrijvingen${
+          res.incomes ? `, ${res.incomes} inkomstenposten` : ''
+        }${skip ? `, ${skip} dubbel overgeslagen` : ''}. Gebruik “Budget opschonen” om Overig en je bijschrijvingen in te delen.`
       } else {
         text = `Geïmporteerd: ${res.expenses} nieuwe uitgaven${skip ? `, ${skip} al aanwezig` : ''}, ${res.incomes} inkomstenposten en ${res.categories} categorieën.`
       }

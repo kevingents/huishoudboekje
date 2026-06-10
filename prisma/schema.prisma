@@ -238,6 +238,19 @@ model Income {
   @@index([householdId])
 }
 
+// Geleerde categorisatie-regels: onthoudt hoe een winkel/omschrijving ingedeeld
+// wordt. Toegepast bij import én op bestaande transacties (Overig opschonen).
+model MerchantRule {
+  id          Int      @id @default(autoincrement())
+  householdId Int
+  pattern     String // genormaliseerd trefwoord (substring-match op de omschrijving)
+  category    String   @default("") // doelcategorie bij kind=expense
+  kind        String   @default("expense") // expense | income | fixed | ignore
+  createdAt   DateTime @default(now())
+
+  @@index([householdId])
+}
+
 // Gedeelde klantenkaarten/pasjes (premium). Gedeeld binnen het huishouden via
 // householdId. Foto (imageUrl) en/of barcode-nummer (code).
 model Card {
