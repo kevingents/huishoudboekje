@@ -18,7 +18,14 @@ import OverigCleanup from '@/components/OverigCleanup'
 import { useBudget, useSettings, useFixedCosts, useSubscriptions, useHousehold, useIncome, useLoans } from '@/lib/hooks'
 import { apiPost } from '@/lib/api'
 import { resolveIcon } from '@/lib/icons'
-import { cleanLabel, fixedCostMonthly, isSpendingCategory, merchantKey, monthlyEquivalent } from '@/lib/budget'
+import {
+  cleanLabel,
+  fixedCostMonthly,
+  isSpendingCategory,
+  merchantKey,
+  monthlyEquivalent,
+  periodKeyOf,
+} from '@/lib/budget'
 import type { BudgetCategory } from '@/lib/types'
 
 const colorClasses: Record<string, { bar: string; iconBg: string; iconText: string }> = {
@@ -98,6 +105,13 @@ export default function BudgetPage() {
   const { loans } = useLoans()
   const { can } = useHousehold()
   const target = typeof settings.budgetTarget === 'number' ? settings.budgetTarget : 500
+  // Startdag van de budgetperiode (1 = kalendermaand). Bijv. 25 = van de 25e t/m de 24e.
+  const periodStart =
+    typeof settings.budgetPeriodStart === 'number' && settings.budgetPeriodStart >= 1 && settings.budgetPeriodStart <= 28
+      ? settings.budgetPeriodStart
+      : 1
+  const periodWord = periodStart > 1 ? 'periode' : 'maand'
+  const periodPlural = periodStart > 1 ? 'periodes' : 'maanden'
 
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState({ label: '', category: '', amount: '' })
@@ -207,8 +221,8 @@ export default function BudgetPage() {
   const spendMonths = new Set<string>()
   const sumByCat = new Map<string, number>()
   for (const t of spendingTx) {
-    const m = /^(\d{4})-(\d{2})/.exec(t.date || '')
-    if (m) spendMonths.add(`${m[1]}-${m[2]}`)
+    const pk = periodKeyOf(t.date, periodStart)
+    if (pk) spendMonths.add(pk)
     const k = t.category || 'Overig'
     sumByCat.set(k, (sumByCat.get(k) ?? 0) + (Number(t.amount) || 0))
   }
@@ -325,7 +339,7 @@ export default function BudgetPage() {
 
       <div className="grid grid-cols-1 items-stretch gap-5 lg:grid-cols-2">
         {/* Overview ring */}
-        <DashboardCard title="Gemiddeld per maand">
+        <DashboardCard title={`Gemiddeld per ${periodWord}`}>
           <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-start sm:gap-5">
             <div className="relative h-28 w-28 shrink-0 sm:h-36 sm:w-36">
               <svg viewBox="0 0 128 128" className="h-full w-full -rotate-90">
@@ -481,9 +495,7 @@ export default function BudgetPage() {
           <p className="mt-3 text-xs text-slate-400">
             Over per maand = inkomsten − vaste lasten − abonnementen − aflossingen − je gemiddelde variabele
             uitgaven
-            {spendMonths.size > 0
-              ? ` (over ${spendMonths.size} ${spendMonths.size === 1 ? 'maand' : 'maanden'})`
-              : ''}
+            {spendMonths.size > 0 ? ` (over ${spendMonths.size} ${spendMonths.size === 1 ? periodWord : periodPlural})` : ''}
             . Eenmalige posten tellen niet mee.
             {totalLimit > 0 ? ` Je budget voor variabele uitgaven is €${totalLimit}.` : ''}
           </p>
@@ -541,8 +553,8 @@ export default function BudgetPage() {
           Terugkijken
         </h3>
 
-        {/* Uitgaven per periode (vandaag/week/vorige maand/eigen) */}
-        <SpendingFilter transactions={transactions} />
+        {/* Uitgaven per periode (vandaag/week/periode/eigen) */}
+        <SpendingFilter transactions={transactions} periodStart={periodStart} />
 
         {/* Maandoverzicht — terugkijken per maand */}
         <MonthlyOverview transactions={transactions} />

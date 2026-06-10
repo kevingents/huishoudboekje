@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Settings, Bell, BellRing, Wallet, Users, LogOut, UserCircle, Sparkles, Smartphone, Download, Share, Check, Accessibility, Trash2, ShieldCheck } from 'lucide-react'
+import { Settings, Bell, BellRing, Wallet, Users, LogOut, UserCircle, Sparkles, Smartphone, Download, Share, Check, Accessibility, Trash2, ShieldCheck, CalendarClock } from 'lucide-react'
 import Link from 'next/link'
 import PageHeader from '@/components/PageHeader'
 import DashboardCard from '@/components/DashboardCard'
@@ -44,6 +44,7 @@ export default function InstellingenPage() {
 
   const prefs = mergePrefs(settings.notifications)
   const savedTarget = typeof settings.budgetTarget === 'number' ? settings.budgetTarget : 500
+  const savedPeriodStart = typeof settings.budgetPeriodStart === 'number' ? settings.budgetPeriodStart : 1
 
   // AI-instellingen (standaard aan; alle data toegestaan tenzij uitgezet).
   const aiEnabled = settings.aiEnabled !== false
@@ -57,6 +58,8 @@ export default function InstellingenPage() {
 
   const [target, setTarget] = useState(savedTarget)
   useEffect(() => setTarget(savedTarget), [savedTarget])
+  const [periodStart, setPeriodStart] = useState(savedPeriodStart)
+  useEffect(() => setPeriodStart(savedPeriodStart), [savedPeriodStart])
 
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleteBusy, setDeleteBusy] = useState(false)
@@ -313,6 +316,39 @@ export default function InstellingenPage() {
             <span>€200</span>
             <span>€1000</span>
           </div>
+        </DashboardCard>
+
+        {/* Budgetperiode (salarisdag) */}
+        <DashboardCard title="Budgetperiode" icon={CalendarClock} iconClassName="text-violet-500">
+          <p className="text-sm text-slate-500">
+            Begint je geldmaand op je salarisdag i.p.v. de 1e? Stel hier de startdag in. Je periode loopt dan
+            bijvoorbeeld van de 25e t/m de 24e — handig als je rond die dag betaald wordt.
+          </p>
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <label htmlFor="periodStart" className="text-sm font-semibold text-slate-600">
+              Periode start op de
+            </label>
+            <select
+              id="periodStart"
+              value={periodStart}
+              onChange={(e) => {
+                const v = Number(e.target.value)
+                setPeriodStart(v)
+                setSetting('budgetPeriodStart', v)
+              }}
+              className="rounded-xl border border-cardborder bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-brand/40 focus:ring-2 focus:ring-brand/20"
+            >
+              <option value={1}>1e (kalendermaand)</option>
+              {Array.from({ length: 27 }, (_, i) => i + 2).map((d) => (
+                <option key={d} value={d}>
+                  {d}e van de maand
+                </option>
+              ))}
+            </select>
+          </div>
+          <p className="mt-2 text-xs text-slate-400">
+            Het budgetscherm groepeert je uitgaven en gemiddelden dan op deze periodes.
+          </p>
         </DashboardCard>
 
         {/* Integraties */}

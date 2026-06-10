@@ -27,20 +27,41 @@ function txDate(t: Transaction): Date | null {
   return null
 }
 
-type Preset = 'today' | 'yesterday' | 'week' | 'lastmonth' | 'all' | 'custom'
-const PRESETS: { key: Preset; label: string }[] = [
-  { key: 'today', label: 'Vandaag' },
-  { key: 'yesterday', label: 'Gisteren' },
-  { key: 'week', label: 'Deze week' },
-  { key: 'lastmonth', label: 'Vorige maand' },
-  { key: 'all', label: 'Alles' },
-  { key: 'custom', label: 'Eigen periode' },
-]
+type Preset = 'today' | 'yesterday' | 'week' | 'thismonth' | 'lastmonth' | 'all' | 'custom'
 
-/** Toont wat er is uitgegeven in een gekozen periode (vandaag/gisteren/week/vorige
- *  maand/eigen datumbereik), met de verdeling per categorie en de transacties. */
-export default function SpendingFilter({ transactions }: { transactions: Transaction[] }) {
-  const [preset, setPreset] = useState<Preset>('week')
+/** Begin/eind van een budgetperiode t.o.v. nu. startDay = 1 → kalendermaand.
+ *  offset 0 = huidige periode, -1 = vorige. Periodes lopen door over maandgrenzen. */
+function periodRange(startDay: number, offset: number): { start: Date; end: Date } {
+  const now = startOfDay(new Date())
+  let m = now.getMonth()
+  if (startDay > 1 && now.getDate() < startDay) m -= 1 // huidige periode begon vorige maand
+  m += offset
+  const start = new Date(now.getFullYear(), m, startDay)
+  const end = new Date(now.getFullYear(), m + 1, startDay - 1) // dag vóór de volgende periodestart
+  return { start, end }
+}
+
+/** Toont wat er is uitgegeven in een gekozen periode (vandaag/gisteren/week/budget-
+ *  periode/eigen datumbereik), met de verdeling per categorie en de transacties.
+ *  periodStart = de dag waarop de budgetperiode begint (1 = kalendermaand). */
+export default function SpendingFilter({
+  transactions,
+  periodStart = 1,
+}: {
+  transactions: Transaction[]
+  periodStart?: number
+}) {
+  const isPeriod = periodStart > 1
+  const presets: { key: Preset; label: string }[] = [
+    { key: 'today', label: 'Vandaag' },
+    { key: 'yesterday', label: 'Gisteren' },
+    { key: 'week', label: 'Deze week' },
+    { key: 'thismonth', label: isPeriod ? 'Deze periode' : 'Deze maand' },
+    { key: 'lastmonth', label: isPeriod ? 'Vorige periode' : 'Vorige maand' },
+    { key: 'all', label: 'Alles' },
+    { key: 'custom', label: 'Eigen periode' },
+  ]
+  const [preset, setPreset] = useState<Preset>('thismonth')
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
   const [showTx, setShowTx] = useState(false)
@@ -60,10 +81,12 @@ export default function SpendingFilter({ transactions }: { transactions: Transac
       s.setDate(now.getDate() - dow)
       return { start: s, end: now, label: 'deze week' }
     }
-    if (preset === 'lastmonth') {
-      const s = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-      const e = new Date(now.getFullYear(), now.getMonth(), 0)
-      return { start: s, end: e, label: s.toLocaleDateString('nl-NL', { month: 'long', year: 'numeric' }) }
+    if (preset === 'thismonth' || preset === 'lastmonth') {
+      const { start: s, end: e } = periodRange(periodStart, preset === 'thismonth' ? 0 : -1)
+      const label = isPeriod
+        ? `${fmt(s)} – ${fmt(e)}`
+        : s.toLocaleDateString('nl-NL', { month: 'long', year: 'numeric' })
+      return { start: s, end: e, label }
     }
     if (preset === 'custom') {
       const s = from ? startOfDay(new Date(from)) : null
@@ -75,7 +98,7 @@ export default function SpendingFilter({ transactions }: { transactions: Transac
       }
     }
     return { start: null as Date | null, end: null as Date | null, label: 'alle tijd' }
-  }, [preset, from, to])
+  }, [preset, from, to, periodStart, isPeriod])
 
   const filtered = useMemo(
     () =>
@@ -111,7 +134,7 @@ export default function SpendingFilter({ transactions }: { transactions: Transac
   return (
     <DashboardCard title="Uitgaven bekijken" icon={CalendarRange} iconClassName="text-sky-500" className="lg:col-span-2">
       <div className="flex flex-wrap gap-2">
-        {PRESETS.map((p) => (
+        {presets.map((p) => (
           <button
             key={p.key}
             type="button"

@@ -139,6 +139,29 @@ export function cleanLabel(label: string): string {
     .join(' ')
 }
 
+/** Periode-sleutel (yyyy-mm van de START-maand) voor een datum, gegeven de dag
+ *  waarop de budgetperiode begint (1 = gewone kalendermaand). Een datum vóór de
+ *  startdag hoort bij de periode die de vorige maand begon — zo lopen periodes door
+ *  over maandgrenzen heen (bijv. 25 jan–24 feb hoort allemaal bij periode jan). */
+export function periodKeyOf(dateStr: string | null | undefined, startDay = 1): string | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(dateStr || '')
+  if (!m) {
+    const ym = /^(\d{4})-(\d{2})/.exec(dateStr || '')
+    return ym ? `${ym[1]}-${ym[2]}` : null
+  }
+  let y = Number(m[1])
+  let mo = Number(m[2])
+  const d = Number(m[3])
+  if (startDay > 1 && d < startDay) {
+    mo -= 1
+    if (mo < 1) {
+      mo = 12
+      y -= 1
+    }
+  }
+  return `${y}-${String(mo).padStart(2, '0')}`
+}
+
 /** Aantal maanden dat een reeks datums (yyyy-mm-dd) beslaat — de spanwijdte van
  *  eerste t/m laatste maand (jan–dec = 12), ook als tussenliggende maanden leeg
  *  zijn. Gebruikt om inkomsten naar een eerlijk maandbedrag te delen. */
