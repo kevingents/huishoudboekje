@@ -15,7 +15,14 @@ export function tagsToString(tags: unknown): string {
   return ''
 }
 
-/** DB-recept → API-vorm met tags als array. */
+/** DB-recept → API-vorm met tags/ingrediënten/stappen als nette arrays. */
 export function serializeRecipe(recipe: DbRecipe) {
-  return { ...recipe, tags: tagsToArray(recipe.tags) }
+  const ingredients = Array.isArray(recipe.ingredients)
+    ? (recipe.ingredients as { name?: unknown; amount?: unknown }[]).map((i) => ({
+        name: String(i?.name ?? ''),
+        amount: String(i?.amount ?? ''),
+      }))
+    : []
+  const steps = Array.isArray(recipe.steps) ? (recipe.steps as unknown[]).map((s) => String(s)) : []
+  return { ...recipe, tags: tagsToArray(recipe.tags), ingredients, steps }
 }

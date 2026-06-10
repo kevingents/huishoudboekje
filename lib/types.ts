@@ -44,9 +44,16 @@ export interface Recipe {
   servings: string
   tags: string[]
   description: string
+  ingredients: RecipeIngredient[]
+  steps: string[]
   favorite: boolean
   /** -1 = duim omlaag, 0 = neutraal, 1 = duim omhoog. */
   vote: number
+}
+
+export interface RecipeIngredient {
+  name: string
+  amount: string
 }
 
 export interface BudgetCategory {

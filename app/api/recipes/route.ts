@@ -18,6 +18,18 @@ export async function POST(req: Request) {
   if (!body?.title) {
     return Response.json({ error: 'title is verplicht' }, { status: 400 })
   }
+  const ingredients = Array.isArray(body.ingredients)
+    ? body.ingredients
+        .map((i: { name?: unknown; amount?: unknown }) => ({
+          name: String(i?.name ?? '').trim(),
+          amount: String(i?.amount ?? '').trim(),
+        }))
+        .filter((i: { name: string }) => i.name)
+    : []
+  const steps = Array.isArray(body.steps)
+    ? body.steps.map((s: unknown) => String(s).trim()).filter(Boolean)
+    : []
+
   const recipe = await prisma.recipe.create({
     data: {
       householdId: hid,
@@ -27,6 +39,8 @@ export async function POST(req: Request) {
       servings: String(body.servings ?? ''),
       tags: tagsToString(body.tags),
       description: String(body.description ?? ''),
+      ingredients,
+      steps,
       favorite: Boolean(body.favorite ?? false),
     },
   })

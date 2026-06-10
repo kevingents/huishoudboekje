@@ -18,8 +18,22 @@ const RECIPE_SCHEMA = {
     time: { type: 'string' },
     servings: { type: 'string' },
     tags: { type: 'array', items: { type: 'string' } },
+    ingredients: {
+      type: 'array',
+      description: 'Alle ingrediënten met hoeveelheid.',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          name: { type: 'string', description: 'Productnaam, kort (NL), bv. "pasta", "ui".' },
+          amount: { type: 'string', description: 'Hoeveelheid, bv. "200 g", "1 stuk", "2 el".' },
+        },
+        required: ['name', 'amount'],
+      },
+    },
+    steps: { type: 'array', description: 'De bereidingsstappen in volgorde.', items: { type: 'string' } },
   },
-  required: ['title', 'description', 'time', 'servings', 'tags'],
+  required: ['title', 'description', 'time', 'servings', 'tags', 'ingredients', 'steps'],
 } as const
 
 export async function POST(req: Request) {
@@ -57,7 +71,9 @@ export async function POST(req: Request) {
       max_tokens: 1024,
       system:
         'Je bent een kok die makkelijke, gezinsvriendelijke Nederlandse recepten bedenkt. ' +
-        'Geef één recept terug dat past bij de voorkeuren. Houd het realistisch en kort.',
+        'Geef één recept terug dat past bij de voorkeuren. Houd het realistisch en kort. ' +
+        'Vermeld ALTIJD de volledige ingrediëntenlijst (met hoeveelheid per ingrediënt) en ' +
+        'duidelijke, genummerde bereidingsstappen.',
       messages: [
         {
           role: 'user',
@@ -74,6 +90,18 @@ export async function POST(req: Request) {
       .join('')
     const parsed = JSON.parse(text)
 
+    const ingredients = Array.isArray(parsed.ingredients)
+      ? parsed.ingredients
+          .map((i: { name?: unknown; amount?: unknown }) => ({
+            name: String(i?.name ?? '').trim(),
+            amount: String(i?.amount ?? '').trim(),
+          }))
+          .filter((i: { name: string }) => i.name)
+      : []
+    const steps = Array.isArray(parsed.steps)
+      ? parsed.steps.map((s: unknown) => String(s).trim()).filter(Boolean)
+      : []
+
     const recipe = await prisma.recipe.create({
       data: {
         householdId: hid,
@@ -82,6 +110,8 @@ export async function POST(req: Request) {
         time: String(parsed.time ?? ''),
         servings: String(parsed.servings ?? ''),
         tags: tagsToString([...(parsed.tags ?? []), 'AI']),
+        ingredients,
+        steps,
         image: FALLBACK_IMAGE,
         favorite: false,
       },

@@ -1,11 +1,13 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { ChefHat, Clock, Users, Heart, Plus, Trash2, ThumbsUp, ThumbsDown, Sparkles } from 'lucide-react'
+import { ChefHat, Clock, Users, Heart, Plus, Trash2, ThumbsUp, ThumbsDown, Sparkles, BookOpen } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
 import Modal from '@/components/Modal'
+import RecipeDetail from '@/components/RecipeDetail'
 import { useRecipes } from '@/lib/hooks'
 import { rankRecipes } from '@/lib/recommend'
+import type { Recipe } from '@/lib/types'
 
 const inputClass =
   'w-full rounded-xl border border-cardborder bg-white px-3.5 py-2.5 text-sm text-slate-700 outline-none transition-colors placeholder:text-slate-400 focus:border-brand/40 focus:ring-2 focus:ring-brand/20'
@@ -15,7 +17,17 @@ export default function ReceptenPage() {
     useRecipes()
   const [activeTag, setActiveTag] = useState('Alles')
   const [open, setOpen] = useState(false)
-  const [form, setForm] = useState({ title: '', description: '', time: '', servings: '', tags: '', image: '' })
+  const [detail, setDetail] = useState<Recipe | null>(null)
+  const [form, setForm] = useState({
+    title: '',
+    description: '',
+    time: '',
+    servings: '',
+    tags: '',
+    image: '',
+    ingredients: '',
+    steps: '',
+  })
 
   // AI-generatie
   const [genOpen, setGenOpen] = useState(false)
@@ -52,6 +64,15 @@ export default function ReceptenPage() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.title.trim()) return
+    const ingredients = form.ingredients
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean)
+      .map((name) => ({ name, amount: '' }))
+    const steps = form.steps
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean)
     await addRecipe({
       title: form.title,
       description: form.description,
@@ -59,8 +80,10 @@ export default function ReceptenPage() {
       servings: form.servings,
       tags: form.tags.split(',').map((t) => t.trim()).filter(Boolean),
       image: form.image || undefined,
+      ingredients,
+      steps,
     })
-    setForm({ title: '', description: '', time: '', servings: '', tags: '', image: '' })
+    setForm({ title: '', description: '', time: '', servings: '', tags: '', image: '', ingredients: '', steps: '' })
     setOpen(false)
   }
 
@@ -182,6 +205,15 @@ export default function ReceptenPage() {
                   </div>
                 )}
 
+                <button
+                  type="button"
+                  onClick={() => setDetail(recipe)}
+                  className="pill mt-3 w-full justify-center border border-cardborder bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-brand/40 hover:bg-brand-light hover:text-brand"
+                >
+                  <BookOpen className="h-4 w-4" />
+                  Bekijk recept
+                </button>
+
                 <div className="mt-4 flex items-center gap-2 border-t border-cardborder pt-3">
                   <span className="mr-auto text-xs text-slate-400">Vind je dit lekker?</span>
                   <button
@@ -277,6 +309,26 @@ export default function ReceptenPage() {
               className={`mt-1 ${inputClass}`}
             />
           </label>
+          <label className="text-xs font-semibold text-slate-500">
+            Ingrediënten <span className="font-normal text-slate-400">— één per regel</span>
+            <textarea
+              rows={4}
+              value={form.ingredients}
+              onChange={(e) => setForm({ ...form, ingredients: e.target.value })}
+              placeholder={'200 g pasta\n1 ui\n2 teentjes knoflook'}
+              className={`mt-1 ${inputClass}`}
+            />
+          </label>
+          <label className="text-xs font-semibold text-slate-500">
+            Bereiding <span className="font-normal text-slate-400">— één stap per regel</span>
+            <textarea
+              rows={4}
+              value={form.steps}
+              onChange={(e) => setForm({ ...form, steps: e.target.value })}
+              placeholder={'Kook de pasta beetgaar.\nFruit de ui en knoflook.'}
+              className={`mt-1 ${inputClass}`}
+            />
+          </label>
           <button
             type="submit"
             className="pill mt-2 bg-brand px-4 py-2.5 text-white shadow-sm shadow-brand/20 hover:bg-brand-dark"
@@ -285,6 +337,8 @@ export default function ReceptenPage() {
           </button>
         </form>
       </Modal>
+
+      <RecipeDetail recipe={detail} onClose={() => setDetail(null)} />
 
       <Modal open={genOpen} onClose={() => setGenOpen(false)} title="Recept laten genereren">
         <form onSubmit={generate} className="flex flex-col gap-3">

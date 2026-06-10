@@ -105,6 +105,9 @@ model Recipe {
   // komma-gescheiden tags (SQLite-vriendelijk; wordt Json bij Postgres-migratie)
   tags        String   @default("")
   description String
+  // Json-arrays: ingredients = [{ name, amount }], steps = [string]
+  ingredients Json?
+  steps       Json?
   favorite    Boolean  @default(false)
   // -1 = duim omlaag, 0 = neutraal, 1 = duim omhoog (voor aanbevelingen)
   vote        Int      @default(0)

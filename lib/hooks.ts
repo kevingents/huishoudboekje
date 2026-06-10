@@ -136,6 +136,8 @@ interface NewRecipe {
   servings?: string
   tags?: string[]
   image?: string
+  ingredients?: { name: string; amount: string }[]
+  steps?: string[]
 }
 
 export function useRecipes() {
@@ -146,7 +148,18 @@ export function useRecipes() {
     addRecipe: (r: NewRecipe) =>
       c.create(
         { ...r },
-        { title: r.title, description: r.description ?? '', time: r.time ?? '', servings: r.servings ?? '', tags: r.tags ?? [], image: r.image ?? '', favorite: false, vote: 0 },
+        {
+          title: r.title,
+          description: r.description ?? '',
+          time: r.time ?? '',
+          servings: r.servings ?? '',
+          tags: r.tags ?? [],
+          ingredients: r.ingredients ?? [],
+          steps: r.steps ?? [],
+          image: r.image ?? '',
+          favorite: false,
+          vote: 0,
+        },
       ),
     toggleFavorite: (recipe: Recipe) => c.update(recipe.id, { favorite: !recipe.favorite }),
     // Duim toggelen: nogmaals dezelfde duim zet 'm weer op neutraal.
