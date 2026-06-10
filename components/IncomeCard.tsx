@@ -83,6 +83,11 @@ export default function IncomeCard({ className = '' }: { className?: string }) {
   const [detail, setDetail] = useState<Income | null>(null)
 
   const totalMonthly = incomes.reduce((sum, i) => sum + monthlyEquivalent(i.amount, i.interval), 0)
+  // Eenmalige inkomsten tellen niet mee in het maandtotaal (zo afgesproken), maar we
+  // tonen ze wel apart zodat het bedrag niet onzichtbaar wegvalt.
+  const onceTotal = incomes
+    .filter((i) => /eenmalig|once/i.test(i.interval))
+    .reduce((sum, i) => sum + i.amount, 0)
 
   // Onderliggende bijschrijvingen bij een inkomstenpost (op de winkel-sleutel).
   const creditsFor = (inc: Income) =>
@@ -171,9 +176,21 @@ export default function IncomeCard({ className = '' }: { className?: string }) {
       )}
 
       {incomes.length > 0 && (
-        <div className="mt-3 flex items-center justify-between border-t border-cardborder pt-3">
-          <span className="text-sm font-semibold text-slate-600">Totaal per maand</span>
-          <span className="text-sm font-extrabold text-emerald-600">+€{euro(totalMonthly)}</span>
+        <div className="mt-3 space-y-1.5 border-t border-cardborder pt-3">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-semibold text-slate-600">Totaal per maand</span>
+            <span className="text-sm font-extrabold text-emerald-600 dark:text-emerald-400">
+              +€{euro(totalMonthly)}
+            </span>
+          </div>
+          {onceTotal > 0 && (
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-slate-500">
+                Eenmalig <span className="text-slate-400">(telt niet mee per maand)</span>
+              </span>
+              <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">+€{euro(onceTotal)}</span>
+            </div>
+          )}
         </div>
       )}
 
