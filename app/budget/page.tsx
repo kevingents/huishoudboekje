@@ -556,8 +556,8 @@ export default function BudgetPage() {
         {/* Uitgaven per periode (vandaag/week/periode/eigen) */}
         <SpendingFilter transactions={transactions} periodStart={periodStart} />
 
-        {/* Maandoverzicht — terugkijken per maand */}
-        <MonthlyOverview transactions={transactions} />
+        {/* Maand-/periodeoverzicht — terugkijken per periode */}
+        <MonthlyOverview transactions={transactions} periodStart={periodStart} />
 
         {/* Sectie: indelen & importeren */}
         <h3 className="mt-2 text-[13px] font-bold uppercase tracking-wide text-slate-400 lg:col-span-2">

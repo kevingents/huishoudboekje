@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react'
 import { CalendarRange, ChevronLeft, ChevronRight } from 'lucide-react'
 import DashboardCard from './DashboardCard'
-import { cleanLabel, isSpendingCategory } from '@/lib/budget'
+import { cleanLabel, isSpendingCategory, periodKeyOf } from '@/lib/budget'
 import type { Transaction } from '@/lib/types'
 
 const PALETTE = ['#35B558', '#0ea5e9', '#8b5cf6', '#f59e0b', '#f43f5e', '#14b8a6', '#6366f1', '#fb923c', '#94a3b8']
@@ -31,30 +31,46 @@ function shiftYm(ym: string, delta: number) {
   const d = new Date(y, mo - 1 + delta, 1)
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}`
 }
-/** Maand (yyyy-mm) van een transactie: uit de datum, anders uit createdAt. */
-function ymOf(t: Transaction): string | null {
-  const m = /^(\d{4})-(\d{2})/.exec(t.date || '')
-  if (m) return `${m[1]}-${m[2]}`
-  if (t.createdAt) {
+/** Periode-sleutel (yyyy-mm van de startmaand) van een transactie: uit de datum,
+ *  anders uit createdAt. Houdt rekening met de ingestelde startdag. */
+function keyOf(t: Transaction, startDay: number): string | null {
+  let ds = t.date || ''
+  if (!/^\d{4}-\d{2}-\d{2}/.test(ds) && t.createdAt) {
     const d = new Date(t.createdAt)
-    if (!isNaN(d.getTime())) return `${d.getFullYear()}-${pad(d.getMonth() + 1)}`
+    if (!isNaN(d.getTime())) ds = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
   }
-  return null
+  return periodKeyOf(ds, startDay)
+}
+/** Volledig label van een periode: kalendermaand of "25 jan – 24 feb" bij startdag > 1. */
+function fullLabel(ym: string, startDay: number): string {
+  if (startDay <= 1) return labelOf(ym)
+  const [y, mo] = ym.split('-').map(Number)
+  const start = new Date(y, mo - 1, startDay)
+  const end = new Date(y, mo, startDay - 1)
+  const f = (d: Date) => d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })
+  return `${f(start)} – ${f(end)}`
 }
 
-export default function MonthlyOverview({ transactions }: { transactions: Transaction[] }) {
+export default function MonthlyOverview({
+  transactions,
+  periodStart = 1,
+}: {
+  transactions: Transaction[]
+  periodStart?: number
+}) {
+  const isPeriod = periodStart > 1
   const byMonth = useMemo(() => {
     const m = new Map<string, Transaction[]>()
     for (const t of transactions) {
       if (!isSpendingCategory(t.category)) continue // inkomsten/genegeerd niet meetellen
-      const ym = ymOf(t)
+      const ym = keyOf(t, periodStart)
       if (!ym) continue
       const list = m.get(ym) ?? []
       list.push(t)
       m.set(ym, list)
     }
     return m
-  }, [transactions])
+  }, [transactions, periodStart])
 
   const monthsWithData = [...byMonth.keys()].sort()
   const [ym, setYm] = useState(() => monthsWithData[monthsWithData.length - 1] ?? currentYm())
@@ -87,16 +103,18 @@ export default function MonthlyOverview({ transactions }: { transactions: Transa
       <button
         type="button"
         onClick={() => setYm(shiftYm(ym, -1))}
-        aria-label="Vorige maand"
+        aria-label={isPeriod ? 'Vorige periode' : 'Vorige maand'}
         className="grid h-8 w-8 place-items-center rounded-full border border-cardborder text-slate-500 hover:bg-slate-50"
       >
         <ChevronLeft className="h-4 w-4" />
       </button>
-      <span className="min-w-28 text-center text-sm font-bold capitalize text-slate-800">{labelOf(ym)}</span>
+      <span className="min-w-32 text-center text-sm font-bold capitalize text-slate-800">
+        {fullLabel(ym, periodStart)}
+      </span>
       <button
         type="button"
         onClick={() => setYm(shiftYm(ym, 1))}
-        aria-label="Volgende maand"
+        aria-label={isPeriod ? 'Volgende periode' : 'Volgende maand'}
         className="grid h-8 w-8 place-items-center rounded-full border border-cardborder text-slate-500 hover:bg-slate-50"
       >
         <ChevronRight className="h-4 w-4" />
@@ -106,7 +124,7 @@ export default function MonthlyOverview({ transactions }: { transactions: Transa
 
   return (
     <DashboardCard
-      title="Maandoverzicht"
+      title={isPeriod ? 'Periodeoverzicht' : 'Maandoverzicht'}
       icon={CalendarRange}
       iconClassName="text-violet-500"
       className="lg:col-span-2"
@@ -140,13 +158,13 @@ export default function MonthlyOverview({ transactions }: { transactions: Transa
       </div>
 
       <p className="text-sm text-slate-500">
-        Uitgaven in <span className="font-semibold capitalize text-slate-700">{labelOf(ym)}</span>
+        Uitgaven in <span className="font-semibold capitalize text-slate-700">{fullLabel(ym, periodStart)}</span>
       </p>
       <p className="text-3xl font-extrabold text-slate-800">€{Math.round(total)}</p>
       <p className="mb-3 text-xs text-slate-400">{monthTx.length} transacties</p>
 
       {breakdown.length === 0 ? (
-        <p className="text-sm text-slate-500">Geen uitgaven in deze maand.</p>
+        <p className="text-sm text-slate-500">Geen uitgaven in deze {isPeriod ? 'periode' : 'maand'}.</p>
       ) : (
         <>
           <ul className="flex flex-col gap-2 border-t border-cardborder pt-3">
@@ -170,7 +188,7 @@ export default function MonthlyOverview({ transactions }: { transactions: Transa
 
           <details className="mt-4 border-t border-cardborder pt-3">
             <summary className="cursor-pointer text-sm font-semibold text-slate-600">
-              Transacties van deze maand ({monthTx.length})
+              Transacties van deze {isPeriod ? 'periode' : 'maand'} ({monthTx.length})
             </summary>
             <ul className="mt-2 max-h-64 overflow-y-auto pr-1">
               {sortedTx.map((t) => (
