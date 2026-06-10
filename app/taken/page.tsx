@@ -250,10 +250,15 @@ export default function TakenPage() {
                 inputMode="numeric"
                 value={form.points}
                 onChange={(e) => setForm({ ...form, points: e.target.value })}
+                placeholder="0"
                 className={`mt-1 ${inputClass}`}
               />
             </label>
           </div>
+          <p className="-mt-1 text-[11px] text-slate-400">
+            Punten zijn voor het gezinsspel. Laat op <span className="font-semibold">0</span> (of leeg) voor een
+            gewone taak zonder beloning.
+          </p>
           <div className="flex gap-3">
             <label className="flex-1 text-xs font-semibold text-slate-500">
               Deadline (optioneel)
