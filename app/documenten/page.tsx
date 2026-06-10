@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { FileText, ShieldCheck, Plus, Trash2, Camera, CalendarClock, Receipt } from 'lucide-react'
+import { FileText, ShieldCheck, Plus, Trash2, Camera, CalendarClock, Receipt, FileSignature } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
 import DashboardCard from '@/components/DashboardCard'
 import Modal from '@/components/Modal'
@@ -13,10 +13,12 @@ const inputClass =
 const TYPES = [
   { value: 'garantie', label: 'Garantiebewijs', icon: FileText, accent: 'bg-sky-100 text-sky-600' },
   { value: 'factuur', label: 'Factuur', icon: Receipt, accent: 'bg-emerald-100 text-emerald-600' },
+  { value: 'contract', label: 'Contract', icon: FileSignature, accent: 'bg-indigo-100 text-indigo-600' },
   { value: 'officieel', label: 'Officieel document', icon: ShieldCheck, accent: 'bg-violet-100 text-violet-600' },
 ]
-// garantie → bon; factuur → rekening; al het andere → officieel (incl. oude 'legitimatie').
-const typeMeta = (t: string) => (t === 'garantie' ? TYPES[0] : t === 'factuur' ? TYPES[1] : TYPES[2])
+// garantie → bon; factuur → rekening; contract → contract; al het andere → officieel.
+const typeMeta = (t: string) =>
+  t === 'garantie' ? TYPES[0] : t === 'factuur' ? TYPES[1] : t === 'contract' ? TYPES[2] : TYPES[3]
 
 function downscale(file: File, max = 900): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -65,14 +67,16 @@ export default function DocumentenPage() {
   const [photo, setPhoto] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [tab, setTab] = useState<'garantie' | 'factuur' | 'officieel'>('garantie')
+  const [tab, setTab] = useState<'garantie' | 'factuur' | 'contract' | 'officieel'>('garantie')
 
   const shown = documents.filter((d) =>
     tab === 'garantie'
       ? d.type === 'garantie'
       : tab === 'factuur'
         ? d.type === 'factuur'
-        : d.type !== 'garantie' && d.type !== 'factuur',
+        : tab === 'contract'
+          ? d.type === 'contract'
+          : d.type !== 'garantie' && d.type !== 'factuur' && d.type !== 'contract',
   )
 
   const openAdd = () => {
@@ -141,12 +145,12 @@ export default function DocumentenPage() {
         onChange={(e) => onPickPhoto(e.target.files?.[0])}
       />
 
-      {/* Drie secties */}
-      <div className="mb-5 flex rounded-full border border-cardborder bg-white p-1 text-xs font-semibold sm:text-sm">
+      {/* Secties */}
+      <div className="mb-5 flex rounded-full border border-cardborder bg-white p-1 text-xs font-semibold">
         <button
           type="button"
           onClick={() => setTab('garantie')}
-          className={`flex-1 rounded-full px-3 py-2 transition-colors ${
+          className={`flex-1 rounded-full px-2 py-2 transition-colors ${
             tab === 'garantie' ? 'bg-brand text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'
           }`}
         >
@@ -155,7 +159,7 @@ export default function DocumentenPage() {
         <button
           type="button"
           onClick={() => setTab('factuur')}
-          className={`flex-1 rounded-full px-3 py-2 transition-colors ${
+          className={`flex-1 rounded-full px-2 py-2 transition-colors ${
             tab === 'factuur' ? 'bg-brand text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'
           }`}
         >
@@ -163,8 +167,17 @@ export default function DocumentenPage() {
         </button>
         <button
           type="button"
+          onClick={() => setTab('contract')}
+          className={`flex-1 rounded-full px-2 py-2 transition-colors ${
+            tab === 'contract' ? 'bg-brand text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          Contracten
+        </button>
+        <button
+          type="button"
           onClick={() => setTab('officieel')}
-          className={`flex-1 rounded-full px-3 py-2 transition-colors ${
+          className={`flex-1 rounded-full px-2 py-2 transition-colors ${
             tab === 'officieel' ? 'bg-brand text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'
           }`}
         >
@@ -185,7 +198,9 @@ export default function DocumentenPage() {
                 ? 'Nog geen garantiebewijzen. Voeg bonnetjes/garanties toe met een foto en eventueel een verloopdatum.'
                 : tab === 'factuur'
                   ? 'Nog geen facturen. Mail ze naar je gezinsmail-adres — ze komen hier vanzelf terecht — of voeg ze handmatig toe.'
-                  : 'Nog geen officiële documenten. Voeg paspoort, ID of rijbewijs toe met een verloopdatum, dan stuurt Fam op tijd een reminder.'}
+                  : tab === 'contract'
+                    ? 'Nog geen contracten. Bewaar hier huur-, telefoon-, energie-, verzekerings- of arbeidscontracten, eventueel met een einddatum als reminder.'
+                    : 'Nog geen officiële documenten. Voeg paspoort, ID of rijbewijs toe met een verloopdatum, dan stuurt Fam op tijd een reminder.'}
             </p>
           </div>
         </DashboardCard>

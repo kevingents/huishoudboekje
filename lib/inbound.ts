@@ -123,7 +123,7 @@ export async function listInboundAttachments(emailId: string): Promise<InboundAt
 
 export interface MailClassification {
   category: 'factuur' | 'garantie' | 'document' | 'afspraak' | 'boodschap' | 'overig'
-  documentType: 'garantie' | 'legitimatie' | 'overig' | 'geen'
+  documentType: 'garantie' | 'legitimatie' | 'contract' | 'overig' | 'geen'
   title: string
   summary: string
   owner: string
@@ -139,7 +139,7 @@ const MAIL_SCHEMA = {
   additionalProperties: false,
   properties: {
     category: { type: 'string', enum: ['factuur', 'garantie', 'document', 'afspraak', 'boodschap', 'overig'] },
-    documentType: { type: 'string', enum: ['garantie', 'legitimatie', 'overig', 'geen'] },
+    documentType: { type: 'string', enum: ['garantie', 'legitimatie', 'contract', 'overig', 'geen'] },
     title: { type: 'string' },
     summary: { type: 'string' },
     owner: { type: 'string' },
@@ -202,8 +202,10 @@ export async function classifyMail(input: {
     'betaaldatum als die zichtbaar is.\n' +
     '- category "garantie": aankoopbon/garantiebewijs van een product. Zet bij documentType "garantie" ' +
     'en bij expiresAt de einddatum van de garantie als die te bepalen is (anders leeg).\n' +
-    '- category "document": officieel document (paspoort, rijbewijs, verzekeringspolis, diploma). ' +
-    'Zet documentType "legitimatie" voor ID-bewijzen, anders "overig". expiresAt = verloopdatum indien bekend.\n' +
+    '- category "document": officieel document (paspoort, rijbewijs, verzekeringspolis, diploma) of een ' +
+    'contract. Zet documentType "legitimatie" voor ID-bewijzen, "contract" voor contracten (huur, telefoon, ' +
+    'energie, verzekering, arbeidscontract, abonnement met looptijd), anders "overig". expiresAt = ' +
+    'verloop-/einddatum indien bekend.\n' +
     '- category "afspraak": een afspraak/reservering met datum. Vul eventDate (yyyy-mm-dd) en eventTime (HH:MM, leeg als hele dag).\n' +
     '- category "boodschap": een boodschappenlijst. Vul shoppingItems met losse producten.\n' +
     '- category "overig": iets anders.\n' +
@@ -321,7 +323,9 @@ export async function processInboundEmail(opts: {
             ? 'factuur'
             : cls.documentType === 'legitimatie'
               ? 'legitimatie'
-              : 'overig'
+              : cls.documentType === 'contract'
+                ? 'contract'
+                : 'overig'
       const amountText = cls.category === 'factuur' && cls.amount ? `Bedrag: €${cls.amount.toFixed(2)}` : ''
       const notes = [cls.summary, amountText].filter(Boolean).join(' · ') || null
       const doc = await prisma.document.create({
