@@ -19,7 +19,7 @@ export default function TakenPage() {
   const [form, setForm] = useState({
     title: '',
     assignedTo: '',
-    points: '10',
+    points: '0',
     dueDate: '',
     description: '',
     recurrence: 'geen',
@@ -40,7 +40,7 @@ export default function TakenPage() {
       description: form.description.trim() || null,
       recurrence: form.recurrence,
     })
-    setForm({ title: '', assignedTo: '', points: '10', dueDate: '', description: '', recurrence: 'geen' })
+    setForm({ title: '', assignedTo: '', points: '0', dueDate: '', description: '', recurrence: 'geen' })
     setOpen(false)
   }
 

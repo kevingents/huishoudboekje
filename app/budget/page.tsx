@@ -15,6 +15,7 @@ import SpendingChart from '@/components/SpendingChart'
 import MonthlyOverview from '@/components/MonthlyOverview'
 import BudgetImport from '@/components/BudgetImport'
 import OverigCleanup from '@/components/OverigCleanup'
+import DayBudgetCard from '@/components/DayBudgetCard'
 import { useBudget, useSettings, useFixedCosts, useSubscriptions, useHousehold, useIncome } from '@/lib/hooks'
 import { apiPost } from '@/lib/api'
 import { resolveIcon } from '@/lib/icons'
@@ -240,6 +241,10 @@ export default function BudgetPage() {
           </button>
         }
       />
+
+      <div className="mb-5">
+        <DayBudgetCard />
+      </div>
 
       <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
         {/* Overview ring */}
