@@ -189,6 +189,29 @@ function parseMt940(text: string): BankTx[] {
   return out
 }
 
+/** ABN AMRO tab-gescheiden export (.TAB / .txt, géén kopregel).
+ *  Kolommen: rekening, muntsoort, boekdatum(yyyymmdd), beginsaldo, eindsaldo,
+ *  rentedatum(yyyymmdd), bedrag(±, komma-decimaal), omschrijving. */
+function parseAbnTab(text: string): BankTx[] {
+  const out: BankTx[] = []
+  for (const raw of text.split(/\r?\n/)) {
+    const c = raw.split('\t')
+    if (c.length < 7) continue
+    const signed = parseAmount(c[6] ?? '')
+    if (!isFinite(signed) || signed === 0) continue
+    const date = parseDate(c[2] || c[5] || '')
+    const description = c.slice(7).join(' ').replace(/\s+/g, ' ').trim()
+    out.push({
+      date,
+      amount: Math.abs(signed),
+      description: description || 'Transactie',
+      isIncome: signed > 0,
+      category: categorizeTx(description),
+    })
+  }
+  return out
+}
+
 /** Detecteert het formaat en parseert het afschrift. */
 export function parseBankStatement(filename: string, text: string): BankTx[] {
   const f = filename.toLowerCase()
@@ -207,6 +230,10 @@ export function parseBankStatement(filename: string, text: string): BankTx[] {
     /:61:/.test(text)
   ) {
     return parseMt940(text)
+  }
+  // ABN AMRO tab-gescheiden export: rekening<TAB>EUR<TAB>jjjjmmdd<TAB>...
+  if (f.endsWith('.tab') || /^[A-Z0-9.]+\t[A-Z]{3}\t\d{8}\t/m.test(text)) {
+    return parseAbnTab(text)
   }
   return parseCsv(text)
 }
