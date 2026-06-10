@@ -85,11 +85,6 @@ function incomeBucket(cat: string): string {
   return 'overig'
 }
 
-/** Kinderbijslag komt per kwartaal binnen; de rest behandelen we als maandelijks. */
-function incomeInterval(label: string): string {
-  return /kinderbijslag/i.test(label) ? '3 months' : '1 month'
-}
-
 /** Sleutel om een transactie te herkennen: datum + bedrag + (genormaliseerde) omschrijving. */
 function txKey(date: string, amount: number, label: string): string {
   const l = label.toLowerCase().replace(/\s+/g, ' ').trim().slice(0, 80)
@@ -218,7 +213,7 @@ export async function POST(req: Request) {
     // indeelbaar zijn; herkenbare vaste inkomsten ook als terugkerende Income-post.
     const credits = txs.filter((t) => t.isIncome && t.amount > 0)
     const incomeTx: { label: string; amount: number; date: string }[] = []
-    const incAgg = new Map<string, { label: string; sum: number; count: number; subtype: string; interval: string }>()
+    const incAgg = new Map<string, { label: string; sum: number; count: number; subtype: string }>()
     for (const c of credits) {
       const label = (c.description || 'Inkomst').slice(0, 120)
       const date = c.date || 'Geïmporteerd'
@@ -245,7 +240,6 @@ export async function POST(req: Request) {
           sum: 0,
           count: 0,
           subtype,
-          interval: incomeInterval(label),
         }
         g.sum += c.amount
         g.count += 1
@@ -260,6 +254,16 @@ export async function POST(req: Request) {
           .map((d) => ({ householdId: hid, label: d.label, category: 'Inkomsten', amount: d.amount, date: d.date })),
       })
     }
+    // Aantal maanden in dit afschrift → inkomsten eerlijk over de maanden verdelen,
+    // zodat een jaarsalaris het echte maandsalaris wordt (niet 12× opgeteld) en
+    // kwartaal-/eenmalige posten niet als vol maandbedrag tellen.
+    const periodMonths = new Set<string>()
+    for (const t of txs) {
+      const mm = /^(\d{4})-(\d{2})/.exec(t.date || '')
+      if (mm) periodMonths.add(`${mm[1]}-${mm[2]}`)
+    }
+    const monthsInPeriod = Math.max(1, periodMonths.size)
+
     let incomesCreated = 0
     if (incAgg.size) {
       const existingIncome = await prisma.income.findMany({ where: { householdId: hid }, select: { label: true } })
@@ -270,9 +274,9 @@ export async function POST(req: Request) {
           data: {
             householdId: hid,
             label: g.label,
-            amount: Math.round((g.sum / g.count) * 100) / 100,
+            amount: Math.round((g.sum / monthsInPeriod) * 100) / 100,
             category: g.subtype,
-            interval: g.interval,
+            interval: '1 month',
           },
         })
         haveIncome.add(g.label.toLowerCase())

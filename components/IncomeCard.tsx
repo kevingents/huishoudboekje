@@ -1,11 +1,13 @@
 'use client'
 
 import { useState } from 'react'
-import { Banknote, Plus, Pencil, Trash2 } from 'lucide-react'
+import { mutate as globalMutate } from 'swr'
+import { Banknote, Plus, Pencil, Trash2, RefreshCw } from 'lucide-react'
 import DashboardCard from './DashboardCard'
 import Modal from './Modal'
-import { useIncome, type Income } from '@/lib/hooks'
-import { monthlyEquivalent } from '@/lib/budget'
+import { useIncome, useBudget, type Income } from '@/lib/hooks'
+import { apiPost } from '@/lib/api'
+import { monthlyEquivalent, merchantKey, labelMatchesPattern } from '@/lib/budget'
 
 const inputClass =
   'w-full rounded-xl border border-cardborder bg-white px-3.5 py-2.5 text-sm text-slate-700 outline-none transition-colors placeholder:text-slate-400 focus:border-brand/40 focus:ring-2 focus:ring-brand/20'
@@ -57,11 +59,41 @@ const emptyForm = { label: '', amount: '', category: 'loon', interval: '1 month'
 
 export default function IncomeCard({ className = '' }: { className?: string }) {
   const { incomes, addIncome, updateIncome, removeIncome } = useIncome()
+  const { transactions } = useBudget()
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<Income | null>(null)
   const [form, setForm] = useState(emptyForm)
+  const [detail, setDetail] = useState<Income | null>(null)
+  const [recomputing, setRecomputing] = useState(false)
+  const [note, setNote] = useState<string | null>(null)
 
   const totalMonthly = incomes.reduce((sum, i) => sum + monthlyEquivalent(i.amount, i.interval), 0)
+
+  const recompute = async () => {
+    setRecomputing(true)
+    setNote(null)
+    try {
+      const res = (await apiPost('/api/budget/recompute-income', {})) as {
+        updated: number
+        created: number
+        monthsInPeriod: number
+      }
+      await globalMutate('/api/income')
+      setNote(
+        `Herberekend over ${res.monthsInPeriod} ${res.monthsInPeriod === 1 ? 'maand' : 'maanden'}: ${res.updated} bijgewerkt, ${res.created} nieuw.`,
+      )
+    } catch {
+      setNote('Herberekenen mislukt.')
+    } finally {
+      setRecomputing(false)
+    }
+  }
+
+  // Onderliggende bijschrijvingen bij een inkomstenpost (op de winkel-sleutel).
+  const creditsFor = (inc: Income) =>
+    transactions
+      .filter((t) => t.category === 'Inkomsten' && labelMatchesPattern(t.label, merchantKey(inc.label)))
+      .sort((a, b) => ((a.date || '') < (b.date || '') ? 1 : -1))
 
   const openAdd = () => {
     setEditing(null)
@@ -91,14 +123,26 @@ export default function IncomeCard({ className = '' }: { className?: string }) {
       iconClassName="text-emerald-500"
       className={className}
       headerRight={
-        <button
-          type="button"
-          onClick={openAdd}
-          className="pill bg-emerald-50 px-3 py-1.5 text-xs text-emerald-600 hover:bg-emerald-100"
-        >
-          <Plus className="h-3.5 w-3.5" />
-          Inkomst
-        </button>
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={recompute}
+            disabled={recomputing}
+            title="Inkomsten herberekenen uit je bijschrijvingen"
+            className="pill bg-slate-100 px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-200 disabled:opacity-50"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${recomputing ? 'animate-spin' : ''}`} />
+            Herbereken
+          </button>
+          <button
+            type="button"
+            onClick={openAdd}
+            className="pill bg-emerald-50 px-3 py-1.5 text-xs text-emerald-600 hover:bg-emerald-100"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Inkomst
+          </button>
+        </div>
       }
     >
       {incomes.length === 0 ? (
@@ -110,12 +154,12 @@ export default function IncomeCard({ className = '' }: { className?: string }) {
           {incomes.map((i, index) => (
             <li key={i.id}>
               <div className="group flex items-center gap-2 py-2.5">
-                <div className="min-w-0 flex-1">
+                <button type="button" onClick={() => setDetail(i)} className="min-w-0 flex-1 text-left">
                   <p className="truncate text-sm font-semibold text-slate-800">{i.label}</p>
                   <p className="text-xs text-slate-400">
-                    {catLabel(i.category)} · {intervalLabel(i.interval)}
+                    {catLabel(i.category)} · {intervalLabel(i.interval)} · <span className="text-brand">details</span>
                   </p>
-                </div>
+                </button>
                 <p className="text-sm font-bold text-emerald-600">
                   +€{euro(i.amount)}
                   <span className="text-xs font-normal text-slate-400">{intervalSuffix(i.interval)}</span>
@@ -149,6 +193,7 @@ export default function IncomeCard({ className = '' }: { className?: string }) {
           <span className="text-sm font-extrabold text-emerald-600">+€{euro(totalMonthly)}</span>
         </div>
       )}
+      {note && <p className="mt-2 text-xs font-medium text-slate-500">{note}</p>}
 
       <Modal open={open} onClose={() => setOpen(false)} title={editing ? 'Inkomst bewerken' : 'Inkomst toevoegen'}>
         <form onSubmit={submit} className="flex flex-col gap-3">
@@ -229,6 +274,41 @@ export default function IncomeCard({ className = '' }: { className?: string }) {
             {editing ? 'Opslaan' : 'Inkomst opslaan'}
           </button>
         </form>
+      </Modal>
+
+      <Modal open={!!detail} onClose={() => setDetail(null)} title={detail ? detail.label : ''}>
+        {detail &&
+          (() => {
+            const credits = creditsFor(detail)
+            const total = credits.reduce((s, t) => s + (Number(t.amount) || 0), 0)
+            return (
+              <div className="flex flex-col gap-3">
+                <p className="text-sm text-slate-500">
+                  {credits.length} bijschrijvingen, totaal{' '}
+                  <span className="font-bold text-emerald-600">+€{euro(total)}</span>. Het maandbedrag is dit
+                  totaal gedeeld door het aantal maanden in je afschrift.
+                </p>
+                {credits.length === 0 ? (
+                  <p className="text-sm text-slate-500">
+                    Geen gekoppelde bijschrijvingen gevonden — deze inkomst is handmatig toegevoegd of de
+                    omschrijving wijkt af.
+                  </p>
+                ) : (
+                  <ul className="max-h-72 overflow-y-auto pr-1">
+                    {credits.map((t) => (
+                      <li key={t.id} className="flex items-center gap-3 py-1.5 text-sm">
+                        <span className="w-20 shrink-0 text-xs text-slate-400">{t.date}</span>
+                        <span className="min-w-0 flex-1 truncate text-slate-600">{t.label}</span>
+                        <span className="shrink-0 font-semibold text-emerald-600">
+                          +€{euro(Number(t.amount) || 0)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )
+          })()}
       </Modal>
     </DashboardCard>
   )

@@ -31,7 +31,11 @@ export async function POST(req: Request) {
     category?: string
   }>
 
-  const saved = []
+  // Bestaande regels één keer ophalen → bestaande bijwerken, nieuwe in bulk maken.
+  const existing = await prisma.merchantRule.findMany({ where: { householdId: hid } })
+  const byPattern = new Map(existing.map((r) => [r.pattern, r.id]))
+  const toCreate: { householdId: number; pattern: string; category: string; kind: string }[] = []
+  let updated = 0
   for (const r of incoming) {
     const pattern = normalizePattern(r?.pattern)
     if (!pattern) continue
@@ -39,12 +43,14 @@ export async function POST(req: Request) {
       ? (r!.kind as RuleKind)
       : 'expense'
     const category = String(r?.category ?? '').slice(0, 60)
-    const existing = await prisma.merchantRule.findFirst({ where: { householdId: hid, pattern } })
-    if (existing) {
-      saved.push(await prisma.merchantRule.update({ where: { id: existing.id }, data: { category, kind } }))
-    } else {
-      saved.push(await prisma.merchantRule.create({ data: { householdId: hid, pattern, category, kind } }))
+    const id = byPattern.get(pattern)
+    if (id) {
+      await prisma.merchantRule.update({ where: { id }, data: { category, kind } })
+      updated++
+    } else if (!toCreate.some((c) => c.pattern === pattern)) {
+      toCreate.push({ householdId: hid, pattern, category, kind })
     }
   }
-  return Response.json({ ok: true, rules: saved }, { status: 201 })
+  if (toCreate.length) await prisma.merchantRule.createMany({ data: toCreate })
+  return Response.json({ ok: true, created: toCreate.length, updated }, { status: 201 })
 }

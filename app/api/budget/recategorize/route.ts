@@ -28,7 +28,10 @@ export async function POST() {
 
   const [rules, txs, cats] = await Promise.all([
     prisma.merchantRule.findMany({ where: { householdId: hid } }),
-    prisma.transaction.findMany({ where: { householdId: hid }, select: { id: true, label: true, amount: true, category: true } }),
+    prisma.transaction.findMany({
+      where: { householdId: hid },
+      select: { id: true, label: true, amount: true, category: true, date: true },
+    }),
     prisma.budgetCategory.findMany({ where: { householdId: hid }, select: { id: true, name: true } }),
   ])
 
@@ -107,6 +110,15 @@ export async function POST() {
   }
 
   // Vaste inkomsten uit income-regels aanmaken (eenmalig = income_once telt niet mee).
+  // Bedrag = totaal ÷ aantal maanden in de data → een eerlijk maandgemiddelde
+  // (jaarsalaris wordt het echte maandsalaris, kwartaal-/eenmalige posten niet te hoog).
+  const periodMonths = new Set<string>()
+  for (const t of txs) {
+    const mm = /^(\d{4})-(\d{2})/.exec(t.date || '')
+    if (mm) periodMonths.add(`${mm[1]}-${mm[2]}`)
+  }
+  const monthsInPeriod = Math.max(1, periodMonths.size)
+
   let incomeCreated = 0
   if (incAgg.size) {
     const existingIncome = await prisma.income.findMany({ where: { householdId: hid }, select: { label: true } })
@@ -117,9 +129,9 @@ export async function POST() {
         data: {
           householdId: hid,
           label: g.name,
-          amount: Math.round((g.sum / g.count) * 100) / 100,
+          amount: Math.round((g.sum / monthsInPeriod) * 100) / 100,
           category: g.subtype,
-          interval: g.subtype === 'kinderbijslag' ? '3 months' : '1 month',
+          interval: '1 month',
         },
       })
       haveIncome.add(g.name.toLowerCase())

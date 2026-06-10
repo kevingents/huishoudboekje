@@ -21,19 +21,24 @@ const hints: Record<string, string> = {
   supermarkt: 'Automatisch bestellen bij de supermarkt — nog niet beschikbaar.',
 }
 
+// 'mollie' en 'ai' zijn operator-/platformconfig (betalingen lopen bij ons binnen,
+// AI-sleutel is backend) — niet relevant voor de gebruiker, dus niet tonen.
+const HIDDEN_INTEGRATIONS = new Set(['mollie', 'ai'])
+
 export default function IntegrationsSection() {
   const { integrations, isLoading, updateIntegration } = useIntegrations()
+  const visible = integrations.filter((i) => !HIDDEN_INTEGRATIONS.has(i.key))
 
   return (
     <DashboardCard title="Integraties" icon={Plug} iconClassName="text-sky-500">
-      {isLoading && integrations.length === 0 ? (
+      {isLoading && visible.length === 0 ? (
         <p className="text-sm text-slate-400">Laden…</p>
       ) : (
         <ul className="flex flex-col">
-          {integrations.map((integration, index) => (
+          {visible.map((integration, index) => (
             <li key={integration.key}>
               <IntegrationRow integration={integration} onUpdate={updateIntegration} />
-              {index < integrations.length - 1 && <hr className="border-cardborder" />}
+              {index < visible.length - 1 && <hr className="border-cardborder" />}
             </li>
           ))}
         </ul>
