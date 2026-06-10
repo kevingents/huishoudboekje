@@ -240,13 +240,11 @@ export default function BudgetPage() {
   const loanMonthly = loans.reduce((sum, l) => sum + (l.termAmount || 0), 0)
   const aflossingenMonthly = loanMonthly + fixedAflossing
 
-  // Maandprognose: vaste lasten + abonnementen + aflossingen + variabel budget
+  // Maandbegroting: inkomsten − vaste lasten − abonnementen − aflossingen − variabel.
   const subsMonthly = subscriptions
     .filter((s) => s.status === 'active')
     .reduce((sum, s) => sum + monthlyEquivalent(s.amount, s.interval), 0)
-  const forecastTotal = fixedTotal + subsMonthly + aflossingenMonthly + totalLimit
   const incomeMonthly = incomes.reduce((sum, i) => sum + monthlyEquivalent(i.amount, i.interval), 0)
-  const netto = incomeMonthly - forecastTotal
 
   // Verwachte variabele kosten per categorie (zónder vaste lasten/aflossingen) → prognose.
   const NON_VARIABLE_CATS = new Set(['Vaste lasten', 'Aflossingen'])
@@ -450,16 +448,16 @@ export default function BudgetPage() {
         <div className="lg:col-span-2">
         <ModuleGate module="budgetplanner">
         <div className="grid grid-cols-1 items-stretch gap-5 lg:grid-cols-2">
-        {/* Maandprognose (full width) */}
-        <DashboardCard title="Maandprognose" icon={LineChart} iconClassName="text-violet-500" className="lg:col-span-2">
+        {/* Maandbegroting (full width) — één overzicht: inkomsten − lasten = over */}
+        <DashboardCard title="Maandbegroting" icon={LineChart} iconClassName="text-violet-500" className="lg:col-span-2">
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-6">
             {[
               { label: 'Inkomsten', value: incomeMonthly, tone: 'pos' as const },
-              { label: 'Vaste lasten', value: fixedTotal, tone: 'default' as const },
-              { label: 'Abonnementen', value: subsMonthly, tone: 'default' as const },
-              { label: 'Aflossingen', value: aflossingenMonthly, tone: 'default' as const },
-              { label: 'Variabel budget', value: totalLimit, tone: 'default' as const },
-              { label: 'Netto over', value: netto, tone: netto >= 0 ? ('pos' as const) : ('neg' as const) },
+              { label: 'Vaste lasten', value: -fixedTotal, tone: 'default' as const },
+              { label: 'Abonnementen', value: -subsMonthly, tone: 'default' as const },
+              { label: 'Aflossingen', value: -aflossingenMonthly, tone: 'default' as const },
+              { label: 'Variabele uitgaven', value: -variableAvg, tone: 'default' as const },
+              { label: 'Over per maand', value: nextMonthNet, tone: nextMonthNet >= 0 ? ('pos' as const) : ('neg' as const) },
             ].map((item) => {
               const box =
                 item.tone === 'pos' ? 'bg-emerald-500/10' : item.tone === 'neg' ? 'bg-rose-500/10' : 'bg-slate-400/10'
@@ -469,18 +467,25 @@ export default function BudgetPage() {
                   : item.tone === 'neg'
                     ? 'text-rose-600 dark:text-rose-400'
                     : 'text-slate-800 dark:text-slate-100'
+              const sign = item.value < 0 ? '−' : item.tone === 'pos' ? '+' : ''
               return (
                 <div key={item.label} className={`rounded-2xl p-3 sm:p-4 ${box}`}>
                   <p className="text-xs text-slate-500">{item.label}</p>
                   <p className={`text-base font-extrabold sm:text-lg ${txt}`}>
-                    {item.value < 0 ? '−' : ''}€{euro(Math.abs(item.value))}
+                    {sign}€{euro(Math.abs(item.value))}
                   </p>
                 </div>
               )
             })}
           </div>
           <p className="mt-3 text-xs text-slate-400">
-            Netto = inkomsten − (vaste lasten + abonnementen + je categoriebudgetten).
+            Over per maand = inkomsten − vaste lasten − abonnementen − aflossingen − je gemiddelde variabele
+            uitgaven
+            {spendMonths.size > 0
+              ? ` (over ${spendMonths.size} ${spendMonths.size === 1 ? 'maand' : 'maanden'})`
+              : ''}
+            . Eenmalige posten tellen niet mee.
+            {totalLimit > 0 ? ` Je budget voor variabele uitgaven is €${totalLimit}.` : ''}
           </p>
 
           {costsByCategory.length > 0 && (
@@ -499,65 +504,27 @@ export default function BudgetPage() {
             </div>
           )}
 
-          <div className="mt-4 border-t border-cardborder pt-3">
-            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-              Prognose volgende maand
-            </p>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              {[
-                { label: 'Verwachte inkomsten', value: incomeMonthly, tone: 'pos' as const },
-                { label: 'Vaste lasten + abo', value: fixedTotal + subsMonthly, tone: 'default' as const },
-                { label: 'Aflossingen', value: aflossingenMonthly, tone: 'default' as const },
-                {
-                  label: 'Verwacht over',
-                  value: nextMonthNet,
-                  tone: nextMonthNet >= 0 ? ('pos' as const) : ('neg' as const),
-                },
-              ].map((item) => {
-                const box =
-                  item.tone === 'pos' ? 'bg-emerald-500/10' : item.tone === 'neg' ? 'bg-rose-500/10' : 'bg-slate-400/10'
-                const txt =
-                  item.tone === 'pos'
-                  ? 'text-emerald-600 dark:text-emerald-400'
-                  : item.tone === 'neg'
-                    ? 'text-rose-600 dark:text-rose-400'
-                    : 'text-slate-800 dark:text-slate-100'
-                return (
-                  <div key={item.label} className={`rounded-2xl p-3 sm:p-4 ${box}`}>
-                    <p className="text-xs text-slate-500">{item.label}</p>
-                    <p className={`text-base font-extrabold sm:text-lg ${txt}`}>
-                      {item.value < 0 ? '−' : ''}€{euro(Math.abs(item.value))}
-                    </p>
+          {variableForecast.length > 0 && (
+            <div className="mt-4 border-t border-cardborder pt-3">
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                Variabele uitgaven per categorie (gem. €{Math.round(variableAvg)} p/m)
+              </p>
+              <div className="grid grid-cols-1 gap-x-6 gap-y-1.5 sm:grid-cols-2">
+                {variableForecast.slice(0, 9).map(([cat, v]) => (
+                  <div key={cat} className="flex items-center justify-between text-sm">
+                    <span className="min-w-0 truncate text-slate-600">{cat}</span>
+                    <span className="shrink-0 font-semibold text-slate-800">€{euro(v)}</span>
                   </div>
-                )
-              })}
-            </div>
-
-            {variableForecast.length > 0 && (
-              <div className="mt-3">
-                <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-                  Verwachte variabele kosten per categorie (€{Math.round(variableAvg)} p/m)
-                </p>
-                <div className="grid grid-cols-1 gap-x-6 gap-y-1.5 sm:grid-cols-2">
-                  {variableForecast.slice(0, 9).map(([cat, v]) => (
-                    <div key={cat} className="flex items-center justify-between text-sm">
-                      <span className="min-w-0 truncate text-slate-600">{cat}</span>
-                      <span className="shrink-0 font-semibold text-slate-800">€{euro(v)}</span>
-                    </div>
-                  ))}
-                </div>
+                ))}
               </div>
-            )}
-
-            <p className="mt-2 text-xs text-slate-400">
-              Op basis van je terugkerende inkomsten en je gemiddelde uitgaven per categorie
-              {spendMonths.size > 0
-                ? ` (over ${spendMonths.size} ${spendMonths.size === 1 ? 'maand' : 'maanden'})`
-                : ''}
-              . Eenmalige posten tellen niet mee.
-            </p>
-          </div>
+            </div>
+          )}
         </DashboardCard>
+
+        {/* Sectie: instellen wat er binnenkomt en vast uitgaat */}
+        <h3 className="mt-2 text-[13px] font-bold uppercase tracking-wide text-slate-400 lg:col-span-2">
+          Instellen
+        </h3>
 
         {/* Inkomsten, vaste lasten, abonnementen, leningen, spaardoelen */}
         <IncomeCard />
@@ -569,14 +536,24 @@ export default function BudgetPage() {
         </ModuleGate>
         </div>
 
-        {/* Budget opschonen: Overig + bijschrijvingen indelen (met geheugen + AI) */}
-        <OverigCleanup />
+        {/* Sectie: terugkijken op uitgaven */}
+        <h3 className="mt-2 text-[13px] font-bold uppercase tracking-wide text-slate-400 lg:col-span-2">
+          Terugkijken
+        </h3>
 
         {/* Uitgaven per periode (vandaag/week/vorige maand/eigen) */}
         <SpendingFilter transactions={transactions} />
 
         {/* Maandoverzicht — terugkijken per maand */}
         <MonthlyOverview transactions={transactions} />
+
+        {/* Sectie: indelen & importeren */}
+        <h3 className="mt-2 text-[13px] font-bold uppercase tracking-wide text-slate-400 lg:col-span-2">
+          Indelen &amp; importeren
+        </h3>
+
+        {/* Budget opschonen: Overig + bijschrijvingen indelen (met geheugen + AI) */}
+        <OverigCleanup />
 
         {/* Importeer uit budget-Excel */}
         <BudgetImport />
