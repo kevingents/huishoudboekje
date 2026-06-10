@@ -52,10 +52,11 @@ export function isSpendingCategory(name: string): boolean {
 }
 
 // expense=uitgave in category · income=vaste inkomst · income_once=eenmalige
-// inkomst (terugbetaling/teruggave) · fixed=vaste last · ignore=eigen overboeking/sparen.
-export type RuleKind = 'expense' | 'income' | 'income_once' | 'fixed' | 'ignore'
+// inkomst (terugbetaling/teruggave) · fixed=vaste last · subscription=vaste last die
+// ook een abonnement is · ignore=eigen overboeking/sparen.
+export type RuleKind = 'expense' | 'income' | 'income_once' | 'fixed' | 'subscription' | 'ignore'
 
-export const RULE_KINDS: RuleKind[] = ['expense', 'income', 'income_once', 'fixed', 'ignore']
+export const RULE_KINDS: RuleKind[] = ['expense', 'income', 'income_once', 'fixed', 'subscription', 'ignore']
 
 /** Inkomensoorten waaruit je kunt kiezen bij het indelen. */
 export const INCOME_TYPES = ['loon', 'kinderbijslag', 'toeslag', 'uitkering', 'alimentatie', 'overig'] as const
@@ -70,7 +71,7 @@ export interface MerchantRuleLike {
 export function categoryForKind(kind: string, category: string, fallback = 'Overig'): string {
   if (kind === 'income' || kind === 'income_once') return 'Inkomsten'
   if (kind === 'ignore') return 'Negeren'
-  if (kind === 'fixed') return FIXED_CATEGORY
+  if (kind === 'fixed' || kind === 'subscription') return FIXED_CATEGORY
   return category || fallback
 }
 

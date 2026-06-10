@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import useSWR, { mutate as globalMutate } from 'swr'
-import { Wand2, Sparkles, Check } from 'lucide-react'
+import { Wand2, Sparkles, Check, Plus } from 'lucide-react'
 import DashboardCard from './DashboardCard'
 import Modal from './Modal'
 import { fetcher, apiPost } from '@/lib/api'
@@ -63,17 +63,35 @@ function decode(value: string): { kind: string; category: string } | null {
 }
 
 export default function OverigCleanup() {
-  const { categories } = useBudget()
+  const { categories, addCategory } = useBudget()
   const { data, isLoading, mutate } = useSWR<UncatResp>('/api/budget/uncategorized', fetcher)
 
   const [open, setOpen] = useState(false)
   const [tab, setTab] = useState<'expenses' | 'income'>('expenses')
   const [choices, setChoices] = useState<Record<string, string>>({})
+  const [flags, setFlags] = useState<Record<string, { vast: boolean; abo: boolean }>>({})
   const [showAll, setShowAll] = useState(false)
+  const [showAssigned, setShowAssigned] = useState(false)
   const [search, setSearch] = useState('')
   const [aiBusy, setAiBusy] = useState(false)
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
+  const [newCatFor, setNewCatFor] = useState<string | null>(null)
+  const [newCatName, setNewCatName] = useState('')
+
+  const flagsOf = (key: string) => flags[`${tab}|${key}`] ?? { vast: false, abo: false }
+  const setFlag = (key: string, patch: Partial<{ vast: boolean; abo: boolean }>) =>
+    setFlags((f) => ({ ...f, [`${tab}|${key}`]: { ...flagsOf(key), ...patch } }))
+
+  // Inline een nieuwe uitgave-categorie ("post") aanmaken en meteen kiezen.
+  const createCategory = async (key: string) => {
+    const name = newCatName.trim()
+    if (!name) return
+    await addCategory({ name })
+    setChoices((c) => ({ ...c, [`${tab}|${key}`]: `cat:${name}` }))
+    setNewCatFor(null)
+    setNewCatName('')
+  }
 
   const catNames = useMemo(() => {
     const set = new Set<string>(COMMON_CATS)
@@ -84,13 +102,17 @@ export default function OverigCleanup() {
   const bucket = data?.[tab]
   const groups = bucket?.groups ?? []
   const q = search.trim().toLowerCase()
-  const filtered = q
-    ? groups.filter((g) => g.key.toLowerCase().includes(q) || g.example.toLowerCase().includes(q))
-    : groups
+  const filtered = groups
+    .filter((g) => showAssigned || !g.hasRule) // standaard alleen niet-ingedeelde
+    .filter((g) => !q || g.key.toLowerCase().includes(q) || g.example.toLowerCase().includes(q))
   const shown = showAll ? filtered : filtered.slice(0, 20)
 
-  const expCount = data?.expenses.count ?? 0
-  const incCount = data?.income.count ?? 0
+  // Tellingen op de nog niet-ingedeelde posten (dat is wat er "op te schonen" is).
+  const expGroups = data?.expenses.groups ?? []
+  const incGroups = data?.income.groups ?? []
+  const expCount = expGroups.filter((g) => !g.hasRule).length
+  const incCount = incGroups.filter((g) => !g.hasRule).length
+  const assignedCount = [...expGroups, ...incGroups].filter((g) => g.hasRule).length
   const expTotal = data?.expenses.total ?? 0
 
   const setChoice = (key: string, value: string) => setChoices((c) => ({ ...c, [`${tab}|${key}`]: value }))
@@ -109,18 +131,25 @@ export default function OverigCleanup() {
         return
       }
       const next: Record<string, string> = {}
+      const nextFlags: Record<string, { vast: boolean; abo: boolean }> = {}
       for (const it of res.items ?? []) {
+        const fkey = `${tab}|${it.key}`
         let value = ''
-        if (it.kind === 'fixed') value = 'fixed:'
-        else if (it.kind === 'ignore') value = 'ignore:'
-        else if (it.kind === 'income') value = `income:${tab === 'income' ? 'overig' : 'overig'}`
+        if (it.kind === 'ignore') value = 'ignore:'
+        else if (it.kind === 'income') value = 'income:overig'
         else {
+          // expense/fixed/subscription → een categorie kiezen; vaste last/abonnement
+          // worden vinkjes.
           const match = catNames.find((c) => c.toLowerCase() === (it.category || '').toLowerCase())
           value = `cat:${match ?? 'Overig'}`
+          if (it.kind === 'fixed' || it.kind === 'subscription') {
+            nextFlags[fkey] = { vast: true, abo: it.kind === 'subscription' }
+          }
         }
-        next[`${tab}|${it.key}`] = value
+        next[fkey] = value
       }
       setChoices((c) => ({ ...c, ...next }))
+      setFlags((f) => ({ ...f, ...nextFlags }))
       setMsg('AI heeft een voorstel ingevuld — controleer en pas aan waar nodig.')
     } catch {
       setMsg('AI-indeling mislukt. Probeer het later opnieuw.')
@@ -135,7 +164,15 @@ export default function OverigCleanup() {
       const dec = decode(value)
       if (!dec) continue
       const pattern = k.slice(k.indexOf('|') + 1)
-      rules.push({ pattern, kind: dec.kind, category: dec.category })
+      let kind = dec.kind
+      // Vinkjes "vaste last"/"abonnement" gelden alleen bovenop een echte categorie:
+      // abonnement => subscription (vaste last die ook abonnement is), anders fixed.
+      if (dec.kind === 'expense') {
+        const fl = flags[k]
+        if (fl?.abo) kind = 'subscription'
+        else if (fl?.vast) kind = 'fixed'
+      }
+      rules.push({ pattern, kind, category: dec.category })
     }
     if (!rules.length) {
       setMsg('Kies eerst bij een paar posten wat het is.')
@@ -160,6 +197,7 @@ export default function OverigCleanup() {
         mutate(),
       ])
       setChoices({})
+      setFlags({})
       const parts = [`${rules.length} onthouden`]
       if (res.updated) parts.push(`${res.updated} uitgaven ingedeeld`)
       if (res.incomeCreated) parts.push(`${res.incomeCreated} inkomsten bijgewerkt`)
@@ -177,10 +215,25 @@ export default function OverigCleanup() {
   return (
     <DashboardCard title="Budget opschonen" icon={Wand2} iconClassName="text-violet-500" className="lg:col-span-2">
       {nothingToDo ? (
-        <p className="text-sm text-slate-500">
-          Niets meer op te schonen — al je transacties zijn ingedeeld. Nieuwe imports worden automatisch
-          herkend dankzij wat je eerder hebt onthouden.
-        </p>
+        <>
+          <p className="text-sm text-slate-500">
+            Niets meer op te schonen — al je transacties zijn ingedeeld. Nieuwe imports worden automatisch
+            herkend dankzij wat je eerder hebt onthouden.
+          </p>
+          {assignedCount > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                setShowAssigned(true)
+                setOpen(true)
+              }}
+              className="pill mt-3 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-200"
+            >
+              <Wand2 className="h-4 w-4" />
+              Ingedeelde posten wijzigen ({assignedCount})
+            </button>
+          )}
+        </>
       ) : (
         <>
           <p className="text-sm text-slate-500">
@@ -244,6 +297,18 @@ export default function OverigCleanup() {
             {aiBusy ? 'AI denkt na…' : 'Laat AI een voorstel doen'}
           </button>
 
+          {assignedCount > 0 && (
+            <label className="inline-flex items-center gap-2 text-xs font-medium text-slate-600">
+              <input
+                type="checkbox"
+                checked={showAssigned}
+                onChange={(e) => setShowAssigned(e.target.checked)}
+                className="h-3.5 w-3.5 rounded accent-brand"
+              />
+              Toon ook al ingedeelde posten ({assignedCount})
+            </label>
+          )}
+
           {isLoading ? (
             <p className="text-sm text-slate-400">Laden…</p>
           ) : filtered.length === 0 ? (
@@ -256,6 +321,11 @@ export default function OverigCleanup() {
                     <span className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-800">
                       {titleCase(g.key)}
                     </span>
+                    {g.hasRule && (
+                      <span className="shrink-0 rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700 dark:text-emerald-300">
+                        ingedeeld
+                      </span>
+                    )}
                     <span className="shrink-0 text-sm font-bold text-slate-800">€{euro(g.total)}</span>
                     <span className="shrink-0 text-xs text-slate-400">{g.count}×</span>
                   </div>
@@ -265,44 +335,111 @@ export default function OverigCleanup() {
                       Nu in: <span className="font-semibold text-slate-500">{g.currentCategory}</span>
                     </p>
                   )}
-                  <select
-                    value={choiceOf(g.key)}
-                    onChange={(e) => setChoice(g.key, e.target.value)}
-                    className="w-full rounded-lg border border-cardborder bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-brand/40 focus:ring-2 focus:ring-brand/20"
-                  >
-                    <option value="">— kies wat dit is —</option>
-                    {tab === 'expenses' ? (
-                      <>
-                        <optgroup label="Uitgave-categorie">
-                          {catNames.map((c) => (
-                            <option key={c} value={`cat:${c}`}>{c}</option>
-                          ))}
-                        </optgroup>
-                        <optgroup label="Vaste lasten">
-                          <option value="fixed:">Vaste last (huur, energie…)</option>
-                          <option value="fixed:Abonnement">Abonnement (Netflix, krant…)</option>
-                          <option value="fixed:Aflossingen">Aflossing / schuld (hypotheek, lening…)</option>
-                        </optgroup>
-                        <optgroup label="Anders">
-                          <option value="once:">Eenmalige inkomst / teruggave</option>
-                          <option value="ignore:">Negeren (sparen / eigen overboeking)</option>
-                        </optgroup>
-                      </>
-                    ) : (
-                      <>
-                        <optgroup label="Vaste inkomst">
-                          {INCOME_TYPES.map((t) => (
-                            <option key={t} value={`income:${t}`}>{INCOME_LABELS[t]}</option>
-                          ))}
-                        </optgroup>
-                        <optgroup label="Anders">
-                          <option value="once:">Eenmalig / teruggave</option>
-                          <option value="ignore:">Negeren (eigen overboeking / sparen)</option>
-                          <option value="cat:Overig">Toch een uitgave</option>
-                        </optgroup>
-                      </>
-                    )}
-                  </select>
+
+                  {newCatFor === g.key ? (
+                    <div className="flex gap-2">
+                      <input
+                        autoFocus
+                        value={newCatName}
+                        onChange={(e) => setNewCatName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            createCategory(g.key)
+                          }
+                        }}
+                        placeholder="Naam nieuwe categorie"
+                        className="min-w-0 flex-1 rounded-lg border border-cardborder bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-brand/40 focus:ring-2 focus:ring-brand/20"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => createCategory(g.key)}
+                        className="pill shrink-0 bg-brand px-3 py-2 text-xs font-semibold text-white hover:bg-brand-dark"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        Maak
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNewCatFor(null)
+                          setNewCatName('')
+                        }}
+                        className="pill shrink-0 bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-200"
+                      >
+                        Annuleer
+                      </button>
+                    </div>
+                  ) : (
+                    <select
+                      value={choiceOf(g.key)}
+                      onChange={(e) => {
+                        if (e.target.value === '__new__') {
+                          setNewCatFor(g.key)
+                          setNewCatName('')
+                        } else {
+                          setChoice(g.key, e.target.value)
+                        }
+                      }}
+                      className="w-full rounded-lg border border-cardborder bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-brand/40 focus:ring-2 focus:ring-brand/20"
+                    >
+                      <option value="">— kies wat dit is —</option>
+                      {tab === 'expenses' ? (
+                        <>
+                          <optgroup label="Categorie (post)">
+                            {catNames.map((c) => (
+                              <option key={c} value={`cat:${c}`}>{c}</option>
+                            ))}
+                            <option value="__new__">+ Nieuwe categorie…</option>
+                          </optgroup>
+                          <optgroup label="Anders">
+                            <option value="once:">Eenmalige inkomst / teruggave</option>
+                            <option value="ignore:">Negeren (sparen / eigen overboeking)</option>
+                          </optgroup>
+                        </>
+                      ) : (
+                        <>
+                          <optgroup label="Vaste inkomst">
+                            {INCOME_TYPES.map((t) => (
+                              <option key={t} value={`income:${t}`}>{INCOME_LABELS[t]}</option>
+                            ))}
+                          </optgroup>
+                          <optgroup label="Anders">
+                            <option value="once:">Eenmalig / teruggave</option>
+                            <option value="ignore:">Negeren (eigen overboeking / sparen)</option>
+                            <option value="cat:Overig">Toch een uitgave</option>
+                          </optgroup>
+                        </>
+                      )}
+                    </select>
+                  )}
+
+                  {tab === 'expenses' && choiceOf(g.key).startsWith('cat:') && newCatFor !== g.key && (
+                    <div className="mt-1.5 flex flex-wrap gap-4 pl-0.5">
+                      <label className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600">
+                        <input
+                          type="checkbox"
+                          checked={flagsOf(g.key).vast}
+                          onChange={(e) =>
+                            setFlag(g.key, { vast: e.target.checked, abo: e.target.checked ? flagsOf(g.key).abo : false })
+                          }
+                          className="h-3.5 w-3.5 rounded accent-brand"
+                        />
+                        Vaste last
+                      </label>
+                      <label className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600">
+                        <input
+                          type="checkbox"
+                          checked={flagsOf(g.key).abo}
+                          onChange={(e) =>
+                            setFlag(g.key, { abo: e.target.checked, vast: e.target.checked ? true : flagsOf(g.key).vast })
+                          }
+                          className="h-3.5 w-3.5 rounded accent-brand"
+                        />
+                        Abonnement
+                      </label>
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>

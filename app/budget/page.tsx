@@ -11,7 +11,7 @@ import FixedCostsCard from '@/components/FixedCostsCard'
 import IncomeCard from '@/components/IncomeCard'
 import LoansCard from '@/components/LoansCard'
 import SubscriptionsCard from '@/components/SubscriptionsCard'
-import SpendingChart from '@/components/SpendingChart'
+import SpendingFilter from '@/components/SpendingFilter'
 import MonthlyOverview from '@/components/MonthlyOverview'
 import BudgetImport from '@/components/BudgetImport'
 import OverigCleanup from '@/components/OverigCleanup'
@@ -572,8 +572,8 @@ export default function BudgetPage() {
         {/* Budget opschonen: Overig + bijschrijvingen indelen (met geheugen + AI) */}
         <OverigCleanup />
 
-        {/* Waar gaat het heen? */}
-        <SpendingChart transactions={transactions} />
+        {/* Uitgaven per periode (vandaag/week/vorige maand/eigen) */}
+        <SpendingFilter transactions={transactions} />
 
         {/* Maandoverzicht — terugkijken per maand */}
         <MonthlyOverview transactions={transactions} />

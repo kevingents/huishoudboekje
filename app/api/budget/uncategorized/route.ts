@@ -33,9 +33,10 @@ function groupByMerchant(
     g.count += 1
     groups.set(key, g)
   }
+  // Alle groepen teruggeven (incl. al-ingedeelde, met hasRule-vlag) — de client toont
+  // standaard alleen de niet-ingedeelde en kan via een toggle ook de rest tonen.
   return [...groups.values()]
     .map((g) => ({ ...g, total: Math.round(g.total * 100) / 100 }))
-    .filter((g) => !g.hasRule) // posten met een geleerde regel zijn al ingedeeld
     .sort((a, b) => b.total - a.total)
 }
 

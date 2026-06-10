@@ -139,7 +139,7 @@ export async function POST(req: Request) {
     // Geleerde regels toepassen: inkomsten/negeren overslaan, vaste lasten doorzetten.
     const rules = await prisma.merchantRule.findMany({ where: { householdId: hid } })
     const toStore: { label: string; category: string; amount: number; date: string }[] = []
-    const fixedAgg = new Map<string, { name: string; sum: number; count: number; category: string }>()
+    const fixedAgg = new Map<string, { name: string; sum: number; count: number; category: string; isSub: boolean }>()
     let skippedKind = 0
     for (const d of fresh) {
       const { category, kind } = classifyWithRules(d.label, rules, d.category)
@@ -147,10 +147,11 @@ export async function POST(req: Request) {
         skippedKind++
         continue
       }
-      if (kind === 'fixed') {
+      if (kind === 'fixed' || kind === 'subscription') {
         const rule = matchRule(d.label, rules)
         const name = titleCase(rule?.pattern || d.label).slice(0, 60)
-        const fa = fixedAgg.get(name) ?? { name, sum: 0, count: 0, category: rule?.category || '' }
+        const fa =
+          fixedAgg.get(name) ?? { name, sum: 0, count: 0, category: rule?.category || '', isSub: kind === 'subscription' }
         fa.sum += d.amount
         fa.count += 1
         fixedAgg.set(name, fa)
@@ -191,6 +192,8 @@ export async function POST(req: Request) {
             name: fa.name,
             amount: Math.round((fa.sum / fa.count) * 100) / 100,
             category: fa.category || suggestCostCategory(fa.name),
+            isSubscription: fa.isSub,
+            subscriptionInterval: fa.isSub ? '1 month' : null,
           },
         })
         haveFixed.add(fa.name.toLowerCase())
