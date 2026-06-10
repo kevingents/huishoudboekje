@@ -306,6 +306,8 @@ export function useIncome() {
         category: payload.category ?? 'loon',
         interval: payload.interval ?? '1 month',
       }),
+    updateIncome: (id: number, payload: { label?: string; amount?: number; category?: string; interval?: string }) =>
+      c.update(id, payload),
     removeIncome: (id: number) => c.remove(id),
   }
 }

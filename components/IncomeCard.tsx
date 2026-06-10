@@ -1,10 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { Banknote, Plus, Trash2 } from 'lucide-react'
+import { Banknote, Plus, Pencil, Trash2 } from 'lucide-react'
 import DashboardCard from './DashboardCard'
 import Modal from './Modal'
-import { useIncome } from '@/lib/hooks'
+import { useIncome, type Income } from '@/lib/hooks'
 import { monthlyEquivalent } from '@/lib/budget'
 
 const inputClass =
@@ -16,41 +16,71 @@ function euro(value: number) {
 
 const CATS: { value: string; label: string }[] = [
   { value: 'loon', label: 'Loon / salaris' },
-  { value: 'toeslag', label: 'Toeslag' },
+  { value: 'kinderbijslag', label: 'Kinderbijslag' },
+  { value: 'toeslag', label: 'Toeslag / teruggaaf' },
   { value: 'uitkering', label: 'Uitkering / pensioen' },
+  { value: 'alimentatie', label: 'Alimentatie' },
   { value: 'overig', label: 'Overig' },
 ]
 
-// Snelkeuzes voor veelvoorkomende inkomsten.
-const SUGGESTIONS: { label: string; category: string }[] = [
+// Snelkeuzes voor veelvoorkomende inkomsten (met passend interval).
+const SUGGESTIONS: { label: string; category: string; interval?: string }[] = [
   { label: 'Loon', category: 'loon' },
-  { label: 'Kinderbijslag', category: 'toeslag' },
+  { label: 'Kinderbijslag', category: 'kinderbijslag', interval: '3 months' },
   { label: 'Zorgtoeslag', category: 'toeslag' },
   { label: 'Huurtoeslag', category: 'toeslag' },
   { label: 'Kinderopvangtoeslag', category: 'toeslag' },
-  { label: 'Hypotheekteruggave', category: 'overig' },
+  { label: 'Hypotheekrenteaftrek', category: 'toeslag' },
   { label: 'AOW', category: 'uitkering' },
   { label: 'Uitkering', category: 'uitkering' },
   { label: 'Pensioen', category: 'uitkering' },
   { label: 'Alimentatie', category: 'overig' },
-  { label: 'Vakantiegeld', category: 'loon' },
+  { label: 'Vakantiegeld', category: 'loon', interval: '12 months' },
 ]
 
 const catLabel = (c: string) => CATS.find((x) => x.value === c)?.label ?? 'Overig'
 
+function intervalLabel(iv: string): string {
+  if (/eenmalig|once/i.test(iv)) return 'eenmalig'
+  if (/3\s*month/.test(iv)) return 'per kwartaal'
+  if (/12\s*month|year/.test(iv)) return 'per jaar'
+  return 'per maand'
+}
+function intervalSuffix(iv: string): string {
+  if (/eenmalig|once/i.test(iv)) return ''
+  if (/3\s*month/.test(iv)) return ' /kwt'
+  if (/12\s*month|year/.test(iv)) return ' /jr'
+  return ' /mnd'
+}
+
+const emptyForm = { label: '', amount: '', category: 'loon', interval: '1 month' }
+
 export default function IncomeCard({ className = '' }: { className?: string }) {
-  const { incomes, addIncome, removeIncome } = useIncome()
+  const { incomes, addIncome, updateIncome, removeIncome } = useIncome()
   const [open, setOpen] = useState(false)
-  const [form, setForm] = useState({ label: '', amount: '', category: 'loon', interval: '1 month' })
+  const [editing, setEditing] = useState<Income | null>(null)
+  const [form, setForm] = useState(emptyForm)
 
   const totalMonthly = incomes.reduce((sum, i) => sum + monthlyEquivalent(i.amount, i.interval), 0)
+
+  const openAdd = () => {
+    setEditing(null)
+    setForm(emptyForm)
+    setOpen(true)
+  }
+  const openEdit = (i: Income) => {
+    setEditing(i)
+    setForm({ label: i.label, amount: String(i.amount), category: i.category, interval: i.interval })
+    setOpen(true)
+  }
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     const amount = Number(form.amount.replace(',', '.'))
     if (!form.label.trim() || !amount) return
-    await addIncome({ label: form.label.trim(), amount, category: form.category, interval: form.interval })
-    setForm({ label: '', amount: '', category: 'loon', interval: '1 month' })
+    const payload = { label: form.label.trim(), amount, category: form.category, interval: form.interval }
+    if (editing) await updateIncome(editing.id, payload)
+    else await addIncome(payload)
     setOpen(false)
   }
 
@@ -63,7 +93,7 @@ export default function IncomeCard({ className = '' }: { className?: string }) {
       headerRight={
         <button
           type="button"
-          onClick={() => setOpen(true)}
+          onClick={openAdd}
           className="pill bg-emerald-50 px-3 py-1.5 text-xs text-emerald-600 hover:bg-emerald-100"
         >
           <Plus className="h-3.5 w-3.5" />
@@ -79,19 +109,25 @@ export default function IncomeCard({ className = '' }: { className?: string }) {
         <ul className="flex flex-col">
           {incomes.map((i, index) => (
             <li key={i.id}>
-              <div className="group flex items-center gap-3 py-2.5">
+              <div className="group flex items-center gap-2 py-2.5">
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold text-slate-800">{i.label}</p>
                   <p className="text-xs text-slate-400">
-                    {catLabel(i.category)} · {i.interval === '12 months' ? 'per jaar' : 'per maand'}
+                    {catLabel(i.category)} · {intervalLabel(i.interval)}
                   </p>
                 </div>
                 <p className="text-sm font-bold text-emerald-600">
                   +€{euro(i.amount)}
-                  <span className="text-xs font-normal text-slate-400">
-                    {i.interval === '12 months' ? ' /jr' : ' /mnd'}
-                  </span>
+                  <span className="text-xs font-normal text-slate-400">{intervalSuffix(i.interval)}</span>
                 </p>
+                <button
+                  type="button"
+                  onClick={() => openEdit(i)}
+                  aria-label={`${i.label} bewerken`}
+                  className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-slate-300 opacity-0 transition-all hover:bg-slate-100 hover:text-slate-600 group-hover:opacity-100"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
                 <button
                   type="button"
                   onClick={() => removeIncome(i.id)}
@@ -114,22 +150,26 @@ export default function IncomeCard({ className = '' }: { className?: string }) {
         </div>
       )}
 
-      <Modal open={open} onClose={() => setOpen(false)} title="Inkomst toevoegen">
+      <Modal open={open} onClose={() => setOpen(false)} title={editing ? 'Inkomst bewerken' : 'Inkomst toevoegen'}>
         <form onSubmit={submit} className="flex flex-col gap-3">
-          <div className="flex flex-wrap gap-1.5">
-            {SUGGESTIONS.map((s) => (
-              <button
-                key={s.label}
-                type="button"
-                onClick={() => setForm((f) => ({ ...f, label: s.label, category: s.category }))}
-                className={`pill px-2.5 py-1 text-xs font-semibold ring-1 ring-cardborder transition-colors ${
-                  form.label === s.label ? 'bg-emerald-100 text-emerald-700' : 'bg-white text-slate-600 hover:bg-slate-50'
-                }`}
-              >
-                {s.label}
-              </button>
-            ))}
-          </div>
+          {!editing && (
+            <div className="flex flex-wrap gap-1.5">
+              {SUGGESTIONS.map((s) => (
+                <button
+                  key={s.label}
+                  type="button"
+                  onClick={() =>
+                    setForm((f) => ({ ...f, label: s.label, category: s.category, interval: s.interval ?? f.interval }))
+                  }
+                  className={`pill px-2.5 py-1 text-xs font-semibold ring-1 ring-cardborder transition-colors ${
+                    form.label === s.label ? 'bg-emerald-100 text-emerald-700' : 'bg-white text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+          )}
 
           <label className="text-xs font-semibold text-slate-500">
             Omschrijving
@@ -145,7 +185,6 @@ export default function IncomeCard({ className = '' }: { className?: string }) {
             <label className="flex-1 text-xs font-semibold text-slate-500">
               Bedrag (€)
               <input
-                autoFocus
                 inputMode="decimal"
                 value={form.amount}
                 onChange={(e) => setForm({ ...form, amount: e.target.value })}
@@ -161,7 +200,9 @@ export default function IncomeCard({ className = '' }: { className?: string }) {
                 className={`mt-1 ${inputClass}`}
               >
                 <option value="1 month">Maand</option>
+                <option value="3 months">Kwartaal</option>
                 <option value="12 months">Jaar</option>
+                <option value="eenmalig">Eenmalig</option>
               </select>
             </label>
           </div>
@@ -185,7 +226,7 @@ export default function IncomeCard({ className = '' }: { className?: string }) {
             type="submit"
             className="pill mt-1 bg-brand px-4 py-2.5 text-white shadow-sm shadow-brand/20 hover:bg-brand-dark"
           >
-            Inkomst opslaan
+            {editing ? 'Opslaan' : 'Inkomst opslaan'}
           </button>
         </form>
       </Modal>

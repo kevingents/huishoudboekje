@@ -27,11 +27,16 @@ export interface DailyBudget {
   spendablePerPeriod: number
 }
 
+// Posten die NIET tot je dagelijkse variabele besteding horen: inkomsten,
+// genegeerde posten, vaste lasten en aflossingen (die zitten al in het
+// besteedbare bedrag verrekend, of zijn geen variabele uitgave).
+const NON_VARIABLE = new Set(['Inkomsten', 'Negeren', 'Vaste lasten', 'Aflossingen'])
+
 export function computeDailyBudget(opts: {
   now: Date
   salaryDay: number
   spendablePerPeriod: number
-  transactions: { amount: number; createdAt?: string }[]
+  transactions: { amount: number; date?: string; category?: string; createdAt?: string }[]
 }): DailyBudget {
   const { now, salaryDay, spendablePerPeriod, transactions } = opts
   const todayMid = atMidnight(now)
@@ -64,10 +69,27 @@ export function computeDailyBudget(opts: {
 
   const dailyRate = spendablePerPeriod / totalDays
 
+  const startMs = periodStart.getTime()
+  const endMs = periodEnd.getTime()
   const spentInPeriod = transactions
     .filter((t) => {
-      if (!t.createdAt) return true // optimistische/nieuwe transactie = nu = telt mee
-      return new Date(t.createdAt).getTime() >= periodStart.getTime()
+      // Alleen variabele uitgaven (geen inkomsten/vaste lasten/aflossingen).
+      if (t.category && NON_VARIABLE.has(t.category)) return false
+      // Op echte transactiedatum filteren: alleen déze salarisperiode telt mee.
+      const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(t.date || '')
+      if (m) {
+        const ts = Date.parse(`${m[1]}-${m[2]}-${m[3]}T12:00:00`)
+        return ts >= startMs && ts < endMs
+      }
+      // Handmatige post zonder echte datum ("Vandaag"/leeg) = nu; rest (bijv.
+      // "Geïmporteerd" zonder datum) telt niet mee in het dagbudget.
+      const label = (t.date || '').toLowerCase()
+      if (label === '' || label === 'vandaag') {
+        if (!t.createdAt) return true
+        const ts = Date.parse(t.createdAt)
+        return isNaN(ts) ? true : ts >= startMs && ts < endMs
+      }
+      return false
     })
     .reduce((sum, t) => sum + (Number(t.amount) || 0), 0)
 

@@ -119,7 +119,7 @@ export async function POST() {
           label: g.name,
           amount: Math.round((g.sum / g.count) * 100) / 100,
           category: g.subtype,
-          interval: '1 month',
+          interval: g.subtype === 'kinderbijslag' ? '3 months' : '1 month',
         },
       })
       haveIncome.add(g.name.toLowerCase())

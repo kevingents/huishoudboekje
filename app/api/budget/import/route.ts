@@ -76,10 +76,18 @@ function titleCase(s: string): string {
 
 function incomeBucket(cat: string): string {
   const c = cat.toLowerCase()
-  if (c.includes('toeslag') || c.includes('kinderbijslag')) return 'toeslag'
+  if (c.includes('kinderbijslag')) return 'kinderbijslag'
+  if (c.includes('belastingdienst') || c.includes('teruggaaf') || c.includes('teruggave') || c.includes('toeslag'))
+    return 'toeslag'
   if (c.includes('uitkering') || c.includes('aow') || c.includes('pensioen')) return 'uitkering'
+  if (c.includes('alimentatie')) return 'alimentatie'
   if (c.includes('netto-inkomen') || c.includes('loon') || c.includes('salaris')) return 'loon'
   return 'overig'
+}
+
+/** Kinderbijslag komt per kwartaal binnen; de rest behandelen we als maandelijks. */
+function incomeInterval(label: string): string {
+  return /kinderbijslag/i.test(label) ? '3 months' : '1 month'
 }
 
 /** Sleutel om een transactie te herkennen: datum + bedrag + (genormaliseerde) omschrijving. */
@@ -210,7 +218,7 @@ export async function POST(req: Request) {
     // indeelbaar zijn; herkenbare vaste inkomsten ook als terugkerende Income-post.
     const credits = txs.filter((t) => t.isIncome && t.amount > 0)
     const incomeTx: { label: string; amount: number; date: string }[] = []
-    const incAgg = new Map<string, { label: string; sum: number; count: number; subtype: string }>()
+    const incAgg = new Map<string, { label: string; sum: number; count: number; subtype: string; interval: string }>()
     for (const c of credits) {
       const label = (c.description || 'Inkomst').slice(0, 120)
       const date = c.date || 'Geïmporteerd'
@@ -226,11 +234,19 @@ export async function POST(req: Request) {
       incomeTx.push({ label, amount: c.amount, date })
       const strong =
         rule?.kind === 'income' ||
-        /salaris|\bloon\b|kinderbijslag|toeslag|\baow\b|pensioen|uitkering|sociale verzekeringsbank/i.test(label)
+        /salaris|\bloon\b|kinderbijslag|toeslag|\baow\b|pensioen|uitkering|alimentatie|belastingdienst|sociale verzekeringsbank/i.test(
+          label,
+        )
       if (strong) {
         const key = merchantKey(label) || label.toLowerCase().slice(0, 32)
         const subtype = rule?.kind === 'income' && rule.category ? rule.category : incomeBucket(label)
-        const g = incAgg.get(key) ?? { label: titleCase(merchantKey(label) || 'Inkomst'), sum: 0, count: 0, subtype }
+        const g = incAgg.get(key) ?? {
+          label: titleCase(merchantKey(label) || 'Inkomst'),
+          sum: 0,
+          count: 0,
+          subtype,
+          interval: incomeInterval(label),
+        }
         g.sum += c.amount
         g.count += 1
         g.subtype = subtype
@@ -256,7 +272,7 @@ export async function POST(req: Request) {
             label: g.label,
             amount: Math.round((g.sum / g.count) * 100) / 100,
             category: g.subtype,
-            interval: '1 month',
+            interval: g.interval,
           },
         })
         haveIncome.add(g.label.toLowerCase())
