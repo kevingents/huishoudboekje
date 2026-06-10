@@ -25,6 +25,7 @@ export async function POST(req: Request) {
       total: Number(body.total) || 0,
       termAmount: body.termAmount ? Number(body.termAmount) : null,
       matchPattern: body.matchPattern ? String(body.matchPattern).toLowerCase().trim() : null,
+      excludePattern: body.excludePattern ? String(body.excludePattern).toLowerCase().trim() : null,
       manualPaid: Number(body.manualPaid) || 0,
       startDate: body.startDate ? String(body.startDate) : null,
     },

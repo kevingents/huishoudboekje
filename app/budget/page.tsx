@@ -18,7 +18,7 @@ import OverigCleanup from '@/components/OverigCleanup'
 import { useBudget, useSettings, useFixedCosts, useSubscriptions, useHousehold, useIncome, useLoans } from '@/lib/hooks'
 import { apiPost } from '@/lib/api'
 import { resolveIcon } from '@/lib/icons'
-import { isSpendingCategory, monthlyEquivalent } from '@/lib/budget'
+import { cleanLabel, isSpendingCategory, monthlyEquivalent } from '@/lib/budget'
 import type { BudgetCategory } from '@/lib/types'
 
 const colorClasses: Record<string, { bar: string; iconBg: string; iconText: string }> = {
@@ -475,10 +475,12 @@ export default function BudgetPage() {
                 <li key={tx.id}>
                   <div className="group flex items-center gap-3 py-3">
                     <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-slate-100 text-sm font-bold text-slate-500">
-                      {tx.label.charAt(0)}
+                      {cleanLabel(tx.label).charAt(0)}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold text-slate-800">{tx.label}</p>
+                      <p className="text-sm font-semibold text-slate-800" title={tx.label}>
+                        {cleanLabel(tx.label)}
+                      </p>
                       <p className="text-xs text-slate-500">
                         {tx.category} · {tx.date}
                       </p>

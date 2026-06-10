@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react'
 import { CalendarRange, ChevronLeft, ChevronRight } from 'lucide-react'
 import DashboardCard from './DashboardCard'
-import { isSpendingCategory } from '@/lib/budget'
+import { cleanLabel, isSpendingCategory } from '@/lib/budget'
 import type { Transaction } from '@/lib/types'
 
 const PALETTE = ['#35B558', '#0ea5e9', '#8b5cf6', '#f59e0b', '#f43f5e', '#14b8a6', '#6366f1', '#fb923c', '#94a3b8']
@@ -176,7 +176,9 @@ export default function MonthlyOverview({ transactions }: { transactions: Transa
               {sortedTx.map((t) => (
                 <li key={t.id} className="flex items-center gap-3 py-1.5 text-sm">
                   <span className="w-16 shrink-0 text-xs text-slate-400">{t.date}</span>
-                  <span className="min-w-0 flex-1 truncate text-slate-700">{t.label}</span>
+                  <span className="min-w-0 flex-1 truncate text-slate-700" title={t.label}>
+                    {cleanLabel(t.label)}
+                  </span>
                   <span className="shrink-0 text-xs text-slate-400">{t.category}</span>
                   <span className="w-16 shrink-0 text-right font-semibold text-slate-800">€{euro(t.amount)}</span>
                 </li>

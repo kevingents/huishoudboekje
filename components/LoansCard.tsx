@@ -5,7 +5,7 @@ import { Landmark, Plus, Pencil, Trash2 } from 'lucide-react'
 import DashboardCard from './DashboardCard'
 import Modal from './Modal'
 import { useLoans, useBudget, type Loan } from '@/lib/hooks'
-import { isSpendingCategory, labelMatchesPattern, merchantKey } from '@/lib/budget'
+import { cleanLabel, isSpendingCategory, labelMatchesPattern, merchantKey } from '@/lib/budget'
 import type { Transaction } from '@/lib/types'
 
 const inputClass =
@@ -29,7 +29,8 @@ function compute(loan: Loan, transactions: Transaction[]): Computed {
         (t) =>
           isSpendingCategory(t.category) &&
           (Number(t.amount) || 0) > 0 &&
-          labelMatchesPattern(t.label, loan.matchPattern as string),
+          labelMatchesPattern(t.label, loan.matchPattern as string) &&
+          !(loan.excludePattern && labelMatchesPattern(t.label, loan.excludePattern)),
       )
     : []
   const repaidTx = matched.reduce((s, t) => s + (Number(t.amount) || 0), 0)
@@ -40,7 +41,7 @@ function compute(loan: Loan, transactions: Transaction[]): Computed {
   return { matched, repaid, remaining, pct, monthsLeft }
 }
 
-const emptyForm = { name: '', lender: '', total: '', termAmount: '', matchPattern: '', manualPaid: '' }
+const emptyForm = { name: '', lender: '', total: '', termAmount: '', matchPattern: '', excludePattern: '', manualPaid: '' }
 
 export default function LoansCard() {
   const { loans, addLoan, updateLoan, removeLoan } = useLoans()
@@ -63,6 +64,7 @@ export default function LoansCard() {
       total: loan.total ? String(loan.total) : '',
       termAmount: loan.termAmount ? String(loan.termAmount) : '',
       matchPattern: loan.matchPattern ?? '',
+      excludePattern: loan.excludePattern ?? '',
       manualPaid: loan.manualPaid ? String(loan.manualPaid) : '',
     })
     setOpen(true)
@@ -78,6 +80,7 @@ export default function LoansCard() {
       total: num(form.total),
       termAmount: form.termAmount ? num(form.termAmount) : null,
       matchPattern: form.matchPattern.trim() || (form.lender.trim() ? merchantKey(form.lender) : null),
+      excludePattern: form.excludePattern.trim() || null,
       manualPaid: form.manualPaid ? num(form.manualPaid) : 0,
     }
     if (editing) await updateLoan(editing.id, payload)
@@ -158,7 +161,9 @@ export default function LoansCard() {
                         {c.matched.slice(0, 50).map((t) => (
                           <li key={t.id} className="flex items-center gap-2 py-1 text-xs">
                             <span className="w-16 shrink-0 text-slate-400">{t.date}</span>
-                            <span className="min-w-0 flex-1 truncate text-slate-600">{t.label}</span>
+                            <span className="min-w-0 flex-1 truncate text-slate-600" title={t.label}>
+                              {cleanLabel(t.label)}
+                            </span>
                             <span className="shrink-0 font-semibold text-slate-700">€{euro(Number(t.amount) || 0)}</span>
                           </li>
                         ))}
@@ -224,11 +229,26 @@ export default function LoansCard() {
             <input
               value={form.matchPattern}
               onChange={(e) => setForm({ ...form, matchPattern: e.target.value })}
-              placeholder="Bijv. boots holding (leeg = naam geldverstrekker)"
+              placeholder="Bijv. betalingsregeling, eigen risico"
               className={`mt-1 ${inputClass}`}
             />
             <span className="mt-1 block text-[11px] font-normal text-slate-400">
-              Transacties met dit trefwoord in de omschrijving tellen als aflossing.
+              Transacties met dit woord in de omschrijving tellen als aflossing. Gebruik een{' '}
+              <span className="font-semibold">specifiek</span> woord (niet alleen de naam) als je meerdere
+              producten bij dezelfde instantie hebt.
+            </span>
+          </label>
+          <label className="text-xs font-semibold text-slate-500">
+            Uitsluiten (optioneel)
+            <input
+              value={form.excludePattern}
+              onChange={(e) => setForm({ ...form, excludePattern: e.target.value })}
+              placeholder="Bijv. premie"
+              className={`mt-1 ${inputClass}`}
+            />
+            <span className="mt-1 block text-[11px] font-normal text-slate-400">
+              Transacties met dit woord tellen juist <span className="font-semibold">niet</span> mee — bv.
+              “premie”, zodat je normale zorgverzekering niet bij deze aflossing wordt opgeteld.
             </span>
           </label>
           <label className="text-xs font-semibold text-slate-500">

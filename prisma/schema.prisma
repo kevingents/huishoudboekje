@@ -262,6 +262,7 @@ model Loan {
   total        Float    @default(0) // totaal af te lossen (oorspronkelijke schuld)
   termAmount   Float? // maandtermijn (optioneel)
   matchPattern String? // trefwoord om aflossings-transacties te koppelen
+  excludePattern String? // trefwoord dat een match juist uitsluit (bv. "premie")
   manualPaid   Float    @default(0) // extra handmatig afgelost (buiten transacties)
   startDate    String? // yyyy-mm-dd
   createdAt    DateTime @default(now())

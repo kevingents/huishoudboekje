@@ -319,6 +319,7 @@ export interface Loan {
   total: number
   termAmount: number | null
   matchPattern: string | null
+  excludePattern: string | null
   manualPaid: number
   startDate: string | null
 }
@@ -329,6 +330,7 @@ type NewLoan = {
   total?: number
   termAmount?: number | null
   matchPattern?: string | null
+  excludePattern?: string | null
   manualPaid?: number
   startDate?: string | null
 }
@@ -345,6 +347,7 @@ export function useLoans() {
         total: payload.total ?? 0,
         termAmount: payload.termAmount ?? null,
         matchPattern: payload.matchPattern ?? null,
+        excludePattern: payload.excludePattern ?? null,
         manualPaid: payload.manualPaid ?? 0,
         startDate: payload.startDate ?? null,
       }),

@@ -187,9 +187,10 @@ function parseMt940(text: string): BankTx[] {
   }
   for (const raw of lines) {
     const line = raw.trimStart()
-    // Einde van een dagafschrift ("-"): transactie afsluiten zodat de bankheader
-    // (ABNANL2A / 940) niet aan de vorige omschrijving blijft plakken.
-    if (line === '-') {
+    // Einde van een dagafschrift ("-") of begin van een nieuw afschrift (:20:):
+    // transactie afsluiten zodat de bankheader (ABNANL2A / 940) niet aan de vorige
+    // omschrijving blijft plakken.
+    if (line === '-' || line.startsWith(':20:')) {
       flush()
       continue
     }
@@ -209,10 +210,15 @@ function parseMt940(text: string): BankTx[] {
         }
       } else cur = null
     } else if (line.startsWith(':86:') && cur) {
-      cur.description += ' ' + line.slice(4)
+      cur.description += (cur.description ? ' ' : '') + line.slice(4)
     } else if (cur && line && !line.startsWith(':')) {
-      cur.description += ' ' + line
+      // Gestructureerde ABN :86: (/TRTP/.../NAME/..) wordt op 65 tekens afgebroken
+      // ZONDER spatie → zonder spatie samenvoegen herstelt afgebroken woorden
+      // (INTERN\nATIONAL -> INTERNATIONAL, BOL.CO\nM -> BOL.COM). Ongestructureerde
+      // regels (BEA + losse velden) juist mét spatie.
+      cur.description += cur.description.includes('/') ? line : ' ' + line
     }
+
   }
   flush()
   return out

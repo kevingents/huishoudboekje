@@ -13,6 +13,8 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   if (body.termAmount !== undefined) data.termAmount = body.termAmount ? Number(body.termAmount) : null
   if (body.matchPattern !== undefined)
     data.matchPattern = body.matchPattern ? String(body.matchPattern).toLowerCase().trim() : null
+  if (body.excludePattern !== undefined)
+    data.excludePattern = body.excludePattern ? String(body.excludePattern).toLowerCase().trim() : null
   if (body.manualPaid !== undefined) data.manualPaid = Number(body.manualPaid) || 0
   if (body.startDate !== undefined) data.startDate = body.startDate ? String(body.startDate) : null
   const result = await prisma.loan.updateMany({ where: { id, householdId: hid }, data })

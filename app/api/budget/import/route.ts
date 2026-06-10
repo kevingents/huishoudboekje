@@ -2,7 +2,7 @@ import * as XLSX from 'xlsx'
 import { prisma } from '@/lib/db'
 import { requireHousehold } from '@/lib/guard'
 import { parseBankStatement } from '@/lib/bankImport'
-import { classifyWithRules, isSpendingCategory, matchRule, merchantKey, suggestCostCategory } from '@/lib/budget'
+import { classifyWithRules, isSpendingCategory, matchRule, suggestCostCategory } from '@/lib/budget'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -72,17 +72,6 @@ function titleCase(s: string): string {
     .filter(Boolean)
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join(' ')
-}
-
-function incomeBucket(cat: string): string {
-  const c = cat.toLowerCase()
-  if (c.includes('kinderbijslag')) return 'kinderbijslag'
-  if (c.includes('belastingdienst') || c.includes('teruggaaf') || c.includes('teruggave') || c.includes('toeslag'))
-    return 'toeslag'
-  if (c.includes('uitkering') || c.includes('aow') || c.includes('pensioen')) return 'uitkering'
-  if (c.includes('alimentatie')) return 'alimentatie'
-  if (c.includes('netto-inkomen') || c.includes('loon') || c.includes('salaris')) return 'loon'
-  return 'overig'
 }
 
 /** Sleutel om een transactie te herkennen: datum + bedrag + (genormaliseerde) omschrijving. */
@@ -209,86 +198,13 @@ export async function POST(req: Request) {
       }
     }
 
-    // Bijschrijvingen → opslaan als (uitgesloten) 'Inkomsten'-transacties zodat ze
-    // indeelbaar zijn; herkenbare vaste inkomsten ook als terugkerende Income-post.
-    const credits = txs.filter((t) => t.isIncome && t.amount > 0)
-    const incomeTx: { label: string; amount: number; date: string }[] = []
-    const incAgg = new Map<string, { label: string; sum: number; count: number; subtype: string }>()
-    for (const c of credits) {
-      const label = (c.description || 'Inkomst').slice(0, 120)
-      const date = c.date || 'Geïmporteerd'
-      const k = txKey(date, c.amount, label)
-      const cnt = seen.get(k) ?? 0
-      if (cnt > 0) {
-        seen.set(k, cnt - 1)
-        skipped++
-        continue
-      }
-      const rule = matchRule(label, rules)
-      if (rule?.kind === 'ignore') continue // eigen overboeking/sparen → niet opslaan
-      incomeTx.push({ label, amount: c.amount, date })
-      const strong =
-        rule?.kind === 'income' ||
-        /salaris|\bloon\b|kinderbijslag|toeslag|\baow\b|pensioen|uitkering|alimentatie|belastingdienst|sociale verzekeringsbank/i.test(
-          label,
-        )
-      if (strong) {
-        const key = merchantKey(label) || label.toLowerCase().slice(0, 32)
-        const subtype = rule?.kind === 'income' && rule.category ? rule.category : incomeBucket(label)
-        const g = incAgg.get(key) ?? {
-          label: titleCase(merchantKey(label) || 'Inkomst'),
-          sum: 0,
-          count: 0,
-          subtype,
-        }
-        g.sum += c.amount
-        g.count += 1
-        g.subtype = subtype
-        incAgg.set(key, g)
-      }
-    }
-    if (incomeTx.length) {
-      await prisma.transaction.createMany({
-        data: incomeTx
-          .slice(0, 5000)
-          .map((d) => ({ householdId: hid, label: d.label, category: 'Inkomsten', amount: d.amount, date: d.date })),
-      })
-    }
-    // Aantal maanden in dit afschrift → inkomsten eerlijk over de maanden verdelen,
-    // zodat een jaarsalaris het echte maandsalaris wordt (niet 12× opgeteld) en
-    // kwartaal-/eenmalige posten niet als vol maandbedrag tellen.
-    const periodMonths = new Set<string>()
-    for (const t of txs) {
-      const mm = /^(\d{4})-(\d{2})/.exec(t.date || '')
-      if (mm) periodMonths.add(`${mm[1]}-${mm[2]}`)
-    }
-    const monthsInPeriod = Math.max(1, periodMonths.size)
-
-    let incomesCreated = 0
-    if (incAgg.size) {
-      const existingIncome = await prisma.income.findMany({ where: { householdId: hid }, select: { label: true } })
-      const haveIncome = new Set(existingIncome.map((i) => i.label.toLowerCase()))
-      for (const g of incAgg.values()) {
-        if (!g.count || haveIncome.has(g.label.toLowerCase())) continue
-        await prisma.income.create({
-          data: {
-            householdId: hid,
-            label: g.label,
-            amount: Math.round((g.sum / monthsInPeriod) * 100) / 100,
-            category: g.subtype,
-            interval: '1 month',
-          },
-        })
-        haveIncome.add(g.label.toLowerCase())
-        incomesCreated++
-      }
-    }
-
+    // Bijschrijvingen (inkomsten) worden NIET geïmporteerd — inkomsten voer je zelf
+    // toe (altijd per maand) via de Inkomsten-kaart.
     return Response.json({
       ok: true,
       source: 'bank',
       expenses: slice.length,
-      incomes: incomesCreated,
+      incomes: 0,
       categories: cats.length,
       skipped,
       skippedKind,
@@ -304,13 +220,9 @@ export async function POST(req: Request) {
   }
 
   const expenses = parseLog(wb, 'Uitgaven Logboek').slice(0, 3000)
-  const incomes = parseLog(wb, 'Inkomsten Logboek').slice(0, 1000)
-  if (expenses.length === 0 && incomes.length === 0) {
+  if (expenses.length === 0) {
     return Response.json(
-      {
-        error:
-          'Geen herkenbare uitgaven of inkomsten gevonden. Verwacht tabbladen "Uitgaven Logboek" en "Inkomsten Logboek".',
-      },
+      { error: 'Geen herkenbare uitgaven gevonden. Verwacht een tabblad "Uitgaven Logboek".' },
       { status: 400 },
     )
   }
@@ -350,30 +262,10 @@ export async function POST(req: Request) {
     })
   }
 
-  // Inkomsten → maandgemiddelde per categorie (bestaande labels overslaan).
-  const existingIncome = await prisma.income.findMany({ where: { householdId: hid }, select: { label: true } })
-  const haveIncome = new Set(existingIncome.map((i) => i.label.toLowerCase()))
-  const incByCat = new Map<string, { total: number; months: Set<string> }>()
-  for (const inc of incomes) {
-    const g = incByCat.get(inc.category) ?? { total: 0, months: new Set<string>() }
-    g.total += inc.amount
-    if (inc.ym) g.months.add(inc.ym)
-    incByCat.set(inc.category, g)
-  }
-  let incomeCreated = 0
-  for (const [cat, g] of incByCat) {
-    const monthly = Math.round((g.total / Math.max(1, g.months.size)) * 100) / 100
-    if (monthly <= 0 || haveIncome.has(cat.toLowerCase())) continue
-    await prisma.income.create({
-      data: { householdId: hid, label: cat, amount: monthly, category: incomeBucket(cat), interval: '1 month' },
-    })
-    incomeCreated++
-  }
-
   return Response.json({
     ok: true,
     expenses: freshExp.length,
-    incomes: incomeCreated,
+    incomes: 0,
     categories: expCats.length,
     skipped,
   })

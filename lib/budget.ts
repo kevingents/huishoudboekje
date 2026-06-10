@@ -108,6 +108,43 @@ export function merchantKey(label: string): string {
   return words.slice(0, 3).join(' ').slice(0, 32)
 }
 
+// Merknamen die we netjes willen tonen (key = merchantKey-uitvoer).
+const BRAND_CASES: Record<string, string> = {
+  'bol com': 'Bol.com',
+  'albert heijn': 'Albert Heijn',
+  'h&m': 'H&M',
+  mcdonald: "McDonald's",
+  mcdonalds: "McDonald's",
+  'apple com bill': 'Apple',
+  ics: 'Creditcard (ICS)',
+}
+
+/** Schoon, leesbaar merk/winkel-label voor in de UI. "BEA, APPLE PAY HEMA EV0323
+ *  HAARLEM" -> "Hema"; "/TRTP/IDEAL/.../NAME/BOL.COM/REMI/.." -> "Bol.com". De ruwe
+ *  omschrijving kan als title-attribuut behouden blijven. */
+export function cleanLabel(label: string): string {
+  const key = merchantKey(label)
+  if (!key) return (label || '').trim().slice(0, 30) || 'Onbekend'
+  if (BRAND_CASES[key]) return BRAND_CASES[key]
+  return key
+    .split(' ')
+    .map((w) => (w ? w.charAt(0).toUpperCase() + w.slice(1) : w))
+    .join(' ')
+}
+
+/** Aantal maanden dat een reeks datums (yyyy-mm-dd) beslaat — de spanwijdte van
+ *  eerste t/m laatste maand (jan–dec = 12), ook als tussenliggende maanden leeg
+ *  zijn. Gebruikt om inkomsten naar een eerlijk maandbedrag te delen. */
+export function monthsInData(dates: (string | undefined | null)[]): number {
+  const idx: number[] = []
+  for (const d of dates) {
+    const m = /^(\d{4})-(\d{2})/.exec(d || '')
+    if (m) idx.push(Number(m[1]) * 12 + (Number(m[2]) - 1))
+  }
+  if (!idx.length) return 1
+  return Math.max(1, Math.max(...idx) - Math.min(...idx) + 1)
+}
+
 /** Past een trefwoord op een omschrijving (op de winkel-sleutel én de ruwe tekst)?
  *  Gebruikt o.a. om aflossings-transacties aan een lening te koppelen. */
 export function labelMatchesPattern(label: string, pattern: string): boolean {

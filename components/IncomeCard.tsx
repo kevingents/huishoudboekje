@@ -1,12 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { mutate as globalMutate } from 'swr'
-import { Banknote, Plus, Pencil, Trash2, RefreshCw } from 'lucide-react'
+import { Banknote, Plus, Pencil, Trash2 } from 'lucide-react'
 import DashboardCard from './DashboardCard'
 import Modal from './Modal'
 import { useIncome, useBudget, type Income } from '@/lib/hooks'
-import { apiPost } from '@/lib/api'
 import { monthlyEquivalent, merchantKey, labelMatchesPattern } from '@/lib/budget'
 
 const inputClass =
@@ -83,30 +81,8 @@ export default function IncomeCard({ className = '' }: { className?: string }) {
   const [editing, setEditing] = useState<Income | null>(null)
   const [form, setForm] = useState(emptyForm)
   const [detail, setDetail] = useState<Income | null>(null)
-  const [recomputing, setRecomputing] = useState(false)
-  const [note, setNote] = useState<string | null>(null)
 
   const totalMonthly = incomes.reduce((sum, i) => sum + monthlyEquivalent(i.amount, i.interval), 0)
-
-  const recompute = async () => {
-    setRecomputing(true)
-    setNote(null)
-    try {
-      const res = (await apiPost('/api/budget/recompute-income', {})) as {
-        updated: number
-        created: number
-        monthsInPeriod: number
-      }
-      await globalMutate('/api/income')
-      setNote(
-        `Herberekend over ${res.monthsInPeriod} ${res.monthsInPeriod === 1 ? 'maand' : 'maanden'}: ${res.updated} bijgewerkt, ${res.created} nieuw.`,
-      )
-    } catch {
-      setNote('Herberekenen mislukt.')
-    } finally {
-      setRecomputing(false)
-    }
-  }
 
   // Onderliggende bijschrijvingen bij een inkomstenpost (op de winkel-sleutel).
   const creditsFor = (inc: Income) =>
@@ -142,26 +118,14 @@ export default function IncomeCard({ className = '' }: { className?: string }) {
       iconClassName="text-emerald-500"
       className={className}
       headerRight={
-        <div className="flex items-center gap-1.5">
-          <button
-            type="button"
-            onClick={recompute}
-            disabled={recomputing}
-            title="Inkomsten herberekenen uit je bijschrijvingen"
-            className="pill bg-slate-100 px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-200 disabled:opacity-50"
-          >
-            <RefreshCw className={`h-3.5 w-3.5 ${recomputing ? 'animate-spin' : ''}`} />
-            Herbereken
-          </button>
-          <button
-            type="button"
-            onClick={openAdd}
-            className="pill bg-emerald-50 px-3 py-1.5 text-xs text-emerald-600 hover:bg-emerald-100"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Inkomst
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={openAdd}
+          className="pill bg-emerald-50 px-3 py-1.5 text-xs text-emerald-600 hover:bg-emerald-100"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          Inkomst
+        </button>
       }
     >
       {incomes.length === 0 ? (
@@ -212,7 +176,6 @@ export default function IncomeCard({ className = '' }: { className?: string }) {
           <span className="text-sm font-extrabold text-emerald-600">+€{euro(totalMonthly)}</span>
         </div>
       )}
-      {note && <p className="mt-2 text-xs font-medium text-slate-500">{note}</p>}
 
       <Modal open={open} onClose={() => setOpen(false)} title={editing ? 'Inkomst bewerken' : 'Inkomst toevoegen'}>
         <form onSubmit={submit} className="flex flex-col gap-3">

@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/db'
 import { requireHousehold } from '@/lib/guard'
 import { categorizeTx } from '@/lib/bankImport'
-import { categoryForKind, isSpendingCategory, matchRule, suggestCostCategory } from '@/lib/budget'
+import { categoryForKind, isSpendingCategory, matchRule, monthsInData, suggestCostCategory } from '@/lib/budget'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -112,12 +112,7 @@ export async function POST() {
   // Vaste inkomsten uit income-regels aanmaken (eenmalig = income_once telt niet mee).
   // Bedrag = totaal ÷ aantal maanden in de data → een eerlijk maandgemiddelde
   // (jaarsalaris wordt het echte maandsalaris, kwartaal-/eenmalige posten niet te hoog).
-  const periodMonths = new Set<string>()
-  for (const t of txs) {
-    const mm = /^(\d{4})-(\d{2})/.exec(t.date || '')
-    if (mm) periodMonths.add(`${mm[1]}-${mm[2]}`)
-  }
-  const monthsInPeriod = Math.max(1, periodMonths.size)
+  const monthsInPeriod = monthsInData(txs.map((t) => t.date))
 
   let incomeCreated = 0
   if (incAgg.size) {

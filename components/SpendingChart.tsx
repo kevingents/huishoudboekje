@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react'
 import { PieChart, ChevronRight } from 'lucide-react'
 import DashboardCard from './DashboardCard'
 import Modal from './Modal'
-import { isSpendingCategory } from '@/lib/budget'
+import { cleanLabel, isSpendingCategory } from '@/lib/budget'
 import type { Transaction } from '@/lib/types'
 
 const PALETTE = [
@@ -197,7 +197,9 @@ export default function SpendingChart({ transactions }: { transactions: Transact
                 {detail.items.map((t) => (
                   <li key={t.id} className="flex items-center gap-3 py-1.5 text-sm">
                     <span className="w-20 shrink-0 text-xs text-slate-400">{t.date}</span>
-                    <span className="min-w-0 flex-1 truncate text-slate-700">{t.label}</span>
+                    <span className="min-w-0 flex-1 truncate text-slate-700" title={t.label}>
+                      {cleanLabel(t.label)}
+                    </span>
                     <span className="shrink-0 font-semibold text-slate-800">€{euro(Number(t.amount) || 0)}</span>
                   </li>
                 ))}
