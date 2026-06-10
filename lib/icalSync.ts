@@ -164,22 +164,26 @@ export async function syncHouseholdIcal(
     .sort((a, b) => a.dateKey.localeCompare(b.dateKey))
     .slice(0, 200)
 
-  // Vervang de bestaande gesyncte items van dit huishouden.
-  await prisma.agendaEvent.deleteMany({ where: { householdId, source: 'ical' } })
-  for (const r of upcoming) {
-    const parts = describeDate(r.dateKey)
-    await prisma.agendaEvent.create({
-      data: {
-        householdId,
-        ...parts,
-        title: r.title,
-        time: r.time,
-        who: r.who,
-        accent: r.accent,
-        source: 'ical',
-        externalId: r.externalId,
-      },
-    })
+  // Alleen vervangen als het ophalen (deels) lukte. Mislukten ALLE feeds, dan de
+  // bestaande afspraken NIET wissen (anders verlies je ze bij een tijdelijke fout).
+  const allFailed = errors.length > 0 && upcoming.length === 0
+  if (!allFailed) {
+    await prisma.agendaEvent.deleteMany({ where: { householdId, source: 'ical' } })
+    for (const r of upcoming) {
+      const parts = describeDate(r.dateKey)
+      await prisma.agendaEvent.create({
+        data: {
+          householdId,
+          ...parts,
+          title: r.title,
+          time: r.time,
+          who: r.who,
+          accent: r.accent,
+          source: 'ical',
+          externalId: r.externalId,
+        },
+      })
+    }
   }
 
   await prisma.integration.updateMany({

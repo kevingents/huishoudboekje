@@ -5,9 +5,17 @@ import { CalendarDays, ChevronRight } from 'lucide-react'
 import DashboardCard from './DashboardCard'
 import { useAgenda } from '@/lib/hooks'
 
+function todayKey(): string {
+  const d = new Date()
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
+}
+
 export default function AgendaCard() {
   const { events, isLoading } = useAgenda()
-  const upcoming = events.slice(0, 3)
+  // Alleen de komende afspraken (vanaf vandaag), op datum.
+  const tk = todayKey()
+  const upcoming = events.filter((e) => e.dateKey >= tk).slice(0, 3)
 
   return (
     <DashboardCard title="Komende afspraken" icon={CalendarDays} iconClassName="text-violet-500">
