@@ -22,7 +22,8 @@ export default function BudgetImport() {
         r.onerror = () => rej(new Error('Bestand kon niet worden gelezen'))
         r.readAsDataURL(file)
       })
-      const res = (await apiPost('/api/budget/import', { file: dataUrl })) as {
+      const res = (await apiPost('/api/budget/import', { file: dataUrl, filename: file.name })) as {
+        source?: string
         expenses: number
         incomes: number
         categories: number
@@ -34,7 +35,10 @@ export default function BudgetImport() {
       ])
       setMsg({
         ok: true,
-        text: `Geïmporteerd: ${res.expenses} uitgaven, ${res.incomes} inkomstenposten en ${res.categories} categorieën.`,
+        text:
+          res.source === 'bank'
+            ? `Bankafschrift geïmporteerd: ${res.expenses} afschrijvingen in ${res.categories} categorieën.`
+            : `Geïmporteerd: ${res.expenses} uitgaven, ${res.incomes} inkomstenposten en ${res.categories} categorieën.`,
       })
     } catch (e) {
       setMsg({ ok: false, text: e instanceof Error ? e.message : 'Import mislukt.' })
@@ -46,20 +50,20 @@ export default function BudgetImport() {
 
   return (
     <DashboardCard
-      title="Importeer uit Excel"
+      title="Importeer Excel of bankafschrift"
       icon={FileSpreadsheet}
       iconClassName="text-emerald-500"
       className="lg:col-span-2"
     >
       <p className="text-sm text-slate-500">
-        Heb je een budget-Excel met de tabbladen <span className="font-semibold">Uitgaven Logboek</span> en{' '}
-        <span className="font-semibold">Inkomsten Logboek</span>? Upload 'm en Fam zet je uitgaven,
-        categorieën en inkomsten in je eigen budget.
+        Upload je <span className="font-semibold">budget-Excel</span> (tabbladen Uitgaven/Inkomsten Logboek)
+        óf een <span className="font-semibold">bankafschrift van elke bank</span> — CSV, CAMT.053 (XML) of
+        MT940. Fam zet je uitgaven en categorieën automatisch in je budget.
       </p>
       <input
         ref={fileRef}
         type="file"
-        accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        accept=".xlsx,.csv,.xml,.sta,.940,.mt940,.txt,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         className="hidden"
         onChange={(e) => onFile(e.target.files?.[0])}
       />
@@ -70,7 +74,7 @@ export default function BudgetImport() {
         className="pill mt-3 bg-brand px-4 py-2.5 text-white shadow-sm shadow-brand/20 hover:bg-brand-dark disabled:opacity-50 sm:w-auto"
       >
         <Upload className={`h-4 w-4 ${busy ? 'animate-pulse' : ''}`} />
-        {busy ? 'Bezig met importeren…' : 'Excel uploaden'}
+        {busy ? 'Bezig met importeren…' : 'Excel of afschrift uploaden'}
       </button>
       {msg && (
         <p className={`mt-2 text-sm font-medium ${msg.ok ? 'text-emerald-600' : 'text-rose-600'}`}>{msg.text}</p>

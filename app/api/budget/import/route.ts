@@ -1,6 +1,7 @@
 import * as XLSX from 'xlsx'
 import { prisma } from '@/lib/db'
 import { requireHousehold } from '@/lib/guard'
+import { parseBankStatement } from '@/lib/bankImport'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -80,9 +81,48 @@ export async function POST(req: Request) {
   const base64 = String(body?.file ?? '').replace(/^data:[^;]+;base64,/, '')
   if (!base64) return Response.json({ error: 'Geen bestand ontvangen.' }, { status: 400 })
 
+  const filename = String(body?.filename ?? '').toLowerCase()
+  const buf = Buffer.from(base64, 'base64')
+  const isXlsx = filename.endsWith('.xlsx') || (buf.length > 1 && buf[0] === 0x50 && buf[1] === 0x4b)
+
+  // Bankafschrift (CSV / CAMT.053 (XML) / MT940) — werkt voor alle SEPA-banken.
+  if (!isXlsx) {
+    const text = buf.toString('utf8')
+    const txs = parseBankStatement(filename, text)
+    const debits = txs.filter((t) => !t.isIncome && t.amount > 0)
+    if (debits.length === 0) {
+      return Response.json(
+        { error: 'Geen afschrijvingen herkend. Upload een CSV, CAMT.053 (XML) of MT940 van je bank.' },
+        { status: 400 },
+      )
+    }
+    const existingCats = await prisma.budgetCategory.findMany({ where: { householdId: hid }, select: { name: true } })
+    const haveCats = new Set(existingCats.map((c) => c.name.toLowerCase()))
+    const cats = [...new Set(debits.map((d) => d.category))]
+    let ci = 0
+    for (const cat of cats) {
+      if (haveCats.has(cat.toLowerCase())) continue
+      await prisma.budgetCategory.create({
+        data: { householdId: hid, name: cat, color: COLORS[ci % COLORS.length], icon: 'ShoppingCart', limit: 0, spent: 0 },
+      })
+      ci++
+    }
+    const slice = debits.slice(0, 5000)
+    await prisma.transaction.createMany({
+      data: slice.map((d) => ({
+        householdId: hid,
+        label: (d.description || d.category).slice(0, 120),
+        category: d.category,
+        amount: d.amount,
+        date: d.date || 'Geïmporteerd',
+      })),
+    })
+    return Response.json({ ok: true, source: 'bank', expenses: slice.length, incomes: 0, categories: cats.length })
+  }
+
   let wb: XLSX.WorkBook
   try {
-    wb = XLSX.read(Buffer.from(base64, 'base64'), { type: 'buffer', cellDates: true })
+    wb = XLSX.read(buf, { type: 'buffer', cellDates: true })
   } catch {
     return Response.json({ error: 'Kon het Excel-bestand niet lezen.' }, { status: 400 })
   }
