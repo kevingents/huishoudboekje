@@ -27,6 +27,19 @@ interface Row {
   dateKey: string
   title: string
   time: string
+  who: string
+  accent: string
+}
+
+interface Feed {
+  url: string
+  label: string
+}
+
+/** School-/Parro-feeds krijgen een eigen kleur in de agenda. */
+function isSchoolFeed(label: string): boolean {
+  const l = label.toLowerCase()
+  return l.includes('school') || l.includes('parro')
 }
 
 /**
@@ -40,14 +53,24 @@ export async function syncHouseholdIcal(
   const integration = await prisma.integration.findFirst({
     where: { householdId, key: 'ical' },
   })
-  let urls: string[] = []
+  let feeds: Feed[] = []
   try {
-    urls = (JSON.parse(integration?.config ?? '{}').urls ?? []).filter(Boolean)
+    const raw = (JSON.parse(integration?.config ?? '{}').urls ?? []) as unknown[]
+    feeds = raw
+      .map((e) =>
+        typeof e === 'string'
+          ? { url: e, label: 'Agenda' }
+          : {
+              url: String((e as { url?: unknown })?.url ?? ''),
+              label: String((e as { label?: unknown })?.label || 'Agenda'),
+            },
+      )
+      .filter((f) => f.url)
   } catch {
-    urls = []
+    feeds = []
   }
 
-  if (urls.length === 0) {
+  if (feeds.length === 0) {
     await prisma.agendaEvent.deleteMany({ where: { householdId, source: 'ical' } })
     await prisma.integration.updateMany({
       where: { householdId, key: 'ical' },
@@ -67,9 +90,11 @@ export async function syncHouseholdIcal(
   // Lazy import zodat node-ical niet tijdens Next's build wordt geladen.
   const ical = (await import('node-ical')).default
 
-  for (const url of urls) {
+  for (const feed of feeds) {
+    const who = feed.label
+    const accent = isSchoolFeed(feed.label) ? 'amber' : 'sky'
     try {
-      const data = await ical.async.fromURL(url)
+      const data = await ical.async.fromURL(feed.url)
       for (const key of Object.keys(data)) {
         const ev = data[key] as {
           type?: string
@@ -107,6 +132,8 @@ export async function syncHouseholdIcal(
               dateKey,
               title,
               time: ev.datetype === 'date' ? 'Hele dag' : clockLabel(ev.start),
+              who,
+              accent,
             })
           }
         } else {
@@ -117,11 +144,18 @@ export async function syncHouseholdIcal(
           const externalId = `ical:${uid}`
           if (seen.has(externalId)) continue
           seen.add(externalId)
-          rows.push({ externalId, dateKey: isoDate(start), title, time: timeLabel(start, ev.end, ev.datetype) })
+          rows.push({
+            externalId,
+            dateKey: isoDate(start),
+            title,
+            time: timeLabel(start, ev.end, ev.datetype),
+            who,
+            accent,
+          })
         }
       }
     } catch (e) {
-      errors.push(`${url}: ${String(e)}`)
+      errors.push(`${feed.url}: ${String(e)}`)
     }
   }
 
@@ -140,8 +174,8 @@ export async function syncHouseholdIcal(
         ...parts,
         title: r.title,
         time: r.time,
-        who: 'Agenda',
-        accent: 'sky',
+        who: r.who,
+        accent: r.accent,
         source: 'ical',
         externalId: r.externalId,
       },

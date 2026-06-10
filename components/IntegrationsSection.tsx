@@ -74,21 +74,32 @@ function IcalConfig({
   integration: Integration
   onUpdate: (key: string, payload: { config?: unknown }) => Promise<void>
 }) {
-  const urls = ((integration.config?.urls as string[] | undefined) ?? []).filter(Boolean)
-  const [draft, setDraft] = useState('')
+  const feeds: { url: string; label: string }[] = ((integration.config?.urls as unknown[] | undefined) ?? [])
+    .map((e) =>
+      typeof e === 'string'
+        ? { url: e, label: 'Agenda' }
+        : {
+            url: String((e as { url?: unknown })?.url ?? ''),
+            label: String((e as { label?: unknown })?.label || 'Agenda'),
+          },
+    )
+    .filter((f) => f.url)
+  const [draftUrl, setDraftUrl] = useState('')
+  const [draftLabel, setDraftLabel] = useState('Agenda')
   const [syncing, setSyncing] = useState(false)
   const [result, setResult] = useState<string | null>(null)
 
-  const save = (next: string[]) => onUpdate('ical', { config: { urls: next } })
+  const save = (next: { url: string; label: string }[]) => onUpdate('ical', { config: { urls: next } })
 
   const add = async () => {
-    const url = draft.trim()
+    const url = draftUrl.trim()
     if (!url) return
-    await save([...urls, url])
-    setDraft('')
+    await save([...feeds, { url, label: draftLabel.trim() || 'Agenda' }])
+    setDraftUrl('')
+    setDraftLabel('Agenda')
   }
 
-  const remove = (url: string) => save(urls.filter((u) => u !== url))
+  const remove = (url: string) => save(feeds.filter((f) => f.url !== url))
 
   const sync = async () => {
     setSyncing(true)
@@ -113,21 +124,28 @@ function IcalConfig({
           werkt alleen als je agenda openbaar staat — gebruik dus het geheime adres.
         </p>
         <p className="mt-0.5">
-          <span className="font-semibold">Outlook / Apple / Parro:</span> kopieer de gedeelde
-          ICS-link en plak die hieronder.
+          <span className="font-semibold">Outlook / Apple:</span> kopieer de gedeelde ICS-link en plak die hieronder.
+        </p>
+        <p className="mt-0.5">
+          <span className="font-semibold">Parro (schoolagenda):</span> open Parro → <span className="font-semibold">Agenda</span> →{' '}
+          <span className="font-semibold">Abonneren / iCal-link kopiëren</span>, plak hieronder en kies het label{' '}
+          <span className="font-semibold">School</span>. Schoolafspraken verschijnen dan met een eigen kleur in jullie agenda.
         </p>
       </div>
 
-      {urls.length > 0 && (
+      {feeds.length > 0 && (
         <ul className="mb-2 flex flex-col gap-1.5">
-          {urls.map((url) => (
-            <li key={url} className="flex items-center gap-2 text-xs text-slate-600">
+          {feeds.map((feed) => (
+            <li key={feed.url} className="flex items-center gap-2 text-xs text-slate-600">
               <CalendarClock className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-              <span className="min-w-0 flex-1 truncate">{url}</span>
+              <span className="shrink-0 rounded-full bg-slate-100 px-1.5 py-0.5 font-semibold text-slate-500">
+                {feed.label}
+              </span>
+              <span className="min-w-0 flex-1 truncate">{feed.url}</span>
               <button
                 type="button"
-                onClick={() => remove(url)}
-                aria-label="iCal-URL verwijderen"
+                onClick={() => remove(feed.url)}
+                aria-label="Feed verwijderen"
                 className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-slate-400 hover:bg-rose-50 hover:text-rose-500"
               >
                 <Trash2 className="h-3.5 w-3.5" />
@@ -137,13 +155,24 @@ function IcalConfig({
         </ul>
       )}
 
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <input
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
+          value={draftUrl}
+          onChange={(e) => setDraftUrl(e.target.value)}
           placeholder="Plak je iCal-URL (https://…)"
           className="min-w-0 flex-1 rounded-full border border-cardborder bg-white px-3.5 py-2 text-xs text-slate-700 outline-none placeholder:text-slate-400 focus:border-brand/40 focus:ring-2 focus:ring-brand/20"
         />
+        <select
+          value={draftLabel}
+          onChange={(e) => setDraftLabel(e.target.value)}
+          aria-label="Label voor deze agenda"
+          className="rounded-full border border-cardborder bg-white px-3 py-2 text-xs text-slate-700 outline-none focus:border-brand/40 focus:ring-2 focus:ring-brand/20"
+        >
+          <option value="Agenda">Agenda</option>
+          <option value="School">School (Parro)</option>
+          <option value="Werk">Werk</option>
+          <option value="Sport">Sport</option>
+        </select>
         <button
           type="button"
           onClick={add}
@@ -155,7 +184,7 @@ function IcalConfig({
         <button
           type="button"
           onClick={sync}
-          disabled={syncing || urls.length === 0}
+          disabled={syncing || feeds.length === 0}
           className="pill bg-brand px-3 py-2 text-xs text-white hover:bg-brand-dark disabled:opacity-50"
         >
           <RefreshCw className={`h-3.5 w-3.5 ${syncing ? 'animate-spin' : ''}`} />
