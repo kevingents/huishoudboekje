@@ -58,12 +58,12 @@ export default function BudgetImport() {
       <p className="text-sm text-slate-500">
         Upload je <span className="font-semibold">budget-Excel</span> (tabbladen Uitgaven/Inkomsten Logboek)
         óf een <span className="font-semibold">bankafschrift van elke bank</span> — CSV, CAMT.053 (XML) of
-        MT940. Fam zet je uitgaven en categorieën automatisch in je budget.
+        MT940 (.mt940, .940, .sta, .swi). Fam zet je uitgaven en categorieën automatisch in je budget.
       </p>
       <input
         ref={fileRef}
         type="file"
-        accept=".xlsx,.csv,.xml,.sta,.940,.mt940,.txt,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        accept=".xlsx,.csv,.xml,.sta,.940,.mt940,.swi,.mt9,.dat,.txt,text/plain,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         className="hidden"
         onChange={(e) => onFile(e.target.files?.[0])}
       />

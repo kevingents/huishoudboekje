@@ -155,41 +155,57 @@ function parseMt940(text: string): BankTx[] {
   const lines = text.split(/\r?\n/)
   const out: BankTx[] = []
   let cur: BankTx | null = null
-  for (const line of lines) {
+  const flush = () => {
+    if (cur) {
+      cur.description = cur.description.replace(/\s+/g, ' ').trim()
+      cur.category = categorizeTx(cur.description)
+      out.push(cur)
+    }
+  }
+  for (const raw of lines) {
+    const line = raw.trimStart()
     if (line.startsWith(':61:')) {
-      if (cur) out.push(cur)
-      const m = /:61:(\d{6})(\d{4})?(R?[CD])([\d,]+)/.exec(line)
+      flush()
+      // valutadatum(6) [boekdatum(4)] D/C-merk(C|D|RC|RD) [fondscode(1 letter)] bedrag
+      const m = /:61:(\d{6})(?:\d{4})?(RC|RD|C|D)[A-Za-z]?([\d.,]+)/.exec(line)
       if (m) {
         const ymd = m[1]
-        const dc = m[3].replace('R', '')
+        const mark = m[2]
         cur = {
           date: `20${ymd.slice(0, 2)}-${ymd.slice(2, 4)}-${ymd.slice(4, 6)}`,
-          amount: Math.abs(parseAmount(m[4])),
+          amount: Math.abs(parseAmount(m[3])),
           description: '',
-          isIncome: dc === 'C',
+          isIncome: mark === 'C' || mark === 'RD',
           category: 'Overig',
         }
       } else cur = null
     } else if (line.startsWith(':86:') && cur) {
-      cur.description = line.slice(4).replace(/\s+/g, ' ').trim()
-      cur.category = categorizeTx(cur.description)
+      cur.description += ' ' + line.slice(4)
     } else if (cur && line && !line.startsWith(':')) {
-      cur.description = `${cur.description} ${line}`.trim()
-      cur.category = categorizeTx(cur.description)
+      cur.description += ' ' + line
     }
   }
-  if (cur) out.push(cur)
+  flush()
   return out
 }
 
 /** Detecteert het formaat en parseert het afschrift. */
 export function parseBankStatement(filename: string, text: string): BankTx[] {
   const f = filename.toLowerCase()
-  const head = text.slice(0, 400)
-  if (f.endsWith('.xml') || head.includes('<Document') || head.includes('camt.053') || head.trimStart().startsWith('<?xml')) {
+  const head = text.slice(0, 600)
+  if (f.endsWith('.xml') || head.includes('<Document') || head.includes('camt.05') || head.trimStart().startsWith('<?xml')) {
     return parseCamt(text)
   }
-  if (f.endsWith('.sta') || f.endsWith('.940') || f.endsWith('.mt940') || /(^|\n):20:/.test(text) || /\n:61:/.test(text)) {
+  // MT940 herkennen aan de SWIFT-tags in de inhoud, ongeacht de bestandsextensie.
+  if (
+    f.endsWith('.sta') ||
+    f.endsWith('.940') ||
+    f.endsWith('.mt940') ||
+    f.endsWith('.swi') ||
+    f.endsWith('.mt9') ||
+    /:20:/.test(head) ||
+    /:61:/.test(text)
+  ) {
     return parseMt940(text)
   }
   return parseCsv(text)
