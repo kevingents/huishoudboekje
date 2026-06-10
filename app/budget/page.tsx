@@ -156,6 +156,15 @@ export default function BudgetPage() {
   const incomeMonthly = incomes.reduce((sum, i) => sum + monthlyEquivalent(i.amount, i.interval), 0)
   const netto = incomeMonthly - forecastTotal
 
+  // Vaste lasten gegroepeerd per categorie (voor de prognose-uitsplitsing).
+  const costsByCategory = Object.entries(
+    costs.reduce<Record<string, number>>((acc, c) => {
+      const key = c.category || 'Overig'
+      acc[key] = (acc[key] ?? 0) + c.amount
+      return acc
+    }, {}),
+  ).sort((a, b) => b[1] - a[1])
+
   const radius = 54
   const circumference = 2 * Math.PI * radius
   const progress = totalLimit ? Math.min(totalSpent / totalLimit, 1) : 0
@@ -301,6 +310,22 @@ export default function BudgetPage() {
           <p className="mt-3 text-xs text-slate-400">
             Netto = inkomsten − (vaste lasten + abonnementen + je categoriebudgetten).
           </p>
+
+          {costsByCategory.length > 0 && (
+            <div className="mt-4 border-t border-cardborder pt-3">
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                Vaste lasten per categorie
+              </p>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 sm:grid-cols-3">
+                {costsByCategory.map(([cat, sum]) => (
+                  <div key={cat} className="flex items-center justify-between text-sm">
+                    <span className="truncate text-slate-600">{cat}</span>
+                    <span className="shrink-0 font-semibold text-slate-800">€{euro(sum)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </DashboardCard>
 
         {/* Inkomsten, vaste lasten, spaardoelen */}
