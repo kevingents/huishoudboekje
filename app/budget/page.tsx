@@ -10,6 +10,7 @@ import SavingsGoalsCard from '@/components/SavingsGoalsCard'
 import FixedCostsCard from '@/components/FixedCostsCard'
 import IncomeCard from '@/components/IncomeCard'
 import SpendingChart from '@/components/SpendingChart'
+import BudgetImport from '@/components/BudgetImport'
 import { useBudget, useSettings, useFixedCosts, useSubscriptions, useHousehold, useIncome } from '@/lib/hooks'
 import { apiPost } from '@/lib/api'
 import { resolveIcon } from '@/lib/icons'
@@ -339,6 +340,9 @@ export default function BudgetPage() {
 
         {/* Waar gaat het heen? */}
         <SpendingChart transactions={transactions} />
+
+        {/* Importeer uit budget-Excel */}
+        <BudgetImport />
 
         {/* Recent transactions (full width) */}
         <DashboardCard title="Recente uitgaven" className="lg:col-span-2">
