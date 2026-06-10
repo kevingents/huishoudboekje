@@ -16,7 +16,7 @@ import MonthlyOverview from '@/components/MonthlyOverview'
 import BudgetImport from '@/components/BudgetImport'
 import OverigCleanup from '@/components/OverigCleanup'
 import DayBudgetCard from '@/components/DayBudgetCard'
-import { useBudget, useSettings, useFixedCosts, useSubscriptions, useHousehold, useIncome } from '@/lib/hooks'
+import { useBudget, useSettings, useFixedCosts, useSubscriptions, useHousehold, useIncome, useLoans } from '@/lib/hooks'
 import { apiPost } from '@/lib/api'
 import { resolveIcon } from '@/lib/icons'
 import { isSpendingCategory, monthlyEquivalent } from '@/lib/budget'
@@ -86,6 +86,7 @@ export default function BudgetPage() {
   const { costs } = useFixedCosts()
   const { subscriptions } = useSubscriptions()
   const { incomes } = useIncome()
+  const { loans } = useLoans()
   const { can } = useHousehold()
   const target = typeof settings.budgetTarget === 'number' ? settings.budgetTarget : 500
 
@@ -179,12 +180,18 @@ export default function BudgetPage() {
   const totalLimit = Math.round(spendingCats.reduce((sum, c) => sum + c.limit, 0))
   const remaining = totalLimit - totalSpent
 
-  // Maandprognose: vaste lasten + abonnementen (maandequivalent) + variabel budget
-  const fixedTotal = costs.reduce((sum, c) => sum + c.amount, 0)
+  // Aflossingen/schulden apart van vaste lasten houden (hypotheek + leningen).
+  const isAflossing = (cat?: string) => /afloss|lening|hypothe|schuld|krediet/i.test(cat || '')
+  const fixedTotal = costs.filter((c) => !isAflossing(c.category)).reduce((sum, c) => sum + c.amount, 0)
+  const fixedAflossing = costs.filter((c) => isAflossing(c.category)).reduce((sum, c) => sum + c.amount, 0)
+  const loanMonthly = loans.reduce((sum, l) => sum + (l.termAmount || 0), 0)
+  const aflossingenMonthly = loanMonthly + fixedAflossing
+
+  // Maandprognose: vaste lasten + abonnementen + aflossingen + variabel budget
   const subsMonthly = subscriptions
     .filter((s) => s.status === 'active')
     .reduce((sum, s) => sum + monthlyEquivalent(s.amount, s.interval), 0)
-  const forecastTotal = fixedTotal + subsMonthly + totalLimit
+  const forecastTotal = fixedTotal + subsMonthly + aflossingenMonthly + totalLimit
   const incomeMonthly = incomes.reduce((sum, i) => sum + monthlyEquivalent(i.amount, i.interval), 0)
   const netto = incomeMonthly - forecastTotal
 
@@ -194,15 +201,17 @@ export default function BudgetPage() {
     .filter(([k]) => !NON_VARIABLE_CATS.has(k))
     .sort((a, b) => b[1] - a[1])
   const variableAvg = variableForecast.reduce((s, [, v]) => s + v, 0)
-  const nextMonthNet = incomeMonthly - fixedTotal - subsMonthly - variableAvg
+  const nextMonthNet = incomeMonthly - fixedTotal - subsMonthly - aflossingenMonthly - variableAvg
 
-  // Vaste lasten gegroepeerd per categorie (voor de prognose-uitsplitsing).
+  // Vaste lasten gegroepeerd per categorie (zonder aflossingen — die staan apart).
   const costsByCategory = Object.entries(
-    costs.reduce<Record<string, number>>((acc, c) => {
-      const key = c.category || 'Overig'
-      acc[key] = (acc[key] ?? 0) + c.amount
-      return acc
-    }, {}),
+    costs
+      .filter((c) => !isAflossing(c.category))
+      .reduce<Record<string, number>>((acc, c) => {
+        const key = c.category || 'Overig'
+        acc[key] = (acc[key] ?? 0) + c.amount
+        return acc
+      }, {}),
   ).sort((a, b) => b[1] - a[1])
 
   const radius = 54
@@ -343,8 +352,8 @@ export default function BudgetPage() {
               { label: 'Inkomsten', value: incomeMonthly, tone: 'pos' as const },
               { label: 'Vaste lasten', value: fixedTotal, tone: 'default' as const },
               { label: 'Abonnementen', value: subsMonthly, tone: 'default' as const },
+              { label: 'Aflossingen', value: aflossingenMonthly, tone: 'default' as const },
               { label: 'Variabel budget', value: totalLimit, tone: 'default' as const },
-              { label: 'Uitgaven p/m', value: forecastTotal, tone: 'default' as const },
               { label: 'Netto over', value: netto, tone: netto >= 0 ? ('pos' as const) : ('neg' as const) },
             ].map((item) => {
               const box =
@@ -385,10 +394,11 @@ export default function BudgetPage() {
             <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
               Prognose volgende maand
             </p>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               {[
                 { label: 'Verwachte inkomsten', value: incomeMonthly, tone: 'pos' as const },
                 { label: 'Vaste lasten + abo', value: fixedTotal + subsMonthly, tone: 'default' as const },
+                { label: 'Aflossingen', value: aflossingenMonthly, tone: 'default' as const },
                 {
                   label: 'Verwacht over',
                   value: nextMonthNet,

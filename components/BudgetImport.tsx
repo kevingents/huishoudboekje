@@ -2,14 +2,42 @@
 
 import { useRef, useState } from 'react'
 import { mutate } from 'swr'
-import { FileSpreadsheet, Upload } from 'lucide-react'
+import { FileSpreadsheet, Upload, RotateCcw } from 'lucide-react'
 import DashboardCard from './DashboardCard'
 import { apiPost } from '@/lib/api'
 
 export default function BudgetImport() {
   const fileRef = useRef<HTMLInputElement>(null)
   const [busy, setBusy] = useState(false)
+  const [resetting, setResetting] = useState(false)
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
+
+  const resetAll = async () => {
+    if (
+      !window.confirm(
+        'Weet je het zeker? Dit wist al je transacties, categorieën, inkomsten, vaste lasten, leningen en geleerde regels. Je account en gezin blijven bestaan.',
+      )
+    )
+      return
+    setResetting(true)
+    setMsg(null)
+    try {
+      await apiPost('/api/budget/reset', {})
+      await Promise.all([
+        mutate('/api/budget/transactions'),
+        mutate('/api/budget/categories'),
+        mutate('/api/income'),
+        mutate('/api/fixed-costs'),
+        mutate('/api/loans'),
+        mutate('/api/budget/uncategorized'),
+      ])
+      setMsg({ ok: true, text: 'Budget leeggemaakt. Je kunt nu een schone maand inladen.' })
+    } catch (e) {
+      setMsg({ ok: false, text: e instanceof Error ? e.message : 'Leegmaken mislukt.' })
+    } finally {
+      setResetting(false)
+    }
+  }
 
   const onFile = async (file?: File) => {
     if (!file) return
@@ -89,6 +117,22 @@ export default function BudgetImport() {
         Dubbele transacties worden automatisch herkend en overgeslagen — een overlappend afschrift
         uploaden (bijv. de 10e en later de 10e–11e) is dus geen probleem.
       </p>
+
+      <div className="mt-4 border-t border-cardborder pt-3">
+        <button
+          type="button"
+          onClick={resetAll}
+          disabled={resetting}
+          className="pill bg-rose-50 px-3.5 py-2 text-sm font-semibold text-rose-600 ring-1 ring-rose-200 hover:bg-rose-100 disabled:opacity-50"
+        >
+          <RotateCcw className={`h-4 w-4 ${resetting ? 'animate-spin' : ''}`} />
+          {resetting ? 'Leegmaken…' : 'Begin opnieuw — budget leegmaken'}
+        </button>
+        <p className="mt-1.5 text-[11px] text-slate-400">
+          Wist transacties, categorieën, inkomsten, vaste lasten, leningen en geleerde regels. Je account en
+          gezin blijven bestaan.
+        </p>
+      </div>
     </DashboardCard>
   )
 }
