@@ -30,6 +30,7 @@ import {
 import BudgetProgressCard from '@/components/budget/BudgetProgressCard'
 import AiCoachCard from '@/components/budget/AiCoachCard'
 import AutoCategorizeSteps from '@/components/budget/AutoCategorizeSteps'
+import InsightsCard from '@/components/budget/InsightsCard'
 import type { BudgetCategory } from '@/lib/types'
 
 const colorClasses: Record<string, { bar: string; iconBg: string; iconText: string }> = {
@@ -539,6 +540,14 @@ export default function BudgetPage() {
         <h3 className="mt-2 text-[13px] font-bold uppercase tracking-wide text-slate-400 lg:col-span-2">
           Terugkijken
         </h3>
+
+        {/* Inzichten: deze periode vs vorige (historie) */}
+        <InsightsCard
+          transactions={transactions}
+          periodStart={periodStart}
+          budget={budgetRef}
+          periodWord={periodWord}
+        />
 
         {/* Uitgaven per periode (vandaag/week/periode/eigen) */}
         <SpendingFilter transactions={transactions} periodStart={periodStart} />
