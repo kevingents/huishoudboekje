@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { BarChart3, TrendingUp, Plus, Trash2, Pencil, LineChart, ScanLine, Sparkles } from 'lucide-react'
+import { BarChart3, TrendingUp, Plus, Trash2, Pencil, LineChart, ScanLine, Sparkles, FolderPlus, ArrowRightLeft } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
 import DashboardCard from '@/components/DashboardCard'
 import Modal from '@/components/Modal'
@@ -18,7 +18,7 @@ import OverigCleanup from '@/components/OverigCleanup'
 import { useBudget, useSettings, useFixedCosts, useSubscriptions, useHousehold, useIncome, useLoans } from '@/lib/hooks'
 import { apiPost } from '@/lib/api'
 import { resolveIcon } from '@/lib/icons'
-import { cleanLabel, fixedCostMonthly, isSpendingCategory, monthlyEquivalent } from '@/lib/budget'
+import { cleanLabel, fixedCostMonthly, isSpendingCategory, merchantKey, monthlyEquivalent } from '@/lib/budget'
 import type { BudgetCategory } from '@/lib/types'
 
 const colorClasses: Record<string, { bar: string; iconBg: string; iconText: string }> = {
@@ -27,6 +27,7 @@ const colorClasses: Record<string, { bar: string; iconBg: string; iconText: stri
   amber: { bar: 'bg-amber-500', iconBg: 'bg-amber-100', iconText: 'text-amber-600' },
   sky: { bar: 'bg-sky-500', iconBg: 'bg-sky-100', iconText: 'text-sky-600' },
 }
+const COLOR_OPTIONS = ['emerald', 'violet', 'amber', 'sky'] as const
 
 const inputClass =
   'w-full rounded-xl border border-cardborder bg-white px-3.5 py-2.5 text-sm text-slate-700 outline-none transition-colors placeholder:text-slate-400 focus:border-brand/40 focus:ring-2 focus:ring-brand/20'
@@ -79,8 +80,17 @@ interface ScanItem {
 }
 
 export default function BudgetPage() {
-  const { categories, transactions, isLoading, addTransaction, removeTransaction, updateCategory } =
-    useBudget()
+  const {
+    categories,
+    transactions,
+    isLoading,
+    addTransaction,
+    removeTransaction,
+    updateCategory,
+    addCategory,
+    removeCategory,
+    assignMerchant,
+  } = useBudget()
   const { settings } = useSettings()
   const { costs } = useFixedCosts()
   const { subscriptions } = useSubscriptions()
@@ -155,6 +165,41 @@ export default function BudgetPage() {
     setEditCat(null)
   }
 
+  // Nieuwe categorie toevoegen
+  const [addCatOpen, setAddCatOpen] = useState(false)
+  const [newCat, setNewCat] = useState({ name: '', color: 'emerald', limit: '' })
+  const submitNewCat = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const name = newCat.name.trim()
+    if (!name) return
+    const limit = Number(newCat.limit.replace(',', '.')) || 0
+    await addCategory({ name, color: newCat.color, limit })
+    setNewCat({ name: '', color: 'emerald', limit: '' })
+    setAddCatOpen(false)
+  }
+
+  // Categorie beheren: kleur/limiet bijwerken, transacties (per winkel) verplaatsen,
+  // of de categorie verwijderen (transacties gaan dan terug naar 'Overig').
+  const [manageCat, setManageCat] = useState<BudgetCategory | null>(null)
+  const [mDraft, setMDraft] = useState({ color: 'emerald', limit: '' })
+  const openManage = (cat: BudgetCategory) => {
+    setManageCat(cat)
+    setMDraft({ color: cat.color || 'emerald', limit: String(Math.round(cat.limit)) })
+  }
+  const saveManage = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!manageCat) return
+    const limit = Number(mDraft.limit.replace(',', '.')) || 0
+    await updateCategory(manageCat.id, { color: mDraft.color, limit })
+    setManageCat(null)
+  }
+  const deleteManaged = async () => {
+    if (!manageCat) return
+    await removeCategory(manageCat.id)
+    setManageCat(null)
+  }
+  const moveGroup = (pattern: string, toCategory: string) => assignMerchant(pattern, toCategory)
+
   // Gemiddelde uitgave per maand per categorie (uit de historie). Hierop baseren
   // we "Per categorie", het maandtotaal én de prognose — niet op het 'spent'-veld
   // (dat blijft 0 bij import en gaf lege balken).
@@ -181,7 +226,12 @@ export default function BudgetPage() {
 
   const totalSpent = Math.round(spendingCats.reduce((sum, c) => sum + avgOf(c.name), 0))
   const totalLimit = Math.round(spendingCats.reduce((sum, c) => sum + c.limit, 0))
-  const remaining = totalLimit - totalSpent
+  // Geen categorie-limieten ingesteld? Val terug op de maandtarget zodat de ring
+  // en "te besteden" zinnig blijven (i.p.v. "van €0" en een negatief bedrag).
+  const hasLimits = totalLimit > 0
+  const budgetRef = hasLimits ? totalLimit : target
+  const remaining = budgetRef - totalSpent
+  const overBudget = remaining < 0
 
   // Aflossingen/schulden apart van vaste lasten houden (hypotheek + leningen).
   const isAflossing = (cat?: string) => /afloss|lening|hypothe|schuld|krediet/i.test(cat || '')
@@ -219,8 +269,29 @@ export default function BudgetPage() {
 
   const radius = 54
   const circumference = 2 * Math.PI * radius
-  const progress = totalLimit ? Math.min(totalSpent / totalLimit, 1) : 0
+  const progress = budgetRef ? Math.min(totalSpent / budgetRef, 1) : 0
   const offset = circumference * (1 - progress)
+
+  // Transacties van de te beheren categorie, gegroepeerd per winkel — zodat je een
+  // hele winkel in één keer naar een andere categorie kunt verplaatsen (onthouden).
+  const manageGroups = (() => {
+    if (!manageCat) return [] as { key: string; example: string; total: number; count: number }[]
+    const m = new Map<string, { key: string; example: string; total: number; count: number }>()
+    for (const t of transactions) {
+      if ((t.category || 'Overig') !== manageCat.name) continue
+      const amt = Number(t.amount) || 0
+      if (amt <= 0) continue
+      const key = merchantKey(t.label) || (t.label || 'onbekend').toLowerCase().slice(0, 32)
+      const g = m.get(key) ?? { key, example: t.label, total: 0, count: 0 }
+      g.total += amt
+      g.count += 1
+      m.set(key, g)
+    }
+    return [...m.values()].sort((a, b) => b.total - a.total)
+  })()
+  const moveTargets = manageCat
+    ? spendingCats.map((c) => c.name).filter((n) => n !== manageCat.name)
+    : []
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -276,24 +347,47 @@ export default function BudgetPage() {
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
                 <span className="text-2xl font-extrabold text-slate-800">€{totalSpent}</span>
-                <span className="text-xs text-slate-500">van €{totalLimit}</span>
+                <span className="text-xs text-slate-500">van €{budgetRef}</span>
               </div>
             </div>
 
             <div className="min-w-0">
-              <p className="text-sm text-slate-500">Je hebt nog</p>
-              <p className="text-3xl font-extrabold text-slate-800">€{remaining}</p>
-              <p className="text-sm text-slate-500">te besteden</p>
+              <p className="text-sm text-slate-500">{overBudget ? 'Je zit' : 'Je hebt nog'}</p>
+              <p
+                className={`text-3xl font-extrabold ${
+                  overBudget ? 'text-rose-600 dark:text-rose-400' : 'text-slate-800'
+                }`}
+              >
+                €{Math.abs(remaining)}
+              </p>
+              <p className="text-sm text-slate-500">{overBudget ? 'boven budget' : 'te besteden'}</p>
               <p className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-brand-light px-3 py-1 text-xs font-semibold text-brand">
                 <TrendingUp className="h-3.5 w-3.5" />
                 Maandtarget €{target}
               </p>
+              {!hasLimits && (
+                <p className="mt-2 text-[11px] text-slate-400">
+                  Nog geen limiet per categorie. Stel er een in via het potlood of de beheerknop.
+                </p>
+              )}
             </div>
           </div>
         </DashboardCard>
 
         {/* Categories */}
-        <DashboardCard title="Per categorie">
+        <DashboardCard
+          title="Per categorie"
+          headerRight={
+            <button
+              type="button"
+              onClick={() => setAddCatOpen(true)}
+              className="pill bg-brand-light px-3 py-1.5 text-xs font-semibold text-brand hover:bg-brand/15"
+            >
+              <FolderPlus className="h-3.5 w-3.5" />
+              Categorie
+            </button>
+          }
+        >
           <ul className="flex flex-col gap-4">
             {visibleCats.map((cat) => {
               const colors = colorClasses[cat.color] ?? colorClasses.emerald
@@ -303,12 +397,24 @@ export default function BudgetPage() {
               return (
                 <li key={cat.id} className="group">
                   <div className="mb-1.5 flex items-center gap-2.5">
-                    <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg ${colors.iconBg} ${colors.iconText}`}>
+                    <button
+                      type="button"
+                      onClick={() => openManage(cat)}
+                      className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg ${colors.iconBg} ${colors.iconText}`}
+                      aria-label={`${cat.name} beheren`}
+                    >
                       <Icon className="h-4 w-4" strokeWidth={2.2} />
-                    </span>
-                    <span className="flex-1 text-sm font-semibold text-slate-700">{cat.name}</span>
-                    <span className="text-sm text-slate-500">
-                      €{Math.round(spent)} <span className="text-slate-400">/ €{Math.round(cat.limit)}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openManage(cat)}
+                      className="flex-1 truncate text-left text-sm font-semibold text-slate-700 hover:text-brand"
+                    >
+                      {cat.name}
+                    </button>
+                    <span className="shrink-0 text-sm text-slate-500">
+                      €{Math.round(spent)}
+                      {cat.limit > 0 && <span className="text-slate-400"> / €{Math.round(cat.limit)}</span>}
                     </span>
                     <button
                       type="button"
@@ -652,6 +758,157 @@ export default function BudgetPage() {
             Limiet opslaan
           </button>
         </form>
+      </Modal>
+
+      {/* Nieuwe categorie */}
+      <Modal open={addCatOpen} onClose={() => setAddCatOpen(false)} title="Nieuwe categorie">
+        <form onSubmit={submitNewCat} className="flex flex-col gap-3">
+          <label className="text-xs font-semibold text-slate-500">
+            Naam
+            <input
+              autoFocus
+              value={newCat.name}
+              onChange={(e) => setNewCat({ ...newCat, name: e.target.value })}
+              placeholder="Bijv. Kleding"
+              className={`mt-1 ${inputClass}`}
+            />
+          </label>
+          <div>
+            <p className="mb-1 text-xs font-semibold text-slate-500">Kleur</p>
+            <div className="flex gap-2">
+              {COLOR_OPTIONS.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setNewCat({ ...newCat, color: c })}
+                  aria-label={c}
+                  className={`h-8 w-8 rounded-full ${colorClasses[c].bar} ${
+                    newCat.color === c ? 'ring-2 ring-slate-400 ring-offset-2' : ''
+                  }`}
+                />
+              ))}
+            </div>
+          </div>
+          <label className="text-xs font-semibold text-slate-500">
+            Maandlimiet (€) — optioneel
+            <input
+              inputMode="decimal"
+              value={newCat.limit}
+              onChange={(e) => setNewCat({ ...newCat, limit: e.target.value })}
+              placeholder="0"
+              className={`mt-1 ${inputClass}`}
+            />
+          </label>
+          <button
+            type="submit"
+            className="pill mt-2 bg-brand px-4 py-2.5 text-white shadow-sm shadow-brand/20 hover:bg-brand-dark"
+          >
+            Categorie opslaan
+          </button>
+        </form>
+      </Modal>
+
+      {/* Categorie beheren: kleur/limiet + transacties verplaatsen + verwijderen */}
+      <Modal
+        open={!!manageCat}
+        onClose={() => setManageCat(null)}
+        title={manageCat ? `${manageCat.name} beheren` : ''}
+      >
+        {manageCat && (
+          <div className="flex flex-col gap-4">
+            <form onSubmit={saveManage} className="flex flex-col gap-3">
+              <div>
+                <p className="mb-1 text-xs font-semibold text-slate-500">Kleur</p>
+                <div className="flex gap-2">
+                  {COLOR_OPTIONS.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setMDraft({ ...mDraft, color: c })}
+                      aria-label={c}
+                      className={`h-8 w-8 rounded-full ${colorClasses[c].bar} ${
+                        mDraft.color === c ? 'ring-2 ring-slate-400 ring-offset-2' : ''
+                      }`}
+                    />
+                  ))}
+                </div>
+              </div>
+              <label className="text-xs font-semibold text-slate-500">
+                Maandlimiet (€)
+                <input
+                  inputMode="decimal"
+                  value={mDraft.limit}
+                  onChange={(e) => setMDraft({ ...mDraft, limit: e.target.value })}
+                  className={`mt-1 ${inputClass}`}
+                />
+              </label>
+              <button
+                type="submit"
+                className="pill bg-brand px-4 py-2.5 text-white shadow-sm shadow-brand/20 hover:bg-brand-dark"
+              >
+                Opslaan
+              </button>
+            </form>
+
+            <div className="border-t border-cardborder pt-3">
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                Transacties verplaatsen ({manageGroups.length} winkels)
+              </p>
+              {manageGroups.length === 0 ? (
+                <p className="text-sm text-slate-500">Nog geen transacties in deze categorie.</p>
+              ) : (
+                <ul className="flex max-h-72 flex-col divide-y divide-cardborder overflow-y-auto pr-1">
+                  {manageGroups.map((g) => (
+                    <li key={g.key} className="flex items-center gap-2 py-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-slate-800" title={g.example}>
+                          {cleanLabel(g.example)}
+                        </p>
+                        <p className="text-[11px] text-slate-400">
+                          €{euro(g.total)} · {g.count}×
+                        </p>
+                      </div>
+                      <ArrowRightLeft className="h-3.5 w-3.5 shrink-0 text-slate-300" />
+                      <select
+                        defaultValue=""
+                        onChange={(e) => {
+                          const value = e.target.value
+                          e.target.value = '' // reset naar placeholder na verplaatsen
+                          if (value) moveGroup(g.key, value)
+                        }}
+                        className="shrink-0 rounded-lg border border-cardborder bg-white px-2 py-1.5 text-xs text-slate-700 outline-none focus:border-brand/40 focus:ring-2 focus:ring-brand/20"
+                      >
+                        <option value="">Verplaats naar…</option>
+                        {moveTargets.map((n) => (
+                          <option key={n} value={n}>
+                            {n}
+                          </option>
+                        ))}
+                      </select>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <p className="mt-2 text-[11px] text-slate-400">
+                Verplaatsen onthoudt de winkel — volgende imports volgen automatisch.
+              </p>
+            </div>
+
+            <div className="border-t border-cardborder pt-3">
+              <button
+                type="button"
+                onClick={deleteManaged}
+                className="pill w-full justify-center bg-rose-50 px-4 py-2.5 text-sm font-semibold text-rose-600 hover:bg-rose-100 dark:text-rose-300"
+              >
+                <Trash2 className="h-4 w-4" />
+                Categorie verwijderen
+              </button>
+              <p className="mt-1.5 text-center text-[11px] text-slate-400">
+                De transacties gaan terug naar &ldquo;Overig&rdquo;.
+              </p>
+            </div>
+          </div>
+        )}
       </Modal>
     </>
   )

@@ -22,7 +22,6 @@ export async function POST(req: Request) {
       householdId: hid,
       name: String(body.name),
       icon: String(body.icon ?? 'ShoppingCart'),
-      spent: Number(body.spent ?? 0),
       limit: Number(body.limit ?? 0),
       color: String(body.color ?? 'emerald'),
     },

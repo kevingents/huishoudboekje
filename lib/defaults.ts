@@ -8,6 +8,9 @@ export const DEFAULT_BUDGET_CATEGORIES = [
   { name: 'Verzorging', icon: 'Sparkles', limit: 100, color: 'violet' },
   { name: 'Vrije tijd', icon: 'Calendar', limit: 150, color: 'amber' },
   { name: 'Vervoer', icon: 'Car', limit: 200, color: 'sky' },
+  // Vangnet-categorie: import en het verwijderen/ontkoppelen van categorieën
+  // verplaatsen transacties hierheen, dus deze moet altijd bestaan.
+  { name: 'Overig', icon: 'ShoppingCart', limit: 0, color: 'slate' },
 ]
 
 export const DEFAULT_NOTIFICATION_PREFS = [

@@ -234,8 +234,26 @@ export function useBudget() {
     categories: cats.items,
     transactions: tx.items,
     isLoading: cats.isLoading || tx.isLoading,
-    updateCategory: (id: number, payload: { name?: string; limit?: number; color?: string }) =>
+    updateCategory: (id: number, payload: { name?: string; limit?: number; color?: string; icon?: string }) =>
       cats.update(id, payload),
+    addCategory: (payload: { name: string; color?: string; icon?: string; limit?: number }) =>
+      cats.create(payload, {
+        name: payload.name,
+        color: payload.color ?? 'emerald',
+        icon: payload.icon ?? 'ShoppingCart',
+        limit: payload.limit ?? 0,
+        spent: 0,
+      }),
+    removeCategory: async (id: number) => {
+      await cats.remove(id)
+      await tx.mutate() // transacties zijn server-side naar 'Overig' verplaatst
+    },
+    /** Verplaats alle transacties van een winkel (pattern) naar een categorie en
+     *  onthoud dat (regel). 'Overig' = ontkoppelen. */
+    assignMerchant: async (pattern: string, category: string) => {
+      await apiPost('/api/budget/categories/assign', { pattern, category, remember: true })
+      await Promise.all([tx.mutate(), cats.mutate()])
+    },
     addTransaction: async (t: NewTransaction) => {
       await tx.create(
         { ...t },

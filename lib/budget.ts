@@ -153,7 +153,7 @@ export function monthsInData(dates: (string | undefined | null)[]): number {
  *  Gebruikt o.a. om aflossings-transacties aan een lening te koppelen. */
 export function labelMatchesPattern(label: string, pattern: string): boolean {
   const p = (pattern || '').toLowerCase().trim()
-  if (!p) return false
+  if (p.length < 3) return false // te korte/generieke patronen matchen op van alles
   return merchantKey(label).includes(p) || (label || '').toLowerCase().includes(p)
 }
 
@@ -164,7 +164,7 @@ export function matchRule<T extends MerchantRuleLike>(description: string, rules
   const sorted = [...rules].sort((a, b) => b.pattern.length - a.pattern.length)
   for (const r of sorted) {
     const p = (r.pattern || '').toLowerCase().trim()
-    if (p && (key.includes(p) || raw.includes(p))) return r
+    if (p.length >= 3 && (key.includes(p) || raw.includes(p))) return r
   }
   return null
 }
