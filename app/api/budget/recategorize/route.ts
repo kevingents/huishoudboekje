@@ -49,7 +49,7 @@ export async function POST() {
     if (rule) {
       finalCat = categoryForKind(rule.kind, rule.category, categorizeTx(t.label))
       if (rule.kind === 'fixed' || rule.kind === 'subscription') {
-        const name = titleCase(rule.pattern)
+        const name = titleCase(rule.pattern).slice(0, 60) // zelfde afkapping als de import (dedup)
         const fa =
           fixedAgg.get(rule.pattern) ??
           { name, sum: 0, count: 0, category: rule.category || '', isSub: rule.kind === 'subscription' }

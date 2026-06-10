@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import useSWR, { mutate as globalMutate } from 'swr'
 import { Wand2, Sparkles, Check, Plus } from 'lucide-react'
 import DashboardCard from './DashboardCard'
@@ -84,14 +84,22 @@ export default function OverigCleanup() {
     setFlags((f) => ({ ...f, [`${tab}|${key}`]: { ...flagsOf(key), ...patch } }))
 
   // Inline een nieuwe uitgave-categorie ("post") aanmaken en meteen kiezen.
+  // Bestaat de naam al (case-insensitief)? Dan die kiezen i.p.v. een duplicaat maken.
   const createCategory = async (key: string) => {
     const name = newCatName.trim()
     if (!name) return
-    await addCategory({ name })
-    setChoices((c) => ({ ...c, [`${tab}|${key}`]: `cat:${name}` }))
+    const existing = catNames.find((c) => c.toLowerCase() === name.toLowerCase())
+    if (!existing) await addCategory({ name })
+    setChoices((c) => ({ ...c, [`${tab}|${key}`]: `cat:${existing ?? name}` }))
     setNewCatFor(null)
     setNewCatName('')
   }
+
+  // Inline-formulier resetten bij tabwissel (state is niet tab-gescoped).
+  useEffect(() => {
+    setNewCatFor(null)
+    setNewCatName('')
+  }, [tab])
 
   const catNames = useMemo(() => {
     const set = new Set<string>(COMMON_CATS)
@@ -134,6 +142,7 @@ export default function OverigCleanup() {
       const nextFlags: Record<string, { vast: boolean; abo: boolean }> = {}
       for (const it of res.items ?? []) {
         const fkey = `${tab}|${it.key}`
+        if (choices[fkey]) continue // bestaande handmatige keuze niet overschrijven
         let value = ''
         if (it.kind === 'ignore') value = 'ignore:'
         else if (it.kind === 'income') value = 'income:overig'
@@ -264,7 +273,7 @@ export default function OverigCleanup() {
                   tab === 'expenses' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'
                 }`}
               >
-                Uitgaven ({expCount})
+                Uitgaven ({showAssigned ? expGroups.length : expCount})
               </button>
               <button
                 type="button"
@@ -273,7 +282,7 @@ export default function OverigCleanup() {
                   tab === 'income' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'
                 }`}
               >
-                Bijschrijvingen ({incCount})
+                Bijschrijvingen ({showAssigned ? incGroups.length : incCount})
               </button>
             </div>
           )}
@@ -379,6 +388,8 @@ export default function OverigCleanup() {
                           setNewCatName('')
                         } else {
                           setChoice(g.key, e.target.value)
+                          // Vinkjes horen alleen bij een echte categorie; reset ze anders.
+                          if (!e.target.value.startsWith('cat:')) setFlag(g.key, { vast: false, abo: false })
                         }
                       }}
                       className="w-full rounded-lg border border-cardborder bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-brand/40 focus:ring-2 focus:ring-brand/20"

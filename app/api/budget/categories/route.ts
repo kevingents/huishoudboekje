@@ -14,13 +14,20 @@ export async function POST(req: Request) {
   const hid = await requireHousehold()
   if (hid instanceof Response) return hid
   const body = await req.json()
-  if (!body?.name) {
+  const name = String(body?.name ?? '').trim()
+  if (!name) {
     return Response.json({ error: 'name is verplicht' }, { status: 400 })
   }
+  // Bestaat de categorie al (case-insensitief)? Geef die terug i.p.v. een duplicaat.
+  const existing = await prisma.budgetCategory.findFirst({
+    where: { householdId: hid, name: { equals: name, mode: 'insensitive' } },
+  })
+  if (existing) return Response.json(existing, { status: 200 })
+
   const category = await prisma.budgetCategory.create({
     data: {
       householdId: hid,
-      name: String(body.name),
+      name,
       icon: String(body.icon ?? 'ShoppingCart'),
       limit: Number(body.limit ?? 0),
       color: String(body.color ?? 'emerald'),

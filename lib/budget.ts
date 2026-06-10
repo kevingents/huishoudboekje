@@ -42,9 +42,11 @@ export function suggestCostCategory(name: string): string {
 /** Categorie waaronder vaste lasten in de uitgaven-grafiek vallen. */
 export const FIXED_CATEGORY = 'Vaste lasten'
 
-/** Gereserveerde categorieën die NIET als uitgave meetellen (telt als €0):
- *  inkomsten en bewust genegeerde posten (sparen/overboeking eigen rekening). */
-export const EXCLUDED_CATEGORIES = ['Inkomsten', 'Negeren'] as const
+/** Gereserveerde categorieën die NIET als variabele uitgave meetellen (telt als €0):
+ *  inkomsten, bewust genegeerde posten (sparen/overboeking eigen rekening) én vaste
+ *  lasten — die laatste worden apart bijgehouden via FixedCost, dus meetellen als
+ *  variabele uitgave zou ze dubbel tellen. */
+export const EXCLUDED_CATEGORIES = ['Inkomsten', 'Negeren', 'Vaste lasten'] as const
 
 /** Telt deze categorie mee als uitgave? (Inkomsten/Negeren = nee.) */
 export function isSpendingCategory(name: string): boolean {

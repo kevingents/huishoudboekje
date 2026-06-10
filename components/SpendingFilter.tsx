@@ -21,10 +21,9 @@ function txDate(t: Transaction): Date | null {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(t.date || '')
   if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
   if (/^vandaag$/i.test(t.date || '')) return startOfDay(new Date())
-  if (t.createdAt) {
-    const d = new Date(t.createdAt)
-    if (!isNaN(d.getTime())) return startOfDay(d)
-  }
+  // createdAt is een ISO-timestamp; neem de datum-component (geen tijdzone-shift).
+  const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(t.createdAt || ''))
+  if (iso) return new Date(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]))
   return null
 }
 
@@ -102,7 +101,10 @@ export default function SpendingFilter({ transactions }: { transactions: Transac
     return [...m.entries()].sort((a, b) => b[1] - a[1])
   }, [filtered])
   const txList = useMemo(
-    () => [...filtered].sort((a, b) => ((a.date || '') < (b.date || '') ? 1 : -1)).slice(0, 100),
+    () =>
+      [...filtered]
+        .sort((a, b) => (txDate(b)?.getTime() ?? 0) - (txDate(a)?.getTime() ?? 0))
+        .slice(0, 100),
     [filtered],
   )
 
