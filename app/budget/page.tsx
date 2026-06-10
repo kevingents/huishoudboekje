@@ -15,7 +15,6 @@ import SpendingChart from '@/components/SpendingChart'
 import MonthlyOverview from '@/components/MonthlyOverview'
 import BudgetImport from '@/components/BudgetImport'
 import OverigCleanup from '@/components/OverigCleanup'
-import DayBudgetCard from '@/components/DayBudgetCard'
 import { useBudget, useSettings, useFixedCosts, useSubscriptions, useHousehold, useIncome, useLoans } from '@/lib/hooks'
 import { apiPost } from '@/lib/api'
 import { resolveIcon } from '@/lib/icons'
@@ -251,10 +250,6 @@ export default function BudgetPage() {
         }
       />
 
-      <div className="mb-5">
-        <DayBudgetCard />
-      </div>
-
       <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
         {/* Overview ring */}
         <DashboardCard title="Gemiddeld per maand">
@@ -357,7 +352,7 @@ export default function BudgetPage() {
               { label: 'Netto over', value: netto, tone: netto >= 0 ? ('pos' as const) : ('neg' as const) },
             ].map((item) => {
               const box =
-                item.tone === 'pos' ? 'bg-emerald-50' : item.tone === 'neg' ? 'bg-rose-50' : 'bg-slate-50'
+                item.tone === 'pos' ? 'bg-emerald-500/10' : item.tone === 'neg' ? 'bg-rose-500/10' : 'bg-slate-400/10'
               const txt =
                 item.tone === 'pos' ? 'text-emerald-600' : item.tone === 'neg' ? 'text-rose-600' : 'text-slate-800'
               return (
@@ -379,7 +374,7 @@ export default function BudgetPage() {
               <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
                 Vaste lasten per categorie
               </p>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 sm:grid-cols-3">
+              <div className="grid grid-cols-1 gap-x-6 gap-y-1.5 sm:grid-cols-2">
                 {costsByCategory.map(([cat, sum]) => (
                   <div key={cat} className="flex items-center justify-between text-sm">
                     <span className="truncate text-slate-600">{cat}</span>
@@ -406,7 +401,7 @@ export default function BudgetPage() {
                 },
               ].map((item) => {
                 const box =
-                  item.tone === 'pos' ? 'bg-emerald-50' : item.tone === 'neg' ? 'bg-rose-50' : 'bg-slate-50'
+                  item.tone === 'pos' ? 'bg-emerald-500/10' : item.tone === 'neg' ? 'bg-rose-500/10' : 'bg-slate-400/10'
                 const txt =
                   item.tone === 'pos' ? 'text-emerald-600' : item.tone === 'neg' ? 'text-rose-600' : 'text-slate-800'
                 return (
@@ -425,7 +420,7 @@ export default function BudgetPage() {
                 <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
                   Verwachte variabele kosten per categorie (€{Math.round(variableAvg)} p/m)
                 </p>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 sm:grid-cols-3">
+                <div className="grid grid-cols-1 gap-x-6 gap-y-1.5 sm:grid-cols-2">
                   {variableForecast.slice(0, 9).map(([cat, v]) => (
                     <div key={cat} className="flex items-center justify-between text-sm">
                       <span className="min-w-0 truncate text-slate-600">{cat}</span>

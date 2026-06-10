@@ -1,147 +1,252 @@
 'use client'
 
-import { useEffect, useState, type ComponentType } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import {
-  ChevronRight,
-  CalendarCheck,
-  ChefHat,
-  Refrigerator,
+  Sun,
+  UtensilsCrossed,
+  Clock,
   Users,
-  BarChart3,
-  Boxes,
-  CalendarDays,
-  ShoppingCart,
+  ChevronRight,
+  Plus,
+  Sparkles,
   CreditCard,
-  FileText,
-  Phone,
-  Heart,
-  type LucideProps,
+  SlidersHorizontal,
+  ArrowUp,
+  ArrowDown,
+  EyeOff,
+  CalendarRange,
 } from 'lucide-react'
+
+import DashboardCard from '@/components/DashboardCard'
+import BudgetCard from '@/components/BudgetCard'
+import DayBudgetCard from '@/components/DayBudgetCard'
+import AgendaCard from '@/components/AgendaCard'
+import ShoppingList from '@/components/ShoppingList'
 import NotificationBell from '@/components/NotificationBell'
 import Crest from '@/components/Crest'
-import { useFamily, useAuth, useAgenda, useTasks, useShopping, useSettings } from '@/lib/hooks'
+import SponsoredAds from '@/components/SponsoredAds'
+import Modal from '@/components/Modal'
+import { useFamily, useRecipes, useWeather, useAuth, useSettings } from '@/lib/hooks'
+import { resolveWeatherIcon } from '@/lib/icons'
+import { rankRecipes } from '@/lib/recommend'
 import { readCoParenting, coParentNow } from '@/lib/coparent'
 
-type Icon = ComponentType<LucideProps>
+import { aiSuggestion } from '@/lib/mockData'
 
-function pad(n: number) {
-  return String(n).padStart(2, '0')
-}
-
-const TONES: Record<string, string> = {
-  amber: 'bg-amber-100 text-amber-500',
-  sky: 'bg-sky-100 text-sky-500',
-  violet: 'bg-violet-100 text-violet-500',
-  emerald: 'bg-emerald-100 text-emerald-600',
-}
-
-const QUICK: { label: string; href: string; icon: Icon; tone: string }[] = [
-  { label: 'Recepten', href: '/recepten', icon: ChefHat, tone: 'amber' },
-  { label: 'Koelkast', href: '/koelkast', icon: Refrigerator, tone: 'sky' },
-  { label: 'Gezin', href: '/gezin', icon: Users, tone: 'violet' },
-  { label: 'Budget', href: '/budget', icon: BarChart3, tone: 'emerald' },
-  { label: 'Modules', href: '/modules', icon: Boxes, tone: 'violet' },
+const ALL_WIDGETS: { key: string; label: string; span: 1 | 2 }[] = [
+  { key: 'dagbudget', label: 'Vandaag te besteden', span: 2 },
+  { key: 'recept', label: 'Recept van vandaag', span: 1 },
+  { key: 'weer', label: 'Weer', span: 1 },
+  { key: 'agenda', label: 'Komende afspraken', span: 1 },
+  { key: 'budget', label: 'Budget', span: 1 },
+  { key: 'ai', label: 'AI-suggestie', span: 1 },
+  { key: 'pasjes', label: 'Pasjes', span: 1 },
+  { key: 'aanbiedingen', label: 'Aanbiedingen', span: 1 },
+  { key: 'boodschappen', label: 'Boodschappenlijst', span: 2 },
 ]
+const DEFAULT_WIDGETS = ['dagbudget', 'recept', 'weer', 'agenda', 'budget', 'ai', 'boodschappen']
+const labelOf = (key: string) => ALL_WIDGETS.find((w) => w.key === key)?.label ?? key
 
 export default function Vandaag() {
   const { members } = useFamily()
+  const { recipes } = useRecipes()
+  const { weather } = useWeather()
   const { user } = useAuth()
-  const { events } = useAgenda()
-  const { tasks } = useTasks()
-  const { items } = useShopping()
-  const { settings } = useSettings()
+  const { settings, setSetting } = useSettings()
 
   const crest = typeof settings.familyCrest === 'string' ? settings.familyCrest : null
   const coParent = coParentNow(readCoParenting(settings.coParenting), new Date())
+  const WeatherIcon = resolveWeatherIcon(weather?.icon ?? 'Cloud')
+  const recipe = rankRecipes(recipes)[0]
   const greetingName = user?.name?.split(' ')[0] ?? ''
 
+  // Tijd-afhankelijke begroeting + echte datum (client-side, geen hydratie-mismatch).
   const [greet, setGreet] = useState('Hallo')
-  const [today, setToday] = useState('')
+  const [dateStr, setDateStr] = useState('')
   useEffect(() => {
     const d = new Date()
     const h = d.getHours()
     setGreet(h < 6 ? 'Goedenacht' : h < 12 ? 'Goedemorgen' : h < 18 ? 'Goedemiddag' : 'Goedenavond')
-    setToday(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`)
+    const s = d.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' })
+    setDateStr(s.charAt(0).toUpperCase() + s.slice(1))
   }, [])
 
-  const afspraken = today ? events.filter((e) => e.dateKey === today).length : 0
-  const takenOpen = tasks.filter((t) => t.status === 'todo' || t.status === 'open').length
-  const boodschappen = items.filter((i) => !i.checked).length
+  // Indeling per gebruiker (opgeslagen in de household-settings onder een user-key).
+  const dashKey = user ? `dashboard_${user.id}` : 'dashboard_anon'
+  const savedRaw = settings[dashKey]
+  const baseOrder: string[] = Array.isArray(savedRaw)
+    ? (savedRaw as string[]).filter((k) => ALL_WIDGETS.some((w) => w.key === k))
+    : DEFAULT_WIDGETS
+  // Nieuw dagbudget-widget ook tonen bij bestaande indelingen (bovenaan).
+  const order = baseOrder.includes('dagbudget') ? baseOrder : ['dagbudget', ...baseOrder]
 
-  const shownMembers = members.slice(0, 4)
-  const extraMembers = Math.max(0, members.length - shownMembers.length)
+  const [editOpen, setEditOpen] = useState(false)
+  const [draft, setDraft] = useState<string[]>(order)
 
-  const sections: { title: string; rows: { label: string; sub: string; href: string; icon: Icon; tone: string; badge?: number }[] }[] = [
-    {
-      title: 'Plannen & organiseren',
-      rows: [
-        { label: 'Agenda', sub: 'Bekijk alle afspraken', href: '/agenda', icon: CalendarDays, tone: 'sky' },
-        {
-          label: 'Boodschappen',
-          sub: `${boodschappen} ${boodschappen === 1 ? 'product' : 'producten'} op je lijst`,
-          href: '/boodschappen',
-          icon: ShoppingCart,
-          tone: 'emerald',
-          badge: boodschappen || undefined,
-        },
-      ],
-    },
-    {
-      title: 'Thuis & koken',
-      rows: [
-        { label: 'Recepten', sub: 'Wat eten we?', href: '/recepten', icon: ChefHat, tone: 'amber' },
-        { label: 'Koelkast', sub: 'Wat is er thuis?', href: '/koelkast', icon: Refrigerator, tone: 'sky' },
-      ],
-    },
-    {
-      title: 'Financiën & overzicht',
-      rows: [
-        { label: 'Budget', sub: 'Overzicht & planning', href: '/budget', icon: BarChart3, tone: 'emerald' },
-        { label: 'Modules', sub: 'Extra tools voor jouw gezin', href: '/modules', icon: Boxes, tone: 'violet' },
-      ],
-    },
-  ]
+  const openEdit = () => {
+    setDraft(order)
+    setEditOpen(true)
+  }
+  const move = (i: number, dir: -1 | 1) => {
+    const next = [...draft]
+    const j = i + dir
+    if (j < 0 || j >= next.length) return
+    ;[next[i], next[j]] = [next[j], next[i]]
+    setDraft(next)
+  }
+  const removeWidget = (key: string) => setDraft(draft.filter((k) => k !== key))
+  const addWidget = (key: string) => setDraft([...draft, key])
+  const saveLayout = async () => {
+    await setSetting(dashKey, draft)
+    setEditOpen(false)
+  }
+  const hidden = ALL_WIDGETS.filter((w) => !draft.includes(w.key))
 
-  const beheer: { label: string; sub: string; href: string; icon: Icon; tone: string }[] = [
-    { label: 'Pasjes', sub: 'Loyalty & toegangspasjes', href: '/pasjes', icon: CreditCard, tone: 'amber' },
-    { label: 'Documenten', sub: 'Belangrijke papieren', href: '/documenten', icon: FileText, tone: 'sky' },
-    { label: 'Contacten', sub: 'Belangrijke nummers', href: '/contacten', icon: Phone, tone: 'emerald' },
-  ]
+  function renderWidget(key: string) {
+    switch (key) {
+      case 'recept':
+        return (
+          <DashboardCard key={key} title="Vandaag eten we dit" icon={UtensilsCrossed}>
+            <div className="relative mb-4 aspect-[16/10] overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-100 to-amber-100">
+              {recipe && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={recipe.image} alt={recipe.title} loading="lazy" className="h-full w-full object-cover" />
+              )}
+            </div>
+            <h3 className="text-lg font-bold text-slate-800">{recipe ? recipe.title : 'Nog geen recept gekozen'}</h3>
+            {recipe && (
+              <div className="mt-2 flex items-center gap-4 text-sm text-slate-500">
+                <span className="inline-flex items-center gap-1.5">
+                  <Clock className="h-4 w-4" /> {recipe.time}
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <Users className="h-4 w-4" /> {recipe.servings}
+                </span>
+              </div>
+            )}
+            <Link href="/recepten" className="pill mt-4 bg-brand-light px-4 py-2.5 text-brand hover:bg-emerald-100">
+              Bekijk recepten
+            </Link>
+          </DashboardCard>
+        )
+      case 'dagbudget':
+        return <DayBudgetCard key={key} />
+      case 'budget':
+        return <BudgetCard key={key} />
+      case 'weer':
+        return (
+          <DashboardCard key={key} bg="bg-weather" bordered={false}>
+            <div className="flex items-start gap-4">
+              <span className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-white/70 text-sky-500">
+                <WeatherIcon className="h-9 w-9" strokeWidth={2} />
+              </span>
+              <div>
+                <p className="text-sm font-medium text-slate-500">
+                  {weather ? `${weather.day} · ${weather.location}` : 'Weer laden…'}
+                </p>
+                <p className="text-2xl font-extrabold text-slate-800">
+                  {weather ? `${weather.condition}, ${weather.temp}°` : '—'}
+                </p>
+                <p className="text-sm text-slate-500">{weather ? `${weather.low}° / ${weather.high}°` : ''}</p>
+              </div>
+            </div>
+          </DashboardCard>
+        )
+      case 'agenda':
+        return <AgendaCard key={key} />
+      case 'ai':
+        return (
+          <DashboardCard
+            key={key}
+            title="Suggestie van je AI-assistent"
+            icon={Sparkles}
+            iconClassName="text-violet-500"
+            bg="bg-ai"
+            bordered={false}
+          >
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+              <div className="relative aspect-[4/3] w-full shrink-0 overflow-hidden rounded-2xl bg-gradient-to-br from-violet-100 to-amber-100 sm:h-24 sm:w-28">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={aiSuggestion.image} alt="Suggestie" loading="lazy" className="h-full w-full object-cover" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-slate-700">{aiSuggestion.text}</p>
+                <Link href="/ai-assistent" className="pill mt-3 text-violet-600 hover:text-violet-700">
+                  Bekijk recept &amp; aanbiedingen
+                  <ChevronRight className="h-4 w-4" />
+                </Link>
+              </div>
+            </div>
+          </DashboardCard>
+        )
+      case 'pasjes':
+        return (
+          <DashboardCard key={key}>
+            <Link href="/pasjes" className="flex w-full items-center gap-4 text-left">
+              <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-sky-100 text-sky-500">
+                <CreditCard className="h-6 w-6" strokeWidth={2.1} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-base font-bold text-slate-800">Pasjes</span>
+                <span className="block text-sm text-slate-500">Klantenkaarten van het gezin bij de hand</span>
+              </span>
+              <ChevronRight className="h-5 w-5 shrink-0 text-slate-400" />
+            </Link>
+          </DashboardCard>
+        )
+      case 'aanbiedingen':
+        return <SponsoredAds key={key} />
+      case 'boodschappen':
+        return <ShoppingList key={key} className="lg:col-span-2" />
+      default:
+        return null
+    }
+  }
 
   return (
     <>
-      {/* Header */}
-      <header className="mb-6 flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <h1 className="text-2xl font-extrabold text-slate-800 sm:text-3xl">
-            {greet}
-            {greetingName ? `, ${greetingName}` : ''}!
-          </h1>
-          <p className="text-sm text-slate-500">Wat gaan we vandaag doen?</p>
+      <header className="mb-6 flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <span className="grid h-12 w-12 place-items-center rounded-2xl bg-amber-100 text-amber-500">
+            <Sun className="h-7 w-7" strokeWidth={2.2} />
+          </span>
+          <div>
+            <h1 className="text-xl font-extrabold text-slate-800 sm:text-2xl">
+              {greet}
+              {greetingName ? `, ${greetingName}` : ''}!
+            </h1>
+            <p className="text-sm text-slate-500">{dateStr}</p>
+          </div>
         </div>
-        <div className="flex shrink-0 items-center gap-3">
+
+        <div className="flex items-center gap-3 sm:gap-4">
           {crest && (
-            <Link href="/gezin" aria-label="Familiewapen" className="hidden sm:block">
-              <Crest svg={crest} className="h-10 w-8 object-contain drop-shadow-sm" />
+            <Link href="/gezin" aria-label="Familiewapen">
+              <Crest svg={crest} className="h-11 w-9 object-contain drop-shadow-sm" />
             </Link>
           )}
           <Link href="/gezin" className="flex -space-x-3" aria-label="Naar het gezin">
-            {shownMembers.map((m) => (
+            {members.map((member) => (
               <span
-                key={m.id}
-                title={m.name}
-                className={`grid h-10 w-10 place-items-center rounded-full border-2 border-white bg-gradient-to-br text-xs font-bold text-white shadow-sm ${m.color}`}
+                key={member.id}
+                title={member.name}
+                className={`grid h-10 w-10 place-items-center rounded-full border-2 border-white bg-gradient-to-br text-xs font-bold text-white shadow-sm ${member.color}`}
               >
-                {m.initials}
+                {member.initials}
               </span>
             ))}
-            {extraMembers > 0 && (
-              <span className="grid h-10 w-10 place-items-center rounded-full border-2 border-white bg-slate-100 text-xs font-bold text-slate-500 shadow-sm">
-                +{extraMembers}
-              </span>
-            )}
           </Link>
+
+          <button
+            type="button"
+            onClick={openEdit}
+            aria-label="Vandaag aanpassen"
+            title="Vandaag aanpassen"
+            className="grid h-10 w-10 place-items-center rounded-full border border-cardborder bg-white text-slate-500 transition-colors hover:bg-slate-50 hover:text-brand"
+          >
+            <SlidersHorizontal className="h-5 w-5" />
+          </button>
           <NotificationBell />
         </div>
       </header>
@@ -149,7 +254,7 @@ export default function Vandaag() {
       {coParent && (
         <div className="mb-5 flex items-center gap-3 rounded-card bg-gradient-to-br from-violet-50 to-white px-5 py-3 ring-1 ring-violet-100">
           <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-violet-100 text-violet-500">
-            <CalendarDays className="h-5 w-5" strokeWidth={2.1} />
+            <CalendarRange className="h-5 w-5" strokeWidth={2.1} />
           </span>
           <p className="text-sm text-slate-700">
             Deze week zijn de kinderen bij <span className="font-bold">{coParent.parent}</span>.
@@ -157,106 +262,90 @@ export default function Vandaag() {
         </div>
       )}
 
-      {/* Vandaag-hero */}
-      <Link
-        href="/agenda"
-        className="mb-7 flex items-center gap-4 rounded-card bg-gradient-to-br from-brand-light to-white p-5 ring-1 ring-emerald-100 transition-shadow hover:shadow-card"
-      >
-        <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-white text-brand shadow-sm">
-          <CalendarCheck className="h-7 w-7" strokeWidth={2.2} />
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="text-[11px] font-bold uppercase tracking-wide text-brand">Vandaag</p>
-          <p className="text-xl font-extrabold text-slate-800">
-            {afspraken} {afspraken === 1 ? 'afspraak' : 'afspraken'}
+      {order.length === 0 ? (
+        <DashboardCard>
+          <p className="text-sm text-slate-500">
+            Je hebt geen kaarten gekozen. Tik op het schuifjes-icoon rechtsboven om je Vandaag in te
+            delen.
           </p>
-          <p className="inline-flex items-center gap-1.5 text-sm text-slate-500">
-            <span className="h-2 w-2 rounded-full bg-brand" />
-            {takenOpen} {takenOpen === 1 ? 'taak' : 'taken'} openstaand
+        </DashboardCard>
+      ) : (
+        <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-2">{order.map(renderWidget)}</div>
+      )}
+
+      {/* Vandaag indelen */}
+      <Modal open={editOpen} onClose={() => setEditOpen(false)} title="Vandaag indelen">
+        <div className="flex flex-col gap-4">
+          <p className="text-sm text-slate-500">
+            Kies welke kaarten je ziet en in welke volgorde. Dit is persoonlijk — alleen voor jou.
           </p>
-        </div>
-        <ChevronRight className="h-6 w-6 shrink-0 text-slate-300" />
-      </Link>
 
-      {/* Snel naar */}
-      <h2 className="mb-3 text-sm font-bold text-slate-500">Snel naar</h2>
-      <div className="mb-8 grid grid-cols-3 gap-3 sm:grid-cols-5">
-        {QUICK.map((q) => (
-          <Link
-            key={q.label}
-            href={q.href}
-            className="flex flex-col items-center gap-2 rounded-card border border-cardborder bg-white p-3 text-center transition-colors hover:border-brand/40 hover:bg-slate-50"
-          >
-            <span className={`grid h-11 w-11 place-items-center rounded-2xl ${TONES[q.tone]}`}>
-              <q.icon className="h-6 w-6" strokeWidth={2.1} />
-            </span>
-            <span className="text-xs font-semibold text-slate-700">{q.label}</span>
-          </Link>
-        ))}
-      </div>
-
-      {/* Gegroepeerde secties */}
-      {sections.map((section) => (
-        <section key={section.title} className="mb-7">
-          <h2 className="mb-3 text-sm font-bold text-slate-500">{section.title}</h2>
-          <div className="overflow-hidden rounded-card border border-cardborder bg-white">
-            {section.rows.map((row, i) => (
-              <Link
-                key={row.label}
-                href={row.href}
-                className={`flex items-center gap-4 px-4 py-4 transition-colors hover:bg-slate-50 ${
-                  i < section.rows.length - 1 ? 'border-b border-cardborder' : ''
-                }`}
-              >
-                <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-2xl ${TONES[row.tone]}`}>
-                  <row.icon className="h-6 w-6" strokeWidth={2.1} />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block text-base font-bold text-slate-800">{row.label}</span>
-                  <span className="block text-sm text-slate-500">{row.sub}</span>
-                </span>
-                {row.badge ? (
-                  <span className="grid h-7 min-w-7 place-items-center rounded-full bg-brand-light px-2 text-xs font-bold text-brand">
-                    {row.badge}
-                  </span>
-                ) : null}
-                <ChevronRight className="h-5 w-5 shrink-0 text-slate-300" />
-              </Link>
-            ))}
+          <div>
+            <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Zichtbaar</p>
+            <ul className="flex flex-col gap-1.5">
+              {draft.map((key, i) => (
+                <li key={key} className="flex items-center gap-2 rounded-xl border border-cardborder bg-white p-2.5">
+                  <span className="min-w-0 flex-1 text-sm font-semibold text-slate-700">{labelOf(key)}</span>
+                  <button
+                    type="button"
+                    onClick={() => move(i, -1)}
+                    disabled={i === 0}
+                    aria-label="Omhoog"
+                    className="grid h-7 w-7 place-items-center rounded-full text-slate-400 hover:bg-slate-100 disabled:opacity-30"
+                  >
+                    <ArrowUp className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => move(i, 1)}
+                    disabled={i === draft.length - 1}
+                    aria-label="Omlaag"
+                    className="grid h-7 w-7 place-items-center rounded-full text-slate-400 hover:bg-slate-100 disabled:opacity-30"
+                  >
+                    <ArrowDown className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => removeWidget(key)}
+                    aria-label="Verbergen"
+                    className="grid h-7 w-7 place-items-center rounded-full text-slate-400 hover:bg-rose-50 hover:text-rose-500"
+                  >
+                    <EyeOff className="h-4 w-4" />
+                  </button>
+                </li>
+              ))}
+              {draft.length === 0 && <li className="text-sm text-slate-400">Nog niets gekozen.</li>}
+            </ul>
           </div>
-        </section>
-      ))}
 
-      {/* Bewaren & beheren */}
-      <h2 className="mb-3 text-sm font-bold text-slate-500">Bewaren & beheren</h2>
-      <div className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
-        {beheer.map((b) => (
-          <Link
-            key={b.label}
-            href={b.href}
-            className="flex items-center gap-3 rounded-card border border-cardborder bg-white p-4 transition-colors hover:border-brand/40 hover:bg-slate-50"
+          {hidden.length > 0 && (
+            <div>
+              <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Toevoegen</p>
+              <div className="flex flex-wrap gap-2">
+                {hidden.map((w) => (
+                  <button
+                    key={w.key}
+                    type="button"
+                    onClick={() => addWidget(w.key)}
+                    className="pill border border-cardborder bg-white px-3 py-1.5 text-xs text-slate-600 hover:border-brand/40 hover:text-brand"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    {w.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={saveLayout}
+            className="pill bg-brand px-4 py-2.5 text-white shadow-sm shadow-brand/20 hover:bg-brand-dark"
           >
-            <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-2xl ${TONES[b.tone]}`}>
-              <b.icon className="h-6 w-6" strokeWidth={2.1} />
-            </span>
-            <span className="min-w-0">
-              <span className="block text-sm font-bold text-slate-800">{b.label}</span>
-              <span className="block text-xs text-slate-500">{b.sub}</span>
-            </span>
-          </Link>
-        ))}
-      </div>
-
-      {/* Footer-banner */}
-      <div className="flex items-center gap-4 rounded-card bg-gradient-to-br from-sky-50 to-violet-50 p-5 ring-1 ring-sky-100">
-        <div className="min-w-0 flex-1">
-          <p className="text-base font-extrabold text-slate-800">Samen organiseren, meer tijd voor elkaar</p>
-          <p className="text-sm text-slate-500">Alle belangrijke zaken van jullie gezin op één plek.</p>
+            Opslaan
+          </button>
         </div>
-        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white text-rose-400 shadow-sm">
-          <Heart className="h-6 w-6" strokeWidth={2.1} />
-        </span>
-      </div>
+      </Modal>
     </>
   )
 }
