@@ -6,7 +6,7 @@ import InstallPrompt from '@/components/InstallPrompt'
 import { A11yProvider } from '@/components/A11yProvider'
 
 // Past de opgeslagen toegankelijkheidsvoorkeuren toe vóór de eerste paint (geen flikker).
-const A11Y_BOOT = `(function(){try{var s=JSON.parse(localStorage.getItem('fam-a11y')||'{}');var m={normaal:1,groot:1.125,extra:1.25};document.documentElement.style.setProperty('--font-scale',String(m[s.fontScale]||1));if(s.highContrast)document.documentElement.classList.add('hc');if(s.reduceMotion)document.documentElement.classList.add('reduce-motion');}catch(e){}})();`
+const A11Y_BOOT = `(function(){try{var s=JSON.parse(localStorage.getItem('fam-a11y')||'{}');var m={normaal:1,groot:1.125,extra:1.25};var e=document.documentElement;e.style.setProperty('--font-scale',String(m[s.fontScale]||1));if(s.highContrast)e.classList.add('hc');if(s.reduceMotion)e.classList.add('reduce-motion');var t=s.theme||'systeem';var dark=t==='donker'||(t!=='licht'&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches);if(dark)e.classList.add('dark');}catch(e){}})();`
 
 export const metadata: Metadata = {
   title: 'Fam — Gezinsapp',

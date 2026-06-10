@@ -77,6 +77,116 @@ html.reduce-motion *::after {
   scroll-behavior: auto !important;
 }
 
+/* ------------------------------------------------------------------ */
+/*  Dark mode — overrides voor de hoofdoppervlakken, tekst en randen.  */
+/* ------------------------------------------------------------------ */
+html.dark {
+  color-scheme: dark;
+}
+html.dark body {
+  background-color: #0f172a;
+  color: #e2e8f0;
+}
+
+/* Oppervlakken */
+html.dark .bg-white {
+  background-color: #1e293b !important;
+}
+html.dark .bg-canvas {
+  background-color: #0f172a !important;
+}
+html.dark .bg-slate-50,
+html.dark .bg-slate-100 {
+  background-color: #334155 !important;
+}
+html.dark .bg-slate-200 {
+  background-color: #475569 !important;
+}
+html.dark .bg-weather {
+  background-color: #14304a !important;
+}
+html.dark .bg-ai {
+  background-color: #2a1f44 !important;
+}
+html.dark .bg-brand-light {
+  background-color: rgba(53, 181, 88, 0.16) !important;
+}
+html.dark .bg-white\/70 {
+  background-color: rgba(30, 41, 59, 0.7) !important;
+}
+html.dark .bg-white\/90 {
+  background-color: rgba(30, 41, 59, 0.9) !important;
+}
+
+/* Verlopen (gradient-kaarten) afvlakken naar het donkere kaartvlak. */
+html.dark [class*='from-brand-light'],
+html.dark [class*='from-sky-50'],
+html.dark [class*='from-violet-50'],
+html.dark [class*='from-emerald-50'],
+html.dark [class*='from-amber-50'],
+html.dark [class*='from-rose-50'],
+html.dark [class*='from-slate-50'] {
+  --tw-gradient-from: #1e293b !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+}
+html.dark .to-white {
+  --tw-gradient-to: #1e293b !important;
+}
+
+/* Tekst */
+html.dark .text-slate-900,
+html.dark .text-slate-800,
+html.dark .text-slate-700 {
+  color: #e2e8f0 !important;
+}
+html.dark .text-slate-600,
+html.dark .text-slate-500 {
+  color: #cbd5e1 !important;
+}
+html.dark .text-slate-400,
+html.dark .text-slate-300 {
+  color: #94a3b8 !important;
+}
+
+/* Randen + ringen */
+html.dark .border-cardborder,
+html.dark .ring-cardborder,
+html.dark .border-slate-100,
+html.dark .border-slate-200 {
+  border-color: #334155 !important;
+}
+html.dark .divide-cardborder > :not([hidden]) ~ :not([hidden]) {
+  border-color: #334155 !important;
+}
+
+/* Formuliervelden */
+html.dark input:not([type='checkbox']):not([type='radio']):not([type='range']),
+html.dark select,
+html.dark textarea {
+  background-color: #0f172a !important;
+  color: #e2e8f0 !important;
+  border-color: #334155 !important;
+}
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #64748b !important;
+}
+
+/* Hover-achtergronden */
+html.dark .hover\:bg-slate-50:hover,
+html.dark .hover\:bg-slate-100:hover {
+  background-color: #334155 !important;
+}
+html.dark .hover\:bg-white:hover {
+  background-color: #1e293b !important;
+}
+
+/* Schaduwen vallen weg op donker — vervang door een subtiele donkere schaduw. */
+html.dark .shadow-card,
+html.dark .shadow-soft {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4) !important;
+}
+
 @layer components {
   /* Shared pill / button base. Colours + padding are supplied per usage. */
   .pill {

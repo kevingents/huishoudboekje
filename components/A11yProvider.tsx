@@ -14,29 +14,48 @@ export type FontScale = 'normaal' | 'groot' | 'extra'
 
 export const FONT_SCALE: Record<FontScale, number> = { normaal: 1, groot: 1.125, extra: 1.25 }
 
+export type Theme = 'licht' | 'donker' | 'systeem'
+
 const STORAGE_KEY = 'fam-a11y'
+
+function systemPrefersDark(): boolean {
+  return typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-color-scheme: dark)').matches
+}
+function resolveDark(theme: Theme): boolean {
+  if (theme === 'donker') return true
+  if (theme === 'licht') return false
+  return systemPrefersDark()
+}
 
 interface A11yState {
   fontScale: FontScale
   highContrast: boolean
   reduceMotion: boolean
+  theme: Theme
 }
 
 interface A11yContextValue extends A11yState {
   setFontScale: (value: FontScale) => void
   setHighContrast: (value: boolean) => void
   setReduceMotion: (value: boolean) => void
+  setTheme: (value: Theme) => void
 }
 
 const A11yContext = createContext<A11yContextValue | null>(null)
 
-const DEFAULTS: A11yState = { fontScale: 'normaal', highContrast: false, reduceMotion: false }
+const DEFAULTS: A11yState = {
+  fontScale: 'normaal',
+  highContrast: false,
+  reduceMotion: false,
+  theme: 'systeem',
+}
 
 function applyToDocument(state: A11yState) {
   const el = document.documentElement
   el.style.setProperty('--font-scale', String(FONT_SCALE[state.fontScale]))
   el.classList.toggle('hc', state.highContrast)
   el.classList.toggle('reduce-motion', state.reduceMotion)
+  el.classList.toggle('dark', resolveDark(state.theme))
 }
 
 function readStored(): A11yState {
@@ -50,6 +69,9 @@ function readStored(): A11yState {
           : 'normaal',
         highContrast: !!parsed.highContrast,
         reduceMotion: !!parsed.reduceMotion,
+        theme: (['licht', 'donker', 'systeem'] as Theme[]).includes(parsed.theme as Theme)
+          ? (parsed.theme as Theme)
+          : 'systeem',
       }
     }
   } catch {
@@ -69,6 +91,15 @@ export function A11yProvider({ children }: { children: ReactNode }) {
     setState(stored)
     applyToDocument(stored)
   }, [])
+
+  // Bij thema 'systeem': meebewegen met de OS-instelling.
+  useEffect(() => {
+    if (state.theme !== 'systeem' || typeof window === 'undefined' || !window.matchMedia) return
+    const mq = window.matchMedia('(prefers-color-scheme: dark)')
+    const handler = () => applyToDocument(state)
+    mq.addEventListener?.('change', handler)
+    return () => mq.removeEventListener?.('change', handler)
+  }, [state])
 
   const update = (patch: Partial<A11yState>) => {
     setState((prev) => {
@@ -90,6 +121,7 @@ export function A11yProvider({ children }: { children: ReactNode }) {
         setFontScale: (value) => update({ fontScale: value }),
         setHighContrast: (value) => update({ highContrast: value }),
         setReduceMotion: (value) => update({ reduceMotion: value }),
+        setTheme: (value) => update({ theme: value }),
       }}
     >
       {children}

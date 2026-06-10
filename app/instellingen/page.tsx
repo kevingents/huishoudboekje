@@ -8,7 +8,7 @@ import DashboardCard from '@/components/DashboardCard'
 import IntegrationsSection from '@/components/IntegrationsSection'
 import CoParentCard from '@/components/CoParentCard'
 import ProfileCard from '@/components/ProfileCard'
-import { useA11y, type FontScale } from '@/components/A11yProvider'
+import { useA11y, type FontScale, type Theme } from '@/components/A11yProvider'
 import { useSettings, useFamily, useAuth } from '@/lib/hooks'
 import { apiDelete } from '@/lib/api'
 import { usePwaInstall } from '@/lib/usePwaInstall'
@@ -35,6 +35,11 @@ export default function InstellingenPage() {
     ['normaal', 'Normaal'],
     ['groot', 'Groot'],
     ['extra', 'Extra groot'],
+  ]
+  const THEME_OPTIONS: [Theme, string][] = [
+    ['licht', 'Licht'],
+    ['donker', 'Donker'],
+    ['systeem', 'Systeem'],
   ]
 
   const prefs = mergePrefs(settings.notifications)
@@ -161,6 +166,28 @@ export default function InstellingenPage() {
         {/* Toegankelijkheid */}
         <DashboardCard title="Toegankelijkheid" icon={Accessibility} iconClassName="text-sky-500">
           <div className="flex flex-col gap-4">
+            <div>
+              <p className="text-sm font-semibold text-slate-800">Thema</p>
+              <p className="mb-2 text-xs text-slate-500">Licht, donker of automatisch volgens je apparaat.</p>
+              <div className="inline-flex flex-wrap gap-1 rounded-full bg-slate-100 p-1">
+                {THEME_OPTIONS.map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => a11y.setTheme(value)}
+                    aria-pressed={a11y.theme === value}
+                    className={`rounded-full px-3 py-1.5 text-sm font-semibold transition-colors ${
+                      a11y.theme === value ? 'bg-white text-brand shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <hr className="border-cardborder" />
+
             <div>
               <p className="text-sm font-semibold text-slate-800">Lettergrootte</p>
               <p className="mb-2 text-xs text-slate-500">Maakt alle tekst en knoppen in de app groter.</p>
