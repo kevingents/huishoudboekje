@@ -29,6 +29,7 @@ import {
 } from '@/lib/budget'
 import BudgetProgressCard from '@/components/budget/BudgetProgressCard'
 import AiCoachCard from '@/components/budget/AiCoachCard'
+import AutoCategorizeSteps from '@/components/budget/AutoCategorizeSteps'
 import type { BudgetCategory } from '@/lib/types'
 
 const colorClasses: Record<string, { bar: string; iconBg: string; iconText: string }> = {
@@ -550,11 +551,14 @@ export default function BudgetPage() {
           Indelen &amp; importeren
         </h3>
 
-        {/* Budget opschonen: Overig + bijschrijvingen indelen (met geheugen + AI) */}
-        <OverigCleanup />
-
-        {/* Importeer uit budget-Excel */}
+        {/* Bestanden uploaden (premium uploadcentrum) */}
         <BudgetImport />
+
+        {/* Hoe automatische categorisatie werkt */}
+        <AutoCategorizeSteps />
+
+        {/* Budget opschonen / categoriseren (met geheugen + AI) */}
+        <OverigCleanup />
 
         {/* Recent transactions (full width) */}
         <DashboardCard title="Recente uitgaven" className="lg:col-span-2">
