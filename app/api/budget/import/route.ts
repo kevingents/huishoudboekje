@@ -155,7 +155,7 @@ export async function POST(req: Request) {
     // Geleerde regels toepassen: inkomsten/negeren overslaan, vaste lasten doorzetten.
     const rules = await prisma.merchantRule.findMany({ where: { householdId: hid } })
     const toStore: { label: string; category: string; amount: number; date: string }[] = []
-    const fixedAgg = new Map<string, { name: string; sum: number; count: number }>()
+    const fixedAgg = new Map<string, { name: string; sum: number; count: number; category: string }>()
     let skippedKind = 0
     for (const d of fresh) {
       const { category, kind } = classifyWithRules(d.label, rules, d.category)
@@ -166,7 +166,7 @@ export async function POST(req: Request) {
       if (kind === 'fixed') {
         const rule = matchRule(d.label, rules)
         const name = titleCase(rule?.pattern || d.label).slice(0, 60)
-        const fa = fixedAgg.get(name) ?? { name, sum: 0, count: 0 }
+        const fa = fixedAgg.get(name) ?? { name, sum: 0, count: 0, category: rule?.category || '' }
         fa.sum += d.amount
         fa.count += 1
         fixedAgg.set(name, fa)
@@ -206,7 +206,7 @@ export async function POST(req: Request) {
             householdId: hid,
             name: fa.name,
             amount: Math.round((fa.sum / fa.count) * 100) / 100,
-            category: suggestCostCategory(fa.name),
+            category: fa.category || suggestCostCategory(fa.name),
           },
         })
         haveFixed.add(fa.name.toLowerCase())

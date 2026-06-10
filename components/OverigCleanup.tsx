@@ -53,7 +53,7 @@ function decode(value: string): { kind: string; category: string } | null {
   const tag = value.slice(0, i)
   const rest = value.slice(i + 1)
   if (tag === 'cat') return { kind: 'expense', category: rest }
-  if (tag === 'fixed') return { kind: 'fixed', category: '' }
+  if (tag === 'fixed') return { kind: 'fixed', category: rest }
   if (tag === 'income') return { kind: 'income', category: rest || 'overig' }
   if (tag === 'once') return { kind: 'income_once', category: '' }
   if (tag === 'ignore') return { kind: 'ignore', category: '' }
@@ -246,8 +246,11 @@ export default function OverigCleanup() {
                             <option key={c} value={`cat:${c}`}>{c}</option>
                           ))}
                         </optgroup>
+                        <optgroup label="Vaste lasten">
+                          <option value="fixed:">Vaste last (huur, energie…)</option>
+                          <option value="fixed:Abonnement">Abonnement (Netflix, krant…)</option>
+                        </optgroup>
                         <optgroup label="Anders">
-                          <option value="fixed:">Vaste last (huur, energie, abonnement…)</option>
                           <option value="once:">Eenmalige inkomst / teruggave</option>
                           <option value="ignore:">Negeren (sparen / eigen overboeking)</option>
                         </optgroup>

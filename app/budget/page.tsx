@@ -10,6 +10,7 @@ import SavingsGoalsCard from '@/components/SavingsGoalsCard'
 import FixedCostsCard from '@/components/FixedCostsCard'
 import IncomeCard from '@/components/IncomeCard'
 import LoansCard from '@/components/LoansCard'
+import SubscriptionsCard from '@/components/SubscriptionsCard'
 import SpendingChart from '@/components/SpendingChart'
 import MonthlyOverview from '@/components/MonthlyOverview'
 import BudgetImport from '@/components/BudgetImport'
@@ -398,9 +399,10 @@ export default function BudgetPage() {
           </div>
         </DashboardCard>
 
-        {/* Inkomsten, vaste lasten, leningen, spaardoelen */}
+        {/* Inkomsten, vaste lasten, abonnementen, leningen, spaardoelen */}
         <IncomeCard />
         <FixedCostsCard />
+        <SubscriptionsCard />
         <LoansCard />
         <SavingsGoalsCard />
         </div>

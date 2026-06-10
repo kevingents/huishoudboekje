@@ -37,7 +37,7 @@ export async function POST() {
   // Per transactie de definitieve categorie bepalen (regels > ingebouwd > met rust laten).
   const updates: { id: number; category: string }[] = []
   const spentByCat = new Map<string, number>()
-  const fixedAgg = new Map<string, { name: string; sum: number; count: number }>()
+  const fixedAgg = new Map<string, { name: string; sum: number; count: number; category: string }>()
   const incAgg = new Map<string, { name: string; sum: number; count: number; subtype: string }>()
 
   for (const t of txs) {
@@ -47,7 +47,7 @@ export async function POST() {
       finalCat = categoryForKind(rule.kind, rule.category, categorizeTx(t.label))
       if (rule.kind === 'fixed') {
         const name = titleCase(rule.pattern)
-        const fa = fixedAgg.get(rule.pattern) ?? { name, sum: 0, count: 0 }
+        const fa = fixedAgg.get(rule.pattern) ?? { name, sum: 0, count: 0, category: rule.category || '' }
         fa.sum += t.amount
         fa.count += 1
         fixedAgg.set(rule.pattern, fa)
@@ -100,7 +100,7 @@ export async function POST() {
       if (!fa.count || haveFixed.has(fa.name.toLowerCase())) continue
       const amount = Math.round((fa.sum / fa.count) * 100) / 100
       await prisma.fixedCost.create({
-        data: { householdId: hid, name: fa.name, amount, category: suggestCostCategory(fa.name) },
+        data: { householdId: hid, name: fa.name, amount, category: fa.category || suggestCostCategory(fa.name) },
       })
       fixedCreated++
     }
