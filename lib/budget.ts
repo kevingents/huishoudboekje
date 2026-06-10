@@ -108,6 +108,14 @@ export function merchantKey(label: string): string {
   return words.slice(0, 3).join(' ').slice(0, 32)
 }
 
+/** Past een trefwoord op een omschrijving (op de winkel-sleutel én de ruwe tekst)?
+ *  Gebruikt o.a. om aflossings-transacties aan een lening te koppelen. */
+export function labelMatchesPattern(label: string, pattern: string): boolean {
+  const p = (pattern || '').toLowerCase().trim()
+  if (!p) return false
+  return merchantKey(label).includes(p) || (label || '').toLowerCase().includes(p)
+}
+
 /** Vindt de eerste (specifiekste) geleerde regel die op deze omschrijving past. */
 export function matchRule<T extends MerchantRuleLike>(description: string, rules: T[]): T | null {
   const key = merchantKey(description)

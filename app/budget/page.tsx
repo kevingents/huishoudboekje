@@ -9,6 +9,7 @@ import ModuleGate from '@/components/ModuleGate'
 import SavingsGoalsCard from '@/components/SavingsGoalsCard'
 import FixedCostsCard from '@/components/FixedCostsCard'
 import IncomeCard from '@/components/IncomeCard'
+import LoansCard from '@/components/LoansCard'
 import SpendingChart from '@/components/SpendingChart'
 import MonthlyOverview from '@/components/MonthlyOverview'
 import BudgetImport from '@/components/BudgetImport'
@@ -397,9 +398,10 @@ export default function BudgetPage() {
           </div>
         </DashboardCard>
 
-        {/* Inkomsten, vaste lasten, spaardoelen */}
+        {/* Inkomsten, vaste lasten, leningen, spaardoelen */}
         <IncomeCard />
         <FixedCostsCard />
+        <LoansCard />
         <SavingsGoalsCard />
         </div>
         </ModuleGate>

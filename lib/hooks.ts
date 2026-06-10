@@ -310,6 +310,47 @@ export function useIncome() {
   }
 }
 
+export interface Loan {
+  id: number
+  name: string
+  lender: string | null
+  total: number
+  termAmount: number | null
+  matchPattern: string | null
+  manualPaid: number
+  startDate: string | null
+}
+
+type NewLoan = {
+  name: string
+  lender?: string | null
+  total?: number
+  termAmount?: number | null
+  matchPattern?: string | null
+  manualPaid?: number
+  startDate?: string | null
+}
+
+export function useLoans() {
+  const c = useCollection<Loan>('/api/loans')
+  return {
+    loans: c.items,
+    isLoading: c.isLoading,
+    addLoan: (payload: NewLoan) =>
+      c.create(payload as Record<string, unknown>, {
+        name: payload.name,
+        lender: payload.lender ?? null,
+        total: payload.total ?? 0,
+        termAmount: payload.termAmount ?? null,
+        matchPattern: payload.matchPattern ?? null,
+        manualPaid: payload.manualPaid ?? 0,
+        startDate: payload.startDate ?? null,
+      }),
+    updateLoan: (id: number, payload: Partial<NewLoan>) => c.update(id, payload as Record<string, unknown>),
+    removeLoan: (id: number) => c.remove(id),
+  }
+}
+
 /* -------------------------------------------------------------------------- */
 /*  Instellingen                                                              */
 /* -------------------------------------------------------------------------- */

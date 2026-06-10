@@ -251,6 +251,24 @@ model MerchantRule {
   @@index([householdId])
 }
 
+// Leningen/hypotheek met restschuld. Aflossings-transacties worden via
+// matchPattern (trefwoord op de omschrijving) automatisch gekoppeld: de som
+// daarvan + manualPaid bepaalt hoeveel er al is afgelost.
+model Loan {
+  id           Int      @id @default(autoincrement())
+  householdId  Int
+  name         String // "Lening Boots Holding", "Hypotheek"
+  lender       String? // geldverstrekker
+  total        Float    @default(0) // totaal af te lossen (oorspronkelijke schuld)
+  termAmount   Float? // maandtermijn (optioneel)
+  matchPattern String? // trefwoord om aflossings-transacties te koppelen
+  manualPaid   Float    @default(0) // extra handmatig afgelost (buiten transacties)
+  startDate    String? // yyyy-mm-dd
+  createdAt    DateTime @default(now())
+
+  @@index([householdId])
+}
+
 // Gedeelde klantenkaarten/pasjes (premium). Gedeeld binnen het huishouden via
 // householdId. Foto (imageUrl) en/of barcode-nummer (code).
 model Card {
