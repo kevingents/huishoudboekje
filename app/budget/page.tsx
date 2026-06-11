@@ -11,8 +11,7 @@ import FixedCostsCard from '@/components/FixedCostsCard'
 import IncomeCard from '@/components/IncomeCard'
 import LoansCard from '@/components/LoansCard'
 import SubscriptionsCard from '@/components/SubscriptionsCard'
-import SpendingFilter from '@/components/SpendingFilter'
-import MonthlyOverview from '@/components/MonthlyOverview'
+import SpendingExplorer from '@/components/budget/SpendingExplorer'
 import BudgetImport from '@/components/BudgetImport'
 import OverigCleanup from '@/components/OverigCleanup'
 import { useBudget, useSettings, useFixedCosts, useSubscriptions, useHousehold, useIncome, useLoans } from '@/lib/hooks'
@@ -28,7 +27,6 @@ import {
   periodRangeOf,
 } from '@/lib/budget'
 import BudgetProgressCard from '@/components/budget/BudgetProgressCard'
-import AiCoachCard from '@/components/budget/AiCoachCard'
 import AutoCategorizeSteps from '@/components/budget/AutoCategorizeSteps'
 import InsightsCard from '@/components/budget/InsightsCard'
 import UpcomingPaymentsCard from '@/components/budget/UpcomingPaymentsCard'
@@ -468,13 +466,13 @@ export default function BudgetPage() {
           )}
         </DashboardCard>
 
-        {/* AI Budget Coach — inzichten uit je eigen cijfers (deze periode vs gemiddeld) */}
-        <AiCoachCard
-          currentByCat={currentByCat}
-          avgByCat={avgByCat}
-          projected={projected}
+        {/* Inzichten + coach (samengevoegd): deze vs vorige periode, prognose, besparingen */}
+        <InsightsCard
+          transactions={transactions}
+          periodStart={periodStart}
           budget={budgetRef}
-          periodWord={periodWord}
+          projected={projected}
+          avgByCat={avgByCat}
         />
 
         {/* Budgetplanner-module: prognose, spaardoelen, vaste lasten */}
@@ -577,19 +575,9 @@ export default function BudgetPage() {
           Terugkijken
         </h3>
 
-        {/* Inzichten: deze periode vs vorige (historie) */}
-        <InsightsCard
-          transactions={transactions}
-          periodStart={periodStart}
-          budget={budgetRef}
-          periodWord={periodWord}
-        />
-
-        {/* Uitgaven per periode (vandaag/week/periode/eigen) */}
-        <SpendingFilter transactions={transactions} periodStart={periodStart} />
-
-        {/* Maand-/periodeoverzicht — terugkijken per periode */}
-        <MonthlyOverview transactions={transactions} periodStart={periodStart} />
+        {/* Uitgaven: periode-presets + klikbare trend + verdeling + transacties
+            (samengevoegd uit "Uitgaven bekijken" en "Periodeoverzicht"). */}
+        <SpendingExplorer transactions={transactions} periodStart={periodStart} />
 
         {/* Sectie: indelen & importeren */}
         <h3
