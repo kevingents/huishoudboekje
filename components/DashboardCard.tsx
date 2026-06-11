@@ -46,7 +46,7 @@ export default function DashboardCard({
         <header className="mb-4 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
             {Icon && <Icon className={`h-5 w-5 ${iconClassName}`} strokeWidth={2.2} />}
-            {title && <h2 className="text-[15px] font-bold text-slate-800 dark:text-slate-100 sm:text-base">{title}</h2>}
+            {title && <h2 className="text-[15px] font-bold text-slate-900 dark:text-slate-100 sm:text-base">{title}</h2>}
           </div>
           {headerRight}
         </header>
