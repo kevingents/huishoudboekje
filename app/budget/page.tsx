@@ -493,13 +493,13 @@ export default function BudgetPage() {
               { label: 'Over per maand', value: nextMonthNet, tone: nextMonthNet >= 0 ? ('pos' as const) : ('neg' as const) },
             ].map((item) => {
               const box =
-                item.tone === 'pos' ? 'bg-emerald-500/10' : item.tone === 'neg' ? 'bg-rose-500/10' : 'bg-slate-400/10'
+                item.tone === 'pos' ? 'bg-emerald-500/10' : item.tone === 'neg' ? 'bg-rose-500/10' : 'bg-slate-100'
               const txt =
                 item.tone === 'pos'
                   ? 'text-emerald-600 dark:text-emerald-400'
                   : item.tone === 'neg'
                     ? 'text-rose-600 dark:text-rose-400'
-                    : 'text-slate-800 dark:text-slate-100'
+                    : 'text-slate-900 dark:text-slate-100'
               const sign = item.value < 0 ? '−' : item.tone === 'pos' ? '+' : ''
               return (
                 <div key={item.label} className={`rounded-2xl p-3 sm:p-4 ${box}`}>
