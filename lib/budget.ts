@@ -166,11 +166,20 @@ export function periodKeyOf(dateStr: string | null | undefined, startDay = 1): s
  *  bevat, gegeven de startdag (1 = kalendermaand). Periodes lopen door over
  *  maandgrenzen: bij startdag 25 loopt de periode van de 25e t/m de 24e. */
 export function periodRangeOf(date: Date, startDay = 1): { start: Date; end: Date } {
+  const sd = Math.min(28, Math.max(1, Math.floor(startDay) || 1)) // veilige startdag (1–28)
   let m = date.getMonth()
-  if (startDay > 1 && date.getDate() < startDay) m -= 1 // hoort nog bij de vorige periode
-  const start = new Date(date.getFullYear(), m, startDay)
-  const end = new Date(date.getFullYear(), m + 1, startDay - 1) // dag vóór de volgende start
+  if (sd > 1 && date.getDate() < sd) m -= 1 // hoort nog bij de vorige periode
+  const start = new Date(date.getFullYear(), m, sd)
+  const end = new Date(date.getFullYear(), m + 1, sd - 1) // dag vóór de volgende start
   return { start, end }
+}
+
+/** Verschuift een periode-sleutel (yyyy-mm van de startmaand) met N maanden —
+ *  jaarwissel- en tijdzone-veilig (rekent op de maand-sleutel, niet op timestamps). */
+export function shiftPeriodKey(key: string, delta: number): string {
+  const [y, m] = key.split('-').map(Number)
+  const d = new Date(y, m - 1 + delta, 1)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
 }
 
 /** Aantal maanden dat een reeks datums (yyyy-mm-dd) beslaat — de spanwijdte van

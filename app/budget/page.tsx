@@ -122,6 +122,7 @@ export default function BudgetPage() {
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState({ label: '', category: '', amount: '' })
   const [showAllCats, setShowAllCats] = useState(false)
+  const [tab, setTab] = useState<'overzicht' | 'uitgaven' | 'plannen' | 'importeren'>('overzicht')
   const currentMonthLabel = (() => {
     const f = new Date().toLocaleDateString('nl-NL', { month: 'long', year: 'numeric' })
     return f.charAt(0).toUpperCase() + f.slice(1)
@@ -325,8 +326,10 @@ export default function BudgetPage() {
     ? spendingCats.map((c) => c.name).filter((n) => n !== manageCat.name)
     : []
 
-  const scrollToId = (id: string) =>
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  const goTab = (t: typeof tab) => {
+    setTab(t)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
   const exportCsv = () => {
     const rows = [
       ['Datum', 'Omschrijving', 'Categorie', 'Bedrag'],
@@ -345,9 +348,9 @@ export default function BudgetPage() {
   }
   const quickActions: QuickAction[] = [
     { icon: Plus, label: 'Nieuwe uitgave', onClick: openAdd },
-    { icon: UploadCloud, label: 'Bestand uploaden', onClick: () => scrollToId('sectie-importeren') },
-    { icon: Repeat, label: 'Abonnement', onClick: () => scrollToId('sectie-instellen') },
-    { icon: Target, label: 'Spaardoel', onClick: () => scrollToId('sectie-instellen') },
+    { icon: UploadCloud, label: 'Bestand uploaden', onClick: () => goTab('importeren') },
+    { icon: Repeat, label: 'Abonnement', onClick: () => goTab('plannen') },
+    { icon: Target, label: 'Spaardoel', onClick: () => goTab('plannen') },
     { icon: Download, label: 'Rapport (CSV)', onClick: exportCsv },
   ]
 
@@ -383,7 +386,32 @@ export default function BudgetPage() {
         }
       />
 
+      {/* Tab-navigatie: houdt de pagina kort — elke tab toont één taakgebied. */}
+      <div className="mb-5 flex gap-1 rounded-2xl bg-slate-100 p-1">
+        {(
+          [
+            ['overzicht', 'Overzicht'],
+            ['uitgaven', 'Uitgaven'],
+            ['plannen', 'Plannen'],
+            ['importeren', 'Importeren'],
+          ] as const
+        ).map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setTab(key)}
+            className={`flex-1 rounded-xl px-2 py-2 text-sm font-semibold transition-colors ${
+              tab === key ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
       <div className="grid grid-cols-1 items-stretch gap-5 lg:grid-cols-2">
+        {tab === 'overzicht' && (
+        <>
         {/* Budgetvoortgang — gauge van deze periode */}
         <BudgetProgressCard spent={currentSpent} budget={budgetRef} projected={projected} periodWord={periodWord} />
 
@@ -475,7 +503,14 @@ export default function BudgetPage() {
           avgByCat={avgByCat}
         />
 
-        {/* Budgetplanner-module: prognose, spaardoelen, vaste lasten */}
+        {/* Snelle acties */}
+        <QuickActions actions={quickActions} />
+        </>
+        )}
+
+        {tab === 'plannen' && (
+        <>
+        {/* Budgetplanner-module: begroting, inkomsten, vaste lasten, spaardoelen */}
         <div className="lg:col-span-2">
         <ModuleGate module="budgetplanner">
         <div className="grid grid-cols-1 items-stretch gap-5 lg:grid-cols-2">
@@ -550,14 +585,6 @@ export default function BudgetPage() {
           )}
         </DashboardCard>
 
-        {/* Sectie: instellen wat er binnenkomt en vast uitgaat */}
-        <h3
-          id="sectie-instellen"
-          className="mt-2 scroll-mt-20 text-[13px] font-bold uppercase tracking-wide text-slate-400 lg:col-span-2"
-        >
-          Instellen
-        </h3>
-
         {/* Inkomsten, vaste lasten, abonnementen, leningen, spaardoelen */}
         <IncomeCard />
         <FixedCostsCard />
@@ -569,32 +596,13 @@ export default function BudgetPage() {
         </div>
         </ModuleGate>
         </div>
+        </>
+        )}
 
-        {/* Sectie: terugkijken op uitgaven */}
-        <h3 className="mt-2 text-[13px] font-bold uppercase tracking-wide text-slate-400 lg:col-span-2">
-          Terugkijken
-        </h3>
-
-        {/* Uitgaven: periode-presets + klikbare trend + verdeling + transacties
-            (samengevoegd uit "Uitgaven bekijken" en "Periodeoverzicht"). */}
+        {tab === 'uitgaven' && (
+        <>
+        {/* Uitgaven: periode-presets + klikbare trend + verdeling + transacties */}
         <SpendingExplorer transactions={transactions} periodStart={periodStart} />
-
-        {/* Sectie: indelen & importeren */}
-        <h3
-          id="sectie-importeren"
-          className="mt-2 scroll-mt-20 text-[13px] font-bold uppercase tracking-wide text-slate-400 lg:col-span-2"
-        >
-          Indelen &amp; importeren
-        </h3>
-
-        {/* Bestanden uploaden (premium uploadcentrum) */}
-        <BudgetImport />
-
-        {/* Hoe automatische categorisatie werkt */}
-        <AutoCategorizeSteps />
-
-        {/* Budget opschonen / categoriseren (met geheugen + AI) */}
-        <OverigCleanup />
 
         {/* Recent transactions (full width) */}
         <DashboardCard title="Recente uitgaven" className="lg:col-span-2">
@@ -634,9 +642,21 @@ export default function BudgetPage() {
             </ul>
           )}
         </DashboardCard>
+        </>
+        )}
 
-        {/* Snelle acties (onderaan dashboard) */}
-        <QuickActions actions={quickActions} />
+        {tab === 'importeren' && (
+        <>
+        {/* Bestanden uploaden (premium uploadcentrum) */}
+        <BudgetImport />
+
+        {/* Hoe automatische categorisatie werkt */}
+        <AutoCategorizeSteps />
+
+        {/* Budget opschonen / categoriseren (met geheugen + AI) */}
+        <OverigCleanup />
+        </>
+        )}
       </div>
 
       <Modal open={open} onClose={() => setOpen(false)} title="Uitgave toevoegen">

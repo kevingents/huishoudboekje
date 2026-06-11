@@ -3,7 +3,7 @@
 import { useMemo } from 'react'
 import { Sparkles, ArrowUpRight, ArrowDownRight, TrendingDown } from 'lucide-react'
 import DashboardCard from '../DashboardCard'
-import { isSpendingCategory, periodKeyOf, periodRangeOf } from '@/lib/budget'
+import { isSpendingCategory, periodKeyOf, periodRangeOf, shiftPeriodKey } from '@/lib/budget'
 import type { Transaction } from '@/lib/types'
 
 function euro(v: number) {
@@ -36,7 +36,7 @@ export default function InsightsCard({
     const cur = periodRangeOf(now, periodStart)
     const dstr = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
     const curKey = periodKeyOf(dstr(cur.start), periodStart) ?? ''
-    const prevKey = periodKeyOf(dstr(new Date(cur.start.getTime() - 86400000)), periodStart) ?? ''
+    const prevKey = shiftPeriodKey(curKey, -1)
 
     const curByCat = new Map<string, number>()
     const prevByCat = new Map<string, number>()

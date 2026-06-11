@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react'
 import { CalendarRange, ChevronDown } from 'lucide-react'
 import DashboardCard from '../DashboardCard'
-import { cleanLabel, isSpendingCategory, periodKeyOf } from '@/lib/budget'
+import { cleanLabel, isSpendingCategory, periodKeyOf, shiftPeriodKey } from '@/lib/budget'
 import type { Transaction } from '@/lib/types'
 
 const PALETTE = [
@@ -24,8 +24,10 @@ function txDate(t: Transaction): Date | null {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(t.date || '')
   if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
   if (/^vandaag$/i.test(t.date || '')) return startOfDay(new Date())
-  const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(t.createdAt || ''))
-  if (iso) return new Date(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]))
+  if (t.createdAt) {
+    const d = new Date(t.createdAt)
+    if (!isNaN(d.getTime())) return startOfDay(d) // lokale kalenderdatum (zoals keyOf)
+  }
   return null
 }
 /** Periode-sleutel van een transactie (datum óf createdAt), gegeven de startdag. */
@@ -37,14 +39,10 @@ function keyOf(t: Transaction, startDay: number): string | null {
   }
   return periodKeyOf(ds, startDay)
 }
-function shiftKey(key: string, delta: number): string {
-  const [y, m] = key.split('-').map(Number)
-  const d = new Date(y, m - 1 + delta, 1)
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}`
-}
 function rangeForKey(key: string, startDay: number): { start: Date; end: Date } {
+  const sd = Math.min(28, Math.max(1, startDay))
   const [y, m] = key.split('-').map(Number)
-  return { start: new Date(y, m - 1, startDay), end: new Date(y, m, startDay - 1) }
+  return { start: new Date(y, m - 1, sd), end: new Date(y, m, sd - 1) }
 }
 function fullLabel(key: string, startDay: number): string {
   const [y, m] = key.split('-').map(Number)
@@ -100,7 +98,7 @@ export default function SpendingExplorer({
       byKey.set(k, (byKey.get(k) ?? 0) + (Number(t.amount) || 0))
     }
     const keys: string[] = []
-    for (let i = 5; i >= 0; i--) keys.push(shiftKey(curKey, -i))
+    for (let i = 5; i >= 0; i--) keys.push(shiftPeriodKey(curKey, -i))
     const t = keys.map((k) => ({ key: k, total: byKey.get(k) ?? 0 }))
     return { trend: t, trendMax: Math.max(1, ...t.map((x) => x.total)) }
   }, [transactions, periodStart, curKey])
@@ -224,7 +222,7 @@ export default function SpendingExplorer({
                   style={{ height: `${Math.max(4, (v / trendMax) * 100)}%` }}
                 />
               </span>
-              <span className={`text-[10px] ${active ? 'font-bold text-brand' : 'text-slate-400'}`}>
+              <span className={`text-[10px] ${active ? 'font-bold text-brand' : 'text-slate-500 dark:text-slate-300'}`}>
                 {MONTHS[(Number(key.split('-')[1]) - 1 + 12) % 12]}
               </span>
             </button>
