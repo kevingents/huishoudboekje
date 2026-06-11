@@ -57,7 +57,9 @@ export default function SavingsGoalsCard({ className = '' }: { className?: strin
             return (
               <li key={g.id}>
                 <div className="mb-1.5 flex items-center gap-2">
-                  <span className="flex-1 text-sm font-semibold text-slate-800">{g.name}</span>
+                  <span className="flex-1 truncate text-sm font-semibold text-slate-800 dark:text-slate-100">
+                    {g.name}
+                  </span>
                   <span className="text-sm text-slate-500">
                     €{Math.round(g.saved)} <span className="text-slate-400">/ €{Math.round(g.target)}</span>
                   </span>
@@ -75,6 +77,10 @@ export default function SavingsGoalsCard({ className = '' }: { className?: strin
                     className="h-full rounded-full bg-emerald-500 transition-all duration-500"
                     style={{ width: `${pct}%` }}
                   />
+                </div>
+                <div className="mt-1 flex justify-between text-[11px] text-slate-400">
+                  <span className="font-semibold text-emerald-600 dark:text-emerald-400">{pct}% gehaald</span>
+                  <span>nog €{Math.round(Math.max(0, g.target - g.saved))} te gaan</span>
                 </div>
                 <form
                   onSubmit={(e) => {

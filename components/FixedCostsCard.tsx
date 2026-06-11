@@ -71,7 +71,7 @@ export default function FixedCostsCard({ className = '' }: { className?: string 
     const payload = {
       name: form.name.trim(),
       amount,
-      dueDay: form.dueDay ? Number(form.dueDay) : null,
+      dueDay: form.dueDay ? Math.min(28, Math.max(1, Number(form.dueDay))) : null,
       category: form.category,
       isSubscription: form.isSubscription,
       subscriptionInterval: form.isSubscription ? form.subscriptionInterval : null,

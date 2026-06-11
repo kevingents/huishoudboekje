@@ -61,42 +61,55 @@ export default function SubscriptionsCard() {
       ) : (
         <>
           <ul className="flex flex-col">
-            {subs.map((s, index) => (
-              <li key={s.id}>
-                <div className="group flex items-center gap-2 py-2.5">
-                  <div className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-semibold text-slate-800">{s.name}</span>
-                    <span className="block text-[11px] text-slate-400">
-                      {s.subscriptionInterval === '12 months' ? 'jaarlijks' : 'maandelijks'}
-                      {s.subscriptionCancelable === false
-                        ? s.subscriptionEndDate
-                          ? ` · loopt af op ${s.subscriptionEndDate}`
-                          : ''
-                        : ' · maandelijks opzegbaar'}
+            {subs.map((s, index) => {
+              const monthly = fixedCostMonthly(s)
+              return (
+                <li key={s.id}>
+                  <div className="group flex items-center gap-3 py-2.5">
+                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-sky-100 text-sky-600 dark:text-sky-300">
+                      <Repeat className="h-4 w-4" strokeWidth={2.2} />
                     </span>
+                    <div className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-semibold text-slate-800 dark:text-slate-100">
+                        {s.name}
+                      </span>
+                      <span className="block text-[11px] text-slate-400">
+                        {s.dueDay ? `incasso de ${s.dueDay}e · ` : ''}
+                        {s.subscriptionInterval === '12 months' ? 'jaarlijks' : 'maandelijks'}
+                        {s.subscriptionCancelable === false
+                          ? s.subscriptionEndDate
+                            ? ` · loopt af ${s.subscriptionEndDate}`
+                            : ''
+                          : ' · opzegbaar'}
+                      </span>
+                    </div>
+                    <span className="shrink-0 text-right">
+                      <span className="block text-sm font-bold text-slate-800 dark:text-slate-100">
+                        €{euro(monthly)}
+                        <span className="text-xs font-normal text-slate-400"> /mnd</span>
+                      </span>
+                      <span className="block text-[11px] text-slate-400">€{euro(monthly * 12)}/jr</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => removeCost(s.id)}
+                      aria-label={`${s.name} verwijderen`}
+                      className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-slate-300 opacity-0 transition-all hover:bg-rose-50 hover:text-rose-500 group-hover:opacity-100"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
                   </div>
-                  <span className="shrink-0 text-sm font-bold text-slate-800">
-                    €{euro(s.amount)}
-                    <span className="text-xs font-normal text-slate-400">
-                      {s.subscriptionInterval === '12 months' ? ' /jr' : ' /mnd'}
-                    </span>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => removeCost(s.id)}
-                    aria-label={`${s.name} verwijderen`}
-                    className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-slate-300 opacity-0 transition-all hover:bg-rose-50 hover:text-rose-500 group-hover:opacity-100"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-                {index < subs.length - 1 && <hr className="border-cardborder" />}
-              </li>
-            ))}
+                  {index < subs.length - 1 && <hr className="border-cardborder" />}
+                </li>
+              )
+            })}
           </ul>
           <div className="mt-3 flex items-center justify-between border-t border-cardborder pt-3">
-            <span className="text-sm font-semibold text-slate-600">Totaal per maand</span>
-            <span className="text-sm font-extrabold text-slate-800">€{euro(total)}</span>
+            <span className="text-sm font-semibold text-slate-600">Totaal</span>
+            <span className="text-right">
+              <span className="block text-sm font-extrabold text-slate-800 dark:text-slate-100">€{euro(total)} /mnd</span>
+              <span className="block text-[11px] text-slate-400">€{euro(total * 12)} per jaar</span>
+            </span>
           </div>
         </>
       )}

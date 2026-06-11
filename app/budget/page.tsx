@@ -243,7 +243,9 @@ export default function BudgetPage() {
   // over het resterende deel).
   const now = new Date()
   const periodNow = periodRangeOf(now, periodStart)
-  const currentKey = `${periodNow.start.getFullYear()}-${String(periodNow.start.getMonth() + 1).padStart(2, '0')}`
+  // currentKey via dezelfde helper als de transactie-bucketing (jaarwissel-veilig).
+  const nowStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+  const currentKey = periodKeyOf(nowStr, periodStart) ?? ''
   const currentByCat = new Map<string, number>()
   let currentSpent = 0
   for (const t of spendingTx) {
@@ -331,7 +333,9 @@ export default function BudgetPage() {
       ['Datum', 'Omschrijving', 'Categorie', 'Bedrag'],
       ...transactions.map((t) => [t.date, t.label, t.category, String(t.amount)]),
     ]
-    const csv = rows.map((r) => r.map((c) => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\n')
+    const csv = rows
+      .map((r) => r.map((c) => `"${String(c ?? '').replace(/"/g, '""').replace(/[\r\n]+/g, ' ')}"`).join(','))
+      .join('\r\n')
     const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')

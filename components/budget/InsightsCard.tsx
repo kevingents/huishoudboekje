@@ -29,10 +29,10 @@ export default function InsightsCard({
   const data = useMemo(() => {
     const now = new Date()
     const cur = periodRangeOf(now, periodStart)
-    const curKey = `${cur.start.getFullYear()}-${pad(cur.start.getMonth() + 1)}`
-    const prevStartM = cur.start.getMonth() - 1
-    const prevDate = new Date(cur.start.getFullYear(), prevStartM, 15)
-    const prevKey = `${prevDate.getFullYear()}-${pad(prevDate.getMonth() + 1)}`
+    const dstr = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+    const curKey = periodKeyOf(dstr(cur.start), periodStart) ?? ''
+    // De dag vóór de huidige periode valt in de vorige periode (jaarwissel-veilig).
+    const prevKey = periodKeyOf(dstr(new Date(cur.start.getTime() - 86400000)), periodStart) ?? ''
 
     const curByCat = new Map<string, number>()
     const prevByCat = new Map<string, number>()
