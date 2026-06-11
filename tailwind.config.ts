@@ -1,6 +1,10 @@
 import type { Config } from 'tailwindcss'
 
 const config: Config = {
+  // Donkere modus volgt de in-app thema-keuze (html.dark via A11yProvider), niet de
+  // OS-voorkeur. Zonder dit volgen `dark:`-klassen de media-query en raken ze los van
+  // het app-thema (licht thema + OS-donker gaf lichte tekst op lichte achtergrond).
+  darkMode: 'class',
   content: ['./app/**/*.{ts,tsx}', './components/**/*.{ts,tsx}', './lib/**/*.{ts,tsx}'],
   theme: {
     extend: {
