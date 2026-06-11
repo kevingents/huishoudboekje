@@ -139,7 +139,10 @@ export async function POST(req: Request) {
     // Geleerde regels toepassen: inkomsten/negeren overslaan, vaste lasten doorzetten.
     const rules = await prisma.merchantRule.findMany({ where: { householdId: hid } })
     const toStore: { label: string; category: string; amount: number; date: string }[] = []
-    const fixedAgg = new Map<string, { name: string; sum: number; count: number; category: string; isSub: boolean }>()
+    const fixedAgg = new Map<
+      string,
+      { name: string; sum: number; count: number; category: string; isSub: boolean; months: Set<string> }
+    >()
     let skippedKind = 0
     for (const d of fresh) {
       const { category, kind } = classifyWithRules(d.label, rules, d.category)
@@ -151,9 +154,12 @@ export async function POST(req: Request) {
         const rule = matchRule(d.label, rules)
         const name = titleCase(rule?.pattern || d.label).slice(0, 60)
         const fa =
-          fixedAgg.get(name) ?? { name, sum: 0, count: 0, category: rule?.category || '', isSub: kind === 'subscription' }
+          fixedAgg.get(name) ??
+          { name, sum: 0, count: 0, category: rule?.category || '', isSub: kind === 'subscription', months: new Set<string>() }
         fa.sum += d.amount
         fa.count += 1
+        const ym = /^(\d{4})-(\d{2})/.exec(d.date || '')
+        if (ym) fa.months.add(`${ym[1]}-${ym[2]}`)
         fixedAgg.set(name, fa)
       }
       toStore.push({ label: d.label, category, amount: d.amount, date: d.date })
@@ -179,7 +185,8 @@ export async function POST(req: Request) {
       })
     }
 
-    // Vaste lasten uit fixed-regels aanmaken (gemiddeld bedrag, geen dubbele namen).
+    // Vaste lasten uit fixed-regels aanmaken: maandbedrag = totaal ÷ aantal MAANDEN
+    // (2× per maand, zoals een gesplitste hypotheek, telt zo op tot het maandbedrag).
     let fixedCreated = 0
     if (fixedAgg.size) {
       const existingFixed = await prisma.fixedCost.findMany({ where: { householdId: hid }, select: { name: true } })
@@ -190,7 +197,7 @@ export async function POST(req: Request) {
           data: {
             householdId: hid,
             name: fa.name,
-            amount: Math.round((fa.sum / fa.count) * 100) / 100,
+            amount: Math.round((fa.sum / Math.max(1, fa.months.size || fa.count)) * 100) / 100,
             category: fa.category || suggestCostCategory(fa.name),
             isSubscription: fa.isSub,
             subscriptionInterval: fa.isSub ? '1 month' : null,

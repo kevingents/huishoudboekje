@@ -40,7 +40,10 @@ export async function POST() {
   // Per transactie de definitieve categorie bepalen (regels > ingebouwd > met rust laten).
   const updates: { id: number; category: string }[] = []
   const spentByCat = new Map<string, number>()
-  const fixedAgg = new Map<string, { name: string; sum: number; count: number; category: string; isSub: boolean }>()
+  const fixedAgg = new Map<
+    string,
+    { name: string; sum: number; count: number; category: string; isSub: boolean; months: Set<string> }
+  >()
   const incAgg = new Map<string, { name: string; sum: number; count: number; subtype: string }>()
 
   for (const t of txs) {
@@ -52,9 +55,11 @@ export async function POST() {
         const name = titleCase(rule.pattern).slice(0, 60) // zelfde afkapping als de import (dedup)
         const fa =
           fixedAgg.get(rule.pattern) ??
-          { name, sum: 0, count: 0, category: rule.category || '', isSub: rule.kind === 'subscription' }
+          { name, sum: 0, count: 0, category: rule.category || '', isSub: rule.kind === 'subscription', months: new Set<string>() }
         fa.sum += t.amount
         fa.count += 1
+        const ym = /^(\d{4})-(\d{2})/.exec(t.date || '')
+        if (ym) fa.months.add(`${ym[1]}-${ym[2]}`)
         fixedAgg.set(rule.pattern, fa)
       } else if (rule.kind === 'income') {
         const name = titleCase(rule.pattern)
@@ -96,14 +101,15 @@ export async function POST() {
     ci++
   }
 
-  // Vaste lasten uit fixed-regels aanmaken (gemiddeld bedrag per afschrijving).
+  // Vaste lasten uit fixed-regels aanmaken: maandbedrag = totaal ÷ aantal MAANDEN
+  // (zo telt 2× per maand, zoals een gesplitste hypotheek, op tot het echte maandbedrag).
   let fixedCreated = 0
   if (fixedAgg.size) {
     const existingFixed = await prisma.fixedCost.findMany({ where: { householdId: hid }, select: { name: true } })
     const haveFixed = new Set(existingFixed.map((f) => f.name.toLowerCase()))
     for (const fa of fixedAgg.values()) {
       if (!fa.count || haveFixed.has(fa.name.toLowerCase())) continue
-      const amount = Math.round((fa.sum / fa.count) * 100) / 100
+      const amount = Math.round((fa.sum / Math.max(1, fa.months.size || fa.count)) * 100) / 100
       await prisma.fixedCost.create({
         data: {
           householdId: hid,
