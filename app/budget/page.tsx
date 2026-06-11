@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { BarChart3, Plus, Trash2, Pencil, LineChart, ScanLine, Sparkles, FolderPlus, ArrowRightLeft } from 'lucide-react'
+import { BarChart3, Plus, Trash2, Pencil, LineChart, ScanLine, Sparkles, FolderPlus, ArrowRightLeft, UploadCloud, Repeat, Target, Download } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
 import DashboardCard from '@/components/DashboardCard'
 import Modal from '@/components/Modal'
@@ -31,6 +31,8 @@ import BudgetProgressCard from '@/components/budget/BudgetProgressCard'
 import AiCoachCard from '@/components/budget/AiCoachCard'
 import AutoCategorizeSteps from '@/components/budget/AutoCategorizeSteps'
 import InsightsCard from '@/components/budget/InsightsCard'
+import UpcomingPaymentsCard from '@/components/budget/UpcomingPaymentsCard'
+import QuickActions, { type QuickAction } from '@/components/budget/QuickActions'
 import type { BudgetCategory } from '@/lib/types'
 
 const colorClasses: Record<string, { bar: string; iconBg: string; iconText: string }> = {
@@ -322,6 +324,30 @@ export default function BudgetPage() {
     ? spendingCats.map((c) => c.name).filter((n) => n !== manageCat.name)
     : []
 
+  const scrollToId = (id: string) =>
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  const exportCsv = () => {
+    const rows = [
+      ['Datum', 'Omschrijving', 'Categorie', 'Bedrag'],
+      ...transactions.map((t) => [t.date, t.label, t.category, String(t.amount)]),
+    ]
+    const csv = rows.map((r) => r.map((c) => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\n')
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'budget-export.csv'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+  const quickActions: QuickAction[] = [
+    { icon: Plus, label: 'Nieuwe uitgave', onClick: openAdd },
+    { icon: UploadCloud, label: 'Bestand uploaden', onClick: () => scrollToId('sectie-importeren') },
+    { icon: Repeat, label: 'Abonnement', onClick: () => scrollToId('sectie-instellen') },
+    { icon: Target, label: 'Spaardoel', onClick: () => scrollToId('sectie-instellen') },
+    { icon: Download, label: 'Rapport (CSV)', onClick: exportCsv },
+  ]
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     const amount = Number(form.amount.replace(',', '.'))
@@ -522,7 +548,10 @@ export default function BudgetPage() {
         </DashboardCard>
 
         {/* Sectie: instellen wat er binnenkomt en vast uitgaat */}
-        <h3 className="mt-2 text-[13px] font-bold uppercase tracking-wide text-slate-400 lg:col-span-2">
+        <h3
+          id="sectie-instellen"
+          className="mt-2 scroll-mt-20 text-[13px] font-bold uppercase tracking-wide text-slate-400 lg:col-span-2"
+        >
           Instellen
         </h3>
 
@@ -532,6 +561,7 @@ export default function BudgetPage() {
         <SubscriptionsCard />
         <LoansCard />
         <SavingsGoalsCard />
+        <UpcomingPaymentsCard costs={costs} />
         </div>
         </ModuleGate>
         </div>
@@ -556,7 +586,10 @@ export default function BudgetPage() {
         <MonthlyOverview transactions={transactions} periodStart={periodStart} />
 
         {/* Sectie: indelen & importeren */}
-        <h3 className="mt-2 text-[13px] font-bold uppercase tracking-wide text-slate-400 lg:col-span-2">
+        <h3
+          id="sectie-importeren"
+          className="mt-2 scroll-mt-20 text-[13px] font-bold uppercase tracking-wide text-slate-400 lg:col-span-2"
+        >
           Indelen &amp; importeren
         </h3>
 
@@ -607,6 +640,9 @@ export default function BudgetPage() {
             </ul>
           )}
         </DashboardCard>
+
+        {/* Snelle acties (onderaan dashboard) */}
+        <QuickActions actions={quickActions} />
       </div>
 
       <Modal open={open} onClose={() => setOpen(false)} title="Uitgave toevoegen">
