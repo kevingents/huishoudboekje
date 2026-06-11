@@ -63,6 +63,7 @@ export async function DELETE() {
     prisma.subscription.deleteMany({ where }),
     prisma.notification.deleteMany({ where }),
     prisma.savingsGoal.deleteMany({ where }),
+    prisma.familyBudget.deleteMany({ where }),
     prisma.fixedCost.deleteMany({ where }),
     prisma.income.deleteMany({ where }),
     prisma.merchantRule.deleteMany({ where }),

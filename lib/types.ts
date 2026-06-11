@@ -127,6 +127,17 @@ export interface SavingsGoal {
   name: string
   target: number
   saved: number
+  targetDate?: string | null
+  theme?: string | null
+}
+
+export interface FamilyBudget {
+  id: number
+  name: string
+  limit: number
+  spent: number
+  member?: string | null
+  color: string
 }
 
 export interface FixedCost {

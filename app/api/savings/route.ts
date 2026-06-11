@@ -18,7 +18,14 @@ export async function POST(req: Request) {
     return Response.json({ error: 'name en target zijn verplicht' }, { status: 400 })
   }
   const goal = await prisma.savingsGoal.create({
-    data: { householdId: hid, name: String(body.name), target: Number(body.target), saved: Number(body.saved ?? 0) },
+    data: {
+      householdId: hid,
+      name: String(body.name),
+      target: Number(body.target),
+      saved: Number(body.saved ?? 0),
+      targetDate: body.targetDate ? String(body.targetDate) : null,
+      theme: body.theme ? String(body.theme) : null,
+    },
   })
   return Response.json(goal, { status: 201 })
 }

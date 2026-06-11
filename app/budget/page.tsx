@@ -33,6 +33,7 @@ import AutoCategorizeSteps from '@/components/budget/AutoCategorizeSteps'
 import InsightsCard from '@/components/budget/InsightsCard'
 import UpcomingPaymentsCard from '@/components/budget/UpcomingPaymentsCard'
 import QuickActions, { type QuickAction } from '@/components/budget/QuickActions'
+import GezinsbudgetCard from '@/components/budget/GezinsbudgetCard'
 import type { BudgetCategory } from '@/lib/types'
 
 const colorClasses: Record<string, { bar: string; iconBg: string; iconText: string }> = {
@@ -565,6 +566,7 @@ export default function BudgetPage() {
         <SubscriptionsCard />
         <LoansCard />
         <SavingsGoalsCard />
+        <GezinsbudgetCard />
         <UpcomingPaymentsCard costs={costs} />
         </div>
         </ModuleGate>

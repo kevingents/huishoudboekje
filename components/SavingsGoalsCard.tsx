@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { PiggyBank, Plus, Trash2 } from 'lucide-react'
+import { PiggyBank, Plus, Trash2, Plane, Car, Home, Gift, ShieldCheck, type LucideIcon } from 'lucide-react'
 import DashboardCard from './DashboardCard'
 import Modal from './Modal'
 import { useSavings } from '@/lib/hooks'
@@ -9,18 +9,45 @@ import { useSavings } from '@/lib/hooks'
 const inputClass =
   'w-full rounded-xl border border-cardborder bg-white px-3.5 py-2.5 text-sm text-slate-700 outline-none transition-colors placeholder:text-slate-400 focus:border-brand/40 focus:ring-2 focus:ring-brand/20'
 
+const THEMES: Record<string, { label: string; icon: LucideIcon; bg: string; text: string }> = {
+  algemeen: { label: 'Algemeen', icon: PiggyBank, bg: 'bg-emerald-100', text: 'text-emerald-600 dark:text-emerald-300' },
+  vakantie: { label: 'Vakantie', icon: Plane, bg: 'bg-sky-100', text: 'text-sky-600 dark:text-sky-300' },
+  auto: { label: 'Auto', icon: Car, bg: 'bg-violet-100', text: 'text-violet-600 dark:text-violet-300' },
+  huis: { label: 'Huis', icon: Home, bg: 'bg-amber-100', text: 'text-amber-600 dark:text-amber-300' },
+  feest: { label: 'Feest', icon: Gift, bg: 'bg-pink-100', text: 'text-pink-600 dark:text-pink-300' },
+  noodfonds: { label: 'Noodfonds', icon: ShieldCheck, bg: 'bg-slate-100', text: 'text-slate-600 dark:text-slate-300' },
+}
+const themeOf = (t?: string | null) => THEMES[t || 'algemeen'] ?? THEMES.algemeen
+const THEME_KEYS = Object.keys(THEMES)
+
+/** Aantal hele maanden tot een einddatum (yyyy-mm-dd), minimaal 1; null als verleden/leeg. */
+function monthsUntil(dateStr?: string | null): number | null {
+  const m = /^(\d{4})-(\d{2})/.exec(dateStr || '')
+  if (!m) return null
+  const now = new Date()
+  const months = (Number(m[1]) - now.getFullYear()) * 12 + (Number(m[2]) - 1 - now.getMonth())
+  return months >= 1 ? months : null
+}
+
+const emptyForm = { name: '', target: '', targetDate: '', theme: 'algemeen' }
+
 export default function SavingsGoalsCard({ className = '' }: { className?: string }) {
   const { goals, addGoal, deposit, removeGoal } = useSavings()
   const [open, setOpen] = useState(false)
-  const [form, setForm] = useState({ name: '', target: '' })
+  const [form, setForm] = useState(emptyForm)
   const [drafts, setDrafts] = useState<Record<number, string>>({})
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     const target = Number(form.target.replace(',', '.'))
     if (!form.name.trim() || !target) return
-    await addGoal(form.name, target)
-    setForm({ name: '', target: '' })
+    await addGoal({
+      name: form.name.trim(),
+      target,
+      targetDate: form.targetDate || null,
+      theme: form.theme,
+    })
+    setForm(emptyForm)
     setOpen(false)
   }
 
@@ -54,20 +81,33 @@ export default function SavingsGoalsCard({ className = '' }: { className?: strin
         <ul className="flex flex-col gap-4">
           {goals.map((g) => {
             const pct = g.target ? Math.min(Math.round((g.saved / g.target) * 100), 100) : 0
+            const remaining = Math.max(0, g.target - g.saved)
+            const months = monthsUntil(g.targetDate)
+            const perMonth = months ? Math.ceil(remaining / months) : null
+            const th = themeOf(g.theme)
+            const Icon = th.icon
             return (
               <li key={g.id}>
-                <div className="mb-1.5 flex items-center gap-2">
-                  <span className="flex-1 truncate text-sm font-semibold text-slate-800 dark:text-slate-100">
-                    {g.name}
+                <div className="mb-1.5 flex items-center gap-2.5">
+                  <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl ${th.bg} ${th.text}`}>
+                    <Icon className="h-4 w-4" strokeWidth={2.2} />
                   </span>
-                  <span className="text-sm text-slate-500">
+                  <div className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-semibold text-slate-800 dark:text-slate-100">
+                      {g.name}
+                    </span>
+                    {g.targetDate && (
+                      <span className="block text-[11px] text-slate-400">streefdatum {g.targetDate}</span>
+                    )}
+                  </div>
+                  <span className="shrink-0 text-sm text-slate-500">
                     €{Math.round(g.saved)} <span className="text-slate-400">/ €{Math.round(g.target)}</span>
                   </span>
                   <button
                     type="button"
                     onClick={() => removeGoal(g.id)}
                     aria-label={`${g.name} verwijderen`}
-                    className="grid h-7 w-7 place-items-center rounded-full text-slate-300 transition-colors hover:bg-rose-50 hover:text-rose-500"
+                    className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-slate-300 transition-colors hover:bg-rose-50 hover:text-rose-500"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
@@ -80,7 +120,10 @@ export default function SavingsGoalsCard({ className = '' }: { className?: strin
                 </div>
                 <div className="mt-1 flex justify-between text-[11px] text-slate-400">
                   <span className="font-semibold text-emerald-600 dark:text-emerald-400">{pct}% gehaald</span>
-                  <span>nog €{Math.round(Math.max(0, g.target - g.saved))} te gaan</span>
+                  <span>
+                    nog €{Math.round(remaining)}
+                    {perMonth ? ` · €${perMonth}/mnd nodig` : ''}
+                  </span>
                 </div>
                 <form
                   onSubmit={(e) => {
@@ -121,16 +164,50 @@ export default function SavingsGoalsCard({ className = '' }: { className?: strin
               className={`mt-1 ${inputClass}`}
             />
           </label>
-          <label className="text-xs font-semibold text-slate-500">
-            Doelbedrag (€)
-            <input
-              inputMode="decimal"
-              value={form.target}
-              onChange={(e) => setForm({ ...form, target: e.target.value })}
-              placeholder="1500"
-              className={`mt-1 ${inputClass}`}
-            />
-          </label>
+          <div className="flex gap-3">
+            <label className="flex-1 text-xs font-semibold text-slate-500">
+              Doelbedrag (€)
+              <input
+                inputMode="decimal"
+                value={form.target}
+                onChange={(e) => setForm({ ...form, target: e.target.value })}
+                placeholder="1500"
+                className={`mt-1 ${inputClass}`}
+              />
+            </label>
+            <label className="flex-1 text-xs font-semibold text-slate-500">
+              Streefdatum (optioneel)
+              <input
+                type="date"
+                value={form.targetDate}
+                onChange={(e) => setForm({ ...form, targetDate: e.target.value })}
+                className={`mt-1 ${inputClass}`}
+              />
+            </label>
+          </div>
+          <div>
+            <p className="mb-1 text-xs font-semibold text-slate-500">Thema</p>
+            <div className="flex flex-wrap gap-1.5">
+              {THEME_KEYS.map((k) => {
+                const t = THEMES[k]
+                const TIcon = t.icon
+                const active = form.theme === k
+                return (
+                  <button
+                    key={k}
+                    type="button"
+                    onClick={() => setForm({ ...form, theme: k })}
+                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
+                      active ? 'bg-brand text-white' : `${t.bg} ${t.text}`
+                    }`}
+                  >
+                    <TIcon className="h-3.5 w-3.5" />
+                    {t.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
           <button
             type="submit"
             className="pill mt-2 bg-brand px-4 py-2.5 text-white shadow-sm shadow-brand/20 hover:bg-brand-dark"

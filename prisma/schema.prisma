@@ -207,6 +207,23 @@ model SavingsGoal {
   name        String
   target      Float
   saved       Float    @default(0)
+  targetDate  String? // yyyy-mm-dd, optionele einddatum (voor "maandelijks benodigd")
+  theme       String? // cover-thema: algemeen/vakantie/auto/huis/feest/noodfonds
+  createdAt   DateTime @default(now())
+
+  @@index([householdId])
+}
+
+// Gezinsbudget-"potjes" (envelopes): een maandbudget per onderwerp, optioneel
+// toegewezen aan een gezinslid. 'spent' wordt handmatig bijgehouden (uitgave loggen).
+model FamilyBudget {
+  id          Int      @id @default(autoincrement())
+  householdId Int
+  name        String
+  limit       Float    @default(0)
+  spent       Float    @default(0)
+  member      String? // naam van het gezinslid (optioneel)
+  color       String   @default("emerald")
   createdAt   DateTime @default(now())
 
   @@index([householdId])

@@ -8,20 +8,20 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   const body = await req.json()
   const data: Record<string, unknown> = {}
   if (body.name !== undefined) data.name = String(body.name)
-  if (body.target !== undefined) data.target = Number(body.target)
-  if (body.saved !== undefined) data.saved = Number(body.saved)
-  if (body.deposit !== undefined) data.saved = { increment: Number(body.deposit) }
-  if (body.targetDate !== undefined) data.targetDate = body.targetDate ? String(body.targetDate) : null
-  if (body.theme !== undefined) data.theme = body.theme ? String(body.theme) : null
-  const result = await prisma.savingsGoal.updateMany({ where: { id, householdId: hid }, data })
+  if (body.limit !== undefined) data.limit = Number(body.limit)
+  if (body.spent !== undefined) data.spent = Number(body.spent)
+  if (body.spend !== undefined) data.spent = { increment: Number(body.spend) }
+  if (body.member !== undefined) data.member = body.member ? String(body.member) : null
+  if (body.color !== undefined) data.color = String(body.color)
+  const result = await prisma.familyBudget.updateMany({ where: { id, householdId: hid }, data })
   if (result.count === 0) return notFound()
-  const goal = await prisma.savingsGoal.findUnique({ where: { id } })
-  return Response.json(goal)
+  const item = await prisma.familyBudget.findUnique({ where: { id } })
+  return Response.json(item)
 }
 
 export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
   const hid = await requireModule('budgetplanner')
   if (hid instanceof Response) return hid
-  await prisma.savingsGoal.deleteMany({ where: { id: Number(params.id), householdId: hid } })
+  await prisma.familyBudget.deleteMany({ where: { id: Number(params.id), householdId: hid } })
   return new Response(null, { status: 204 })
 }

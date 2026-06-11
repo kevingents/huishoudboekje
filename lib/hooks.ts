@@ -15,6 +15,7 @@ import type {
   Subscription,
   NotificationItem,
   SavingsGoal,
+  FamilyBudget,
   FixedCost,
 } from './types'
 
@@ -272,17 +273,48 @@ export function useBudget() {
 /*  Budgetplanner: spaardoelen + vaste lasten                                 */
 /* -------------------------------------------------------------------------- */
 
+type SavingsInput = { name: string; target: number; targetDate?: string | null; theme?: string | null }
+
 export function useSavings() {
   const c = useCollection<SavingsGoal>('/api/savings')
   return {
     goals: c.items,
     isLoading: c.isLoading,
-    addGoal: (name: string, target: number) =>
-      c.create({ name, target }, { name, target, saved: 0 }),
+    addGoal: (payload: SavingsInput) =>
+      c.create(payload as Record<string, unknown>, {
+        name: payload.name,
+        target: payload.target,
+        saved: 0,
+        targetDate: payload.targetDate ?? null,
+        theme: payload.theme ?? null,
+      }),
     deposit: (goal: SavingsGoal, amount: number) =>
       c.update(goal.id, { saved: Math.max(0, goal.saved + amount) }),
-    updateGoal: (id: number, payload: { name?: string; target?: number }) => c.update(id, payload),
+    updateGoal: (id: number, payload: Partial<SavingsInput>) => c.update(id, payload as Record<string, unknown>),
     removeGoal: (id: number) => c.remove(id),
+  }
+}
+
+type FamilyBudgetInput = { name: string; limit?: number; member?: string | null; color?: string }
+
+export function useFamilyBudgets() {
+  const c = useCollection<FamilyBudget>('/api/family-budgets')
+  return {
+    budgets: c.items,
+    isLoading: c.isLoading,
+    addBudget: (payload: FamilyBudgetInput) =>
+      c.create(payload as Record<string, unknown>, {
+        name: payload.name,
+        limit: payload.limit ?? 0,
+        spent: 0,
+        member: payload.member ?? null,
+        color: payload.color ?? 'emerald',
+      }),
+    updateBudget: (id: number, payload: Partial<FamilyBudgetInput> & { spent?: number }) =>
+      c.update(id, payload as Record<string, unknown>),
+    logSpend: (budget: FamilyBudget, amount: number) =>
+      c.update(budget.id, { spent: Math.max(0, budget.spent + amount) }),
+    removeBudget: (id: number) => c.remove(id),
   }
 }
 
