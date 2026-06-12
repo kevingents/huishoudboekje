@@ -12,7 +12,8 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:reset": "prisma migrate reset --force",
     "gen:icons": "node scripts/gen-icons.mjs",
-    "dev:db": "node scripts/dev-db.mjs"
+    "dev:db": "node scripts/dev-db.mjs",
+    "db:fresh": "node scripts/fresh-db.mjs"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

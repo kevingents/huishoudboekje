@@ -13,6 +13,9 @@ const pg = new EmbeddedPostgres({
   password: 'password',
   port: 5432,
   persistent: true,
+  // UTF8 forceren — anders kiest initdb op Windows WIN1252 en falen migraties
+  // met Unicode-tekens (productie/Neon is ook UTF8).
+  initdbFlags: ['--encoding=UTF8', '--locale=C'],
 })
 
 const fresh = !existsSync(join(dataDir, 'PG_VERSION'))
