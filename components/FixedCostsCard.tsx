@@ -27,7 +27,7 @@ const emptyForm = {
 }
 
 export default function FixedCostsCard({ className = '' }: { className?: string }) {
-  const { costs, addCost, updateCost, removeCost } = useFixedCosts()
+  const { costs, addCost, updateCost, splitCost, removeCost } = useFixedCosts()
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<FixedCost | null>(null)
   const [form, setForm] = useState(emptyForm)
@@ -35,6 +35,7 @@ export default function FixedCostsCard({ className = '' }: { className?: string 
   const [catTouched, setCatTouched] = useState(false)
   // Splitsen in rente + aflossing (hypotheek): het aflossingsdeel in euro's.
   const [splitDraft, setSplitDraft] = useState('')
+  const [splitError, setSplitError] = useState<string | null>(null)
 
   const total = costs.reduce((sum, c) => sum + fixedCostMonthly(c), 0)
 
@@ -48,6 +49,7 @@ export default function FixedCostsCard({ className = '' }: { className?: string 
   const openEdit = (c: FixedCost) => {
     setEditing(c)
     setSplitDraft('')
+    setSplitError(null)
     setForm({
       name: c.name,
       amount: String(c.amount).replace('.', ','),
@@ -293,20 +295,25 @@ export default function FixedCostsCard({ className = '' }: { className?: string 
                     if (!editing) return
                     const total = Number(form.amount.replace(',', '.'))
                     const afl = Number(splitDraft.replace(',', '.'))
-                    if (!afl || afl <= 0 || afl >= total) return
-                    const rente = Math.round((total - afl) * 100) / 100
-                    const base = form.name.trim()
-                    const dueDay = form.dueDay ? Math.min(28, Math.max(1, Number(form.dueDay))) : null
-                    await updateCost(editing.id, { name: `${base} — rente`, amount: rente })
-                    await addCost({ name: `${base} — aflossing`, amount: afl, category: 'Aflossingen', dueDay })
-                    setSplitDraft('')
-                    setOpen(false)
+                    if (!afl || afl <= 0 || afl >= total) {
+                      setSplitError('Vul een aflossingsbedrag in dat groter is dan €0 en kleiner dan het totaal.')
+                      return
+                    }
+                    setSplitError(null)
+                    try {
+                      await splitCost(editing.id, afl)
+                      setSplitDraft('')
+                      setOpen(false)
+                    } catch {
+                      setSplitError('Splitsen mislukt — probeer het opnieuw.')
+                    }
                   }}
                   className="pill shrink-0 bg-white px-3 py-2 text-xs font-semibold text-slate-700 ring-1 ring-cardborder hover:bg-slate-100"
                 >
                   Splitsen
                 </button>
               </div>
+              {splitError && <p className="mt-1.5 text-[11px] font-medium text-rose-600">{splitError}</p>}
             </div>
           )}
         </form>

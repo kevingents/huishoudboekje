@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db'
 import { requireHousehold, notFound } from '@/lib/guard'
+import { EXCLUDED_CATEGORIES } from '@/lib/budget'
 
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
   const hid = await requireHousehold()
@@ -7,7 +8,14 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   const id = Number(params.id)
   const body = await req.json()
   const data: Record<string, unknown> = {}
-  if (body.name !== undefined) data.name = String(body.name)
+  if (body.name !== undefined) {
+    const name = String(body.name).trim()
+    if (!name) return Response.json({ error: 'name mag niet leeg zijn' }, { status: 400 })
+    if (EXCLUDED_CATEGORIES.some((r) => r.toLowerCase() === name.toLowerCase())) {
+      return Response.json({ error: `"${name}" is gereserveerd en kan geen categorie zijn.` }, { status: 400 })
+    }
+    data.name = name
+  }
   if (body.icon !== undefined) data.icon = String(body.icon)
   if (body.color !== undefined) data.color = String(body.color)
   if (body.limit !== undefined) data.limit = Number(body.limit)

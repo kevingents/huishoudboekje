@@ -353,6 +353,11 @@ export function useFixedCosts() {
         subscriptionEndDate: payload.subscriptionEndDate ?? null,
       }),
     updateCost: (id: number, payload: FixedCostInput) => c.update(id, payload as Record<string, unknown>),
+    /** Splits atomair in rente + aflossing (server-side transactie). */
+    splitCost: async (id: number, aflossing: number) => {
+      await apiPost(`/api/fixed-costs/${id}/split`, { aflossing })
+      await c.mutate()
+    },
     removeCost: (id: number) => c.remove(id),
   }
 }

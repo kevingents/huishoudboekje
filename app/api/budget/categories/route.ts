@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db'
 import { requireHousehold } from '@/lib/guard'
+import { EXCLUDED_CATEGORIES } from '@/lib/budget'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,6 +18,10 @@ export async function POST(req: Request) {
   const name = String(body?.name ?? '').trim()
   if (!name) {
     return Response.json({ error: 'name is verplicht' }, { status: 400 })
+  }
+  // Gereserveerde namen (Inkomsten/Negeren/Vaste lasten) zijn geen uitgave-categorieën.
+  if (EXCLUDED_CATEGORIES.some((r) => r.toLowerCase() === name.toLowerCase())) {
+    return Response.json({ error: `"${name}" is gereserveerd en kan geen categorie zijn.` }, { status: 400 })
   }
   // Bestaat de categorie al (case-insensitief)? Geef die terug i.p.v. een duplicaat.
   const existing = await prisma.budgetCategory.findFirst({

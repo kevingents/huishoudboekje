@@ -45,12 +45,15 @@ export default function RecurringSuggestions() {
 
   const candidates = useMemo<Candidate[]>(() => {
     if (!rules) return []
+    // Categorieën die per definitie variabel zijn — daar zit vrijwel nooit een incasso.
+    const VARIABLE_CATS = new Set(['Boodschappen', 'Horeca', 'Contant geld', 'Onderling'])
     const groups = new Map<string, { example: string; amounts: number[]; months: Set<string> }>()
     for (const t of transactions) {
       const amount = Number(t.amount) || 0
       if (amount <= 0 || !isSpendingCategory(t.category) || t.category === 'Vaste lasten') continue
+      if (VARIABLE_CATS.has(t.category)) continue
       const key = merchantKey(t.label)
-      if (!key || key.length < 3) continue
+      if (!key || key.length < 4) continue // te korte sleutels geven te brede regels
       const g = groups.get(key) ?? { example: t.label, amounts: [], months: new Set<string>() }
       g.amounts.push(amount)
       const pk = periodKeyOf(t.date)
@@ -59,12 +62,15 @@ export default function RecurringSuggestions() {
     }
     const out: Candidate[] = []
     for (const [key, g] of groups) {
-      if (g.months.size < 2) continue // pas terugkerend vanaf 2 maanden
+      if (g.months.size < 2) continue
       const min = Math.min(...g.amounts)
       const max = Math.max(...g.amounts)
       const avg = g.amounts.reduce((s, v) => s + v, 0) / g.amounts.length
-      // Stabiel bedrag: max ~15% (of €2) verschil — typisch een incasso/abonnement.
-      if (max - min > Math.max(2, avg * 0.15)) continue
+      // Gestaffelde stabiliteit: bij maar 2 maanden moet het bedrag vrijwel exact
+      // gelijk zijn (echte incasso's zijn dat); vanaf 3 maanden mag ~8% variatie
+      // (termijnbedrag-wijzigingen). Voorkomt valse hits op variabele uitgaven.
+      const tolerance = g.months.size >= 3 ? Math.max(2, avg * 0.08) : Math.max(0.5, avg * 0.01)
+      if (max - min > tolerance) continue
       if (matchRule(g.example, rules)) continue // al ingedeeld via een geleerde regel
       if (dismissed.includes(key)) continue
       out.push({ key, example: g.example, avg, months: g.months.size, count: g.amounts.length })
@@ -95,6 +101,7 @@ export default function RecurringSuggestions() {
         globalMutate('/api/budget/uncategorized'),
         globalMutate('/api/fixed-costs'),
       ])
+      dismiss(c.key) // defensief: suggestie meteen weg, ook als de regel-match nog ververst
       setMsg(`${titleCase(c.key)} staat nu bij je vaste lasten${kind === 'subscription' ? ' als abonnement' : ''}.`)
     } catch {
       setMsg('Markeren mislukt — probeer het opnieuw.')

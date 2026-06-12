@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db'
 import { requireHousehold } from '@/lib/guard'
+import { isSpendingCategory } from '@/lib/budget'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -25,6 +26,10 @@ export async function POST(req: Request) {
     prisma.budgetCategory.findFirst({ where: { id: intoId, householdId: hid } }),
   ])
   if (!from || !into) return Response.json({ error: 'Categorie niet gevonden' }, { status: 404 })
+  // Gereserveerde categorieën (Inkomsten/Negeren/Vaste lasten) mogen niet bron of doel zijn.
+  if (!isSpendingCategory(from.name) || !isSpendingCategory(into.name)) {
+    return Response.json({ error: 'Gereserveerde categorieën kunnen niet samengevoegd worden.' }, { status: 400 })
+  }
 
   const moved = await prisma.transaction.updateMany({
     where: { householdId: hid, category: from.name },

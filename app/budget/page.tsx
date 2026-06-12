@@ -206,6 +206,7 @@ export default function BudgetPage() {
   // of de categorie verwijderen (transacties gaan dan terug naar 'Overig').
   const [manageCat, setManageCat] = useState<BudgetCategory | null>(null)
   const [mDraft, setMDraft] = useState({ color: 'emerald', limit: '' })
+  const [merging, setMerging] = useState(false)
   const openManage = (cat: BudgetCategory) => {
     setManageCat(cat)
     setMDraft({ color: cat.color || 'emerald', limit: String(Math.round(cat.limit)) })
@@ -974,13 +975,19 @@ export default function BudgetPage() {
               </p>
               <select
                 defaultValue=""
+                disabled={merging}
                 onChange={async (e) => {
                   const intoId = Number(e.target.value)
                   e.target.value = ''
-                  if (!intoId || !manageCat) return
+                  if (!intoId || !manageCat || merging) return
                   if (!window.confirm(`"${manageCat.name}" samenvoegen? Alle transacties en regels gaan mee en de categorie verdwijnt.`)) return
-                  await mergeCategory(manageCat.id, intoId)
-                  setManageCat(null)
+                  setMerging(true)
+                  try {
+                    await mergeCategory(manageCat.id, intoId)
+                    setManageCat(null)
+                  } finally {
+                    setMerging(false)
+                  }
                 }}
                 className={inputClass}
               >
