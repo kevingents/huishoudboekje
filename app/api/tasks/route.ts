@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db'
 import { requireHousehold } from '@/lib/guard'
+import { getCurrentUser } from '@/lib/auth'
 import { notify } from '@/lib/notify'
 
 export const dynamic = 'force-dynamic'
@@ -34,12 +35,14 @@ export async function POST(req: Request) {
     },
   })
 
+  const actor = await getCurrentUser()
   await notify({
     householdId: hid,
     type: 'system',
     title: 'Nieuwe taak',
     body: `${title}${assignedTo ? ` — voor ${assignedTo}` : ''}${points ? ` (${points} punten)` : ''}.`,
     targetMember: assignedTo,
+    excludeUserId: actor?.id ?? null,
   }).catch(() => {})
 
   return Response.json(task, { status: 201 })

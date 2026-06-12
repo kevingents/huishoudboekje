@@ -85,9 +85,22 @@ export async function POST(req: Request) {
   // Standaard budgetcategorieën, instellingen en integraties voor dit huishouden.
   await createDefaultsForHousehold(prisma, householdId)
 
+  // De eigenaar is zelf ook een gezinslid (anders kun je jezelf nergens kiezen,
+  // bijv. bij taken toewijzen) — meteen gekoppeld voor gerichte pushmeldingen.
+  const ownerMember = await prisma.familyMember.create({
+    data: {
+      householdId,
+      name,
+      initials: initialsFrom(name),
+      color: GRADIENTS[0],
+      role: 'Ouder',
+    },
+  })
+  await prisma.user.update({ where: { id: user.id }, data: { memberId: ownerMember.id } })
+
   // Eventuele gezinsleden die tijdens registratie zijn opgegeven.
   const members = Array.isArray(body?.members) ? body.members : []
-  let index = 0
+  let index = 1
   for (const m of members) {
     const memberName = String(m?.name ?? '').trim()
     if (!memberName) continue

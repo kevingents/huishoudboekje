@@ -12,6 +12,8 @@ export async function notify(opts: {
   title: string
   body?: string
   targetMember?: string | null
+  /** Gebruiker die de actie zelf uitvoerde — krijgt geen push van z'n eigen actie. */
+  excludeUserId?: number | null
 }) {
   const setting = await prisma.setting.findFirst({
     where: { householdId: opts.householdId, key: 'notifications' },
@@ -48,27 +50,34 @@ export async function notify(opts: {
     await Promise.all(users.map((u) => sendEmail({ to: u.email, subject: opts.title, html })))
   }
 
-  // Echte pushmeldingen (best effort): gericht aan de juiste gebruikers.
+  // Echte pushmeldingen (best effort). Met targetMember gaat de push alléén naar
+  // de accounts van die persoon (via memberId-koppeling of naam-match); is er
+  // niemand gekoppeld, dan als vangnet naar de volwassenen. Zonder targetMember
+  // krijgt het hele gezin de push. De uitvoerder zelf wordt overgeslagen.
   try {
     const { sendPushToUsers } = await import('./push')
     let userIds: number[]
+    const users = await prisma.user.findMany({
+      where: { householdId: opts.householdId },
+      select: { id: true, name: true, role: true, memberId: true },
+    })
     if (opts.targetMember) {
+      const target = opts.targetMember.trim().toLowerCase()
+      const targetFirst = target.split(/\s+/)[0]
       const member = await prisma.familyMember.findFirst({
-        where: { householdId: opts.householdId, name: opts.targetMember },
+        where: { householdId: opts.householdId, name: { equals: opts.targetMember, mode: 'insensitive' } },
         select: { id: true },
       })
-      const users = await prisma.user.findMany({
-        where: {
-          householdId: opts.householdId,
-          OR: [{ role: { not: 'child' } }, ...(member ? [{ memberId: member.id }] : [])],
-        },
-        select: { id: true },
+      const linked = users.filter((u) => {
+        if (member && u.memberId === member.id) return true
+        const uname = u.name.trim().toLowerCase()
+        return uname === target || uname.split(/\s+/)[0] === targetFirst
       })
-      userIds = users.map((u) => u.id)
+      userIds = (linked.length > 0 ? linked : users.filter((u) => u.role !== 'child')).map((u) => u.id)
     } else {
-      const users = await prisma.user.findMany({ where: { householdId: opts.householdId }, select: { id: true } })
       userIds = users.map((u) => u.id)
     }
+    if (opts.excludeUserId) userIds = userIds.filter((id) => id !== opts.excludeUserId)
     await sendPushToUsers(userIds, { title: opts.title, body: opts.body })
   } catch {
     /* push is best-effort */

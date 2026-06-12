@@ -23,6 +23,45 @@ const GRADIENTS = [
 export async function GET() {
   const hid = await requireHousehold()
   if (hid instanceof Response) return hid
+
+  // Self-heal: accounts zonder gekoppeld gezinslid (bijv. de eigenaar van vóór
+  // deze fix) koppelen we op naam, of we maken het lid aan. Zo sta je zelf ook
+  // in keuzelijsten (taken toewijzen) en komen gerichte pushmeldingen goed aan.
+  const unlinked = await prisma.user.findMany({
+    where: { householdId: hid, memberId: null },
+    select: { id: true, name: true, role: true },
+  })
+  if (unlinked.length > 0) {
+    const existing = await prisma.familyMember.findMany({
+      where: { householdId: hid },
+      select: { id: true, name: true },
+    })
+    for (const u of unlinked) {
+      const uname = u.name.trim().toLowerCase()
+      const first = uname.split(/\s+/)[0]
+      const match = existing.find((m) => {
+        const mname = m.name.trim().toLowerCase()
+        return mname === uname || mname === first || mname.split(/\s+/)[0] === first
+      })
+      if (match) {
+        await prisma.user.update({ where: { id: u.id }, data: { memberId: match.id } })
+      } else {
+        const created = await prisma.familyMember.create({
+          data: {
+            householdId: hid,
+            name: u.name,
+            initials: initialsFrom(u.name),
+            color: GRADIENTS[existing.length % GRADIENTS.length],
+            role: u.role === 'child' ? 'Kind' : 'Ouder',
+            isChild: u.role === 'child',
+          },
+        })
+        existing.push({ id: created.id, name: created.name })
+        await prisma.user.update({ where: { id: u.id }, data: { memberId: created.id } })
+      }
+    }
+  }
+
   const members = await prisma.familyMember.findMany({ where: { householdId: hid }, orderBy: { id: 'asc' } })
   return Response.json(members)
 }
