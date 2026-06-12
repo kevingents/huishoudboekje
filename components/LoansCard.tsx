@@ -183,6 +183,27 @@ export default function LoansCard() {
 
       <Modal open={open} onClose={() => setOpen(false)} title={editing ? 'Lening bewerken' : 'Lening toevoegen'}>
         <form onSubmit={submit} className="flex flex-col gap-3">
+          {!editing && (
+            <div className="flex flex-wrap gap-1.5">
+              {[
+                {
+                  label: 'Creditcard (ICS)',
+                  form: { name: 'Creditcard (ICS)', lender: 'International Card Services', matchPattern: 'international card service' },
+                },
+                { label: 'Hypotheek', form: { name: 'Hypotheek', lender: '', matchPattern: 'hypoth' } },
+                { label: 'Studieschuld (DUO)', form: { name: 'Studieschuld', lender: 'DUO', matchPattern: 'duo' } },
+              ].map((p) => (
+                <button
+                  key={p.label}
+                  type="button"
+                  onClick={() => setForm((f) => ({ ...f, ...p.form }))}
+                  className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-200"
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          )}
           <label className="text-xs font-semibold text-slate-500">
             Naam
             <input

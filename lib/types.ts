@@ -72,6 +72,8 @@ export interface Transaction {
   category: string
   amount: number
   date: string
+  note?: string | null
+  paymentMethod?: string | null
   createdAt?: string
 }
 

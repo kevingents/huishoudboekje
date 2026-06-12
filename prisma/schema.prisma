@@ -130,13 +130,15 @@ model BudgetCategory {
 }
 
 model Transaction {
-  id          Int      @id @default(autoincrement())
-  householdId Int
-  label       String
-  category    String
-  amount      Float
-  date        String
-  createdAt   DateTime @default(now())
+  id            Int      @id @default(autoincrement())
+  householdId   Int
+  label         String
+  category      String
+  amount        Float
+  date          String
+  note          String? // eigen notitie bij de uitgave
+  paymentMethod String? // pin | creditcard | contant | incasso | overboeking
+  createdAt     DateTime @default(now())
 
   @@index([householdId])
 }

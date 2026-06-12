@@ -24,7 +24,15 @@ export async function POST(req: Request) {
   const cat = await prisma.budgetCategory.findFirst({ where: { householdId: hid, name: category } })
 
   const transaction = await prisma.transaction.create({
-    data: { householdId: hid, label: String(body.label), category, amount, date: String(body.date ?? 'Vandaag') },
+    data: {
+      householdId: hid,
+      label: String(body.label),
+      category,
+      amount,
+      date: String(body.date ?? 'Vandaag'),
+      note: body.note ? String(body.note).slice(0, 200) : null,
+      paymentMethod: body.paymentMethod ? String(body.paymentMethod).slice(0, 30) : null,
+    },
   })
 
   // Houd de uitgave van de bijbehorende categorie in sync + waarschuw bij 90%.

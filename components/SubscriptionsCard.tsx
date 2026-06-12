@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Repeat, Plus, Trash2 } from 'lucide-react'
+import { Repeat, Plus, Trash2, AlertTriangle } from 'lucide-react'
 import DashboardCard from './DashboardCard'
 import Modal from './Modal'
 import { useFixedCosts } from '@/lib/hooks'
@@ -63,6 +63,10 @@ export default function SubscriptionsCard() {
           <ul className="flex flex-col">
             {subs.map((s, index) => {
               const monthly = fixedCostMonthly(s)
+              // Herinnering: loopt het (niet-opzegbare) abonnement binnen 45 dagen af?
+              const endMs = s.subscriptionEndDate ? new Date(s.subscriptionEndDate).getTime() : NaN
+              const daysToEnd = isNaN(endMs) ? null : Math.ceil((endMs - Date.now()) / 86400000)
+              const endingSoon = daysToEnd !== null && daysToEnd >= 0 && daysToEnd <= 45
               return (
                 <li key={s.id}>
                   <div className="group flex items-center gap-3 py-2.5">
@@ -70,8 +74,14 @@ export default function SubscriptionsCard() {
                       <Repeat className="h-4 w-4" strokeWidth={2.2} />
                     </span>
                     <div className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-semibold text-slate-800 dark:text-slate-100">
+                      <span className="flex items-center gap-1.5 truncate text-sm font-semibold text-slate-800 dark:text-slate-100">
                         {s.name}
+                        {endingSoon && (
+                          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-300">
+                            <AlertTriangle className="h-3 w-3" />
+                            loopt af over {daysToEnd} {daysToEnd === 1 ? 'dag' : 'dagen'}
+                          </span>
+                        )}
                       </span>
                       <span className="block text-[11px] text-slate-400">
                         {s.dueDay ? `incasso de ${s.dueDay}e · ` : ''}

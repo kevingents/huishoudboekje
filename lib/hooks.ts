@@ -225,6 +225,8 @@ interface NewTransaction {
   category: string
   amount: number
   date?: string
+  note?: string | null
+  paymentMethod?: string | null
 }
 
 export function useBudget() {
@@ -253,6 +255,11 @@ export function useBudget() {
      *  onthoud dat (regel). 'Overig' = ontkoppelen. */
     assignMerchant: async (pattern: string, category: string) => {
       await apiPost('/api/budget/categories/assign', { pattern, category, remember: true })
+      await Promise.all([tx.mutate(), cats.mutate()])
+    },
+    /** Voeg categorie `fromId` samen in `intoId` (transacties + regels mee, bron weg). */
+    mergeCategory: async (fromId: number, intoId: number) => {
+      await apiPost('/api/budget/categories/merge', { fromId, intoId })
       await Promise.all([tx.mutate(), cats.mutate()])
     },
     addTransaction: async (t: NewTransaction) => {

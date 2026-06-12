@@ -9,6 +9,7 @@ export const FIXED_COST_CATEGORIES = [
   'Zorg',
   'Belasting',
   'Abonnement',
+  'Aflossingen',
   'Overig',
 ] as const
 

@@ -33,6 +33,8 @@ export default function FixedCostsCard({ className = '' }: { className?: string 
   const [form, setForm] = useState(emptyForm)
   // Of de gebruiker de categorie handmatig heeft gekozen (dan niet meer overschrijven).
   const [catTouched, setCatTouched] = useState(false)
+  // Splitsen in rente + aflossing (hypotheek): het aflossingsdeel in euro's.
+  const [splitDraft, setSplitDraft] = useState('')
 
   const total = costs.reduce((sum, c) => sum + fixedCostMonthly(c), 0)
 
@@ -45,6 +47,7 @@ export default function FixedCostsCard({ className = '' }: { className?: string 
 
   const openEdit = (c: FixedCost) => {
     setEditing(c)
+    setSplitDraft('')
     setForm({
       name: c.name,
       amount: String(c.amount).replace('.', ','),
@@ -268,6 +271,44 @@ export default function FixedCostsCard({ className = '' }: { className?: string 
           >
             {editing ? 'Wijzigingen opslaan' : 'Opslaan'}
           </button>
+
+          {editing && !form.isSubscription && (
+            <div className="mt-1 rounded-2xl bg-slate-50 p-3 dark:bg-white/5">
+              <p className="text-xs font-semibold text-slate-600">Splitsen in rente + aflossing (hypotheek)</p>
+              <p className="mt-0.5 text-[11px] text-slate-400">
+                Het aflossingsdeel gaat naar de categorie Aflossingen (telt als vermogensopbouw, apart in je
+                begroting); de rest blijft als rente in {form.category || 'deze categorie'}.
+              </p>
+              <div className="mt-2 flex gap-2">
+                <input
+                  inputMode="decimal"
+                  value={splitDraft}
+                  onChange={(e) => setSplitDraft(e.target.value)}
+                  placeholder="Waarvan aflossing (€)"
+                  className="min-w-0 flex-1 rounded-xl border border-cardborder bg-white px-3 py-2 text-sm text-slate-700 outline-none placeholder:text-slate-400 focus:border-brand/40 focus:ring-2 focus:ring-brand/20"
+                />
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!editing) return
+                    const total = Number(form.amount.replace(',', '.'))
+                    const afl = Number(splitDraft.replace(',', '.'))
+                    if (!afl || afl <= 0 || afl >= total) return
+                    const rente = Math.round((total - afl) * 100) / 100
+                    const base = form.name.trim()
+                    const dueDay = form.dueDay ? Math.min(28, Math.max(1, Number(form.dueDay))) : null
+                    await updateCost(editing.id, { name: `${base} — rente`, amount: rente })
+                    await addCost({ name: `${base} — aflossing`, amount: afl, category: 'Aflossingen', dueDay })
+                    setSplitDraft('')
+                    setOpen(false)
+                  }}
+                  className="pill shrink-0 bg-white px-3 py-2 text-xs font-semibold text-slate-700 ring-1 ring-cardborder hover:bg-slate-100"
+                >
+                  Splitsen
+                </button>
+              </div>
+            </div>
+          )}
         </form>
       </Modal>
     </DashboardCard>

@@ -32,6 +32,7 @@ import InsightsCard from '@/components/budget/InsightsCard'
 import UpcomingPaymentsCard from '@/components/budget/UpcomingPaymentsCard'
 import QuickActions, { type QuickAction } from '@/components/budget/QuickActions'
 import GezinsbudgetCard from '@/components/budget/GezinsbudgetCard'
+import RecurringSuggestions from '@/components/budget/RecurringSuggestions'
 import type { BudgetCategory } from '@/lib/types'
 
 const colorClasses: Record<string, { bar: string; iconBg: string; iconText: string }> = {
@@ -103,6 +104,7 @@ export default function BudgetPage() {
     addCategory,
     removeCategory,
     assignMerchant,
+    mergeCategory,
   } = useBudget()
   const { settings } = useSettings()
   const { costs } = useFixedCosts()
@@ -120,7 +122,7 @@ export default function BudgetPage() {
   const periodPlural = periodStart > 1 ? 'periodes' : 'maanden'
 
   const [open, setOpen] = useState(false)
-  const [form, setForm] = useState({ label: '', category: '', amount: '' })
+  const [form, setForm] = useState({ label: '', category: '', amount: '', note: '', paymentMethod: '' })
   const [showAllCats, setShowAllCats] = useState(false)
   const [tab, setTab] = useState<'overzicht' | 'uitgaven' | 'plannen' | 'importeren'>('overzicht')
   const currentMonthLabel = (() => {
@@ -136,7 +138,7 @@ export default function BudgetPage() {
   const [scanResult, setScanResult] = useState<{ items: ScanItem[]; advice: string } | null>(null)
 
   const openAdd = () => {
-    setForm({ label: '', category: '', amount: '' })
+    setForm({ label: '', category: '', amount: '', note: '', paymentMethod: '' })
     setScanResult(null)
     setScanError(null)
     setOpen(true)
@@ -157,11 +159,12 @@ export default function BudgetPage() {
         items: ScanItem[]
         advice: string
       }
-      setForm({
+      setForm((f) => ({
+        ...f,
         label: res.merchant || 'Bon',
         category: res.category || categories[0]?.name || '',
         amount: res.total ? String(res.total.toFixed(2)).replace('.', ',') : '',
-      })
+      }))
       setScanResult({ items: res.items ?? [], advice: res.advice ?? '' })
     } catch (e) {
       setScanError(e instanceof Error ? e.message : 'Scannen mislukt.')
@@ -362,8 +365,10 @@ export default function BudgetPage() {
       label: form.label,
       category: form.category || categories[0]?.name || 'Overig',
       amount,
+      note: form.note.trim() || null,
+      paymentMethod: form.paymentMethod || null,
     })
-    setForm({ label: '', category: '', amount: '' })
+    setForm({ label: '', category: '', amount: '', note: '', paymentMethod: '' })
     setOpen(false)
   }
 
@@ -622,8 +627,10 @@ export default function BudgetPage() {
                       <p className="text-sm font-semibold text-slate-800" title={tx.label}>
                         {cleanLabel(tx.label)}
                       </p>
-                      <p className="text-xs text-slate-500">
+                      <p className="truncate text-xs text-slate-500">
                         {tx.category} · {tx.date}
+                        {tx.paymentMethod ? ` · ${tx.paymentMethod}` : ''}
+                        {tx.note ? ` · ${tx.note}` : ''}
                       </p>
                     </div>
                     <p className="text-sm font-bold text-slate-800">€{euro(tx.amount)}</p>
@@ -649,6 +656,9 @@ export default function BudgetPage() {
         <>
         {/* Bestanden uploaden (premium uploadcentrum) */}
         <BudgetImport />
+
+        {/* Slim gedetecteerde terugkerende afschrijvingen (incasso's) */}
+        <RecurringSuggestions />
 
         {/* Hoe automatische categorisatie werkt */}
         <AutoCategorizeSteps />
@@ -737,6 +747,32 @@ export default function BudgetPage() {
                 value={form.amount}
                 onChange={(e) => setForm({ ...form, amount: e.target.value })}
                 placeholder="0,00"
+                className={`mt-1 ${inputClass}`}
+              />
+            </label>
+          </div>
+          <div className="flex gap-3">
+            <label className="w-40 text-xs font-semibold text-slate-500">
+              Betaalmethode
+              <select
+                value={form.paymentMethod}
+                onChange={(e) => setForm({ ...form, paymentMethod: e.target.value })}
+                className={`mt-1 ${inputClass}`}
+              >
+                <option value="">—</option>
+                <option value="pin">Pin</option>
+                <option value="creditcard">Creditcard</option>
+                <option value="contant">Contant</option>
+                <option value="incasso">Incasso</option>
+                <option value="overboeking">Overboeking</option>
+              </select>
+            </label>
+            <label className="flex-1 text-xs font-semibold text-slate-500">
+              Notitie (optioneel)
+              <input
+                value={form.note}
+                onChange={(e) => setForm({ ...form, note: e.target.value })}
+                placeholder="Bijv. verjaardagscadeau"
                 className={`mt-1 ${inputClass}`}
               />
             </label>
@@ -929,6 +965,36 @@ export default function BudgetPage() {
               )}
               <p className="mt-2 text-[11px] text-slate-400">
                 Verplaatsen onthoudt de winkel — volgende imports volgen automatisch.
+              </p>
+            </div>
+
+            <div className="border-t border-cardborder pt-3">
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                Samenvoegen met een andere categorie
+              </p>
+              <select
+                defaultValue=""
+                onChange={async (e) => {
+                  const intoId = Number(e.target.value)
+                  e.target.value = ''
+                  if (!intoId || !manageCat) return
+                  if (!window.confirm(`"${manageCat.name}" samenvoegen? Alle transacties en regels gaan mee en de categorie verdwijnt.`)) return
+                  await mergeCategory(manageCat.id, intoId)
+                  setManageCat(null)
+                }}
+                className={inputClass}
+              >
+                <option value="">— kies doelcategorie —</option>
+                {spendingCats
+                  .filter((c) => c.id !== manageCat.id)
+                  .map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+              </select>
+              <p className="mt-1.5 text-[11px] text-slate-400">
+                Transacties, geleerde regels en de limiet gaan over naar de doelcategorie.
               </p>
             </div>
 
