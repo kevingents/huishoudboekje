@@ -10,7 +10,7 @@ import CoParentCard from '@/components/CoParentCard'
 import ProfileCard from '@/components/ProfileCard'
 import { useA11y, type FontScale, type Theme } from '@/components/A11yProvider'
 import { useSettings, useFamily, useAuth } from '@/lib/hooks'
-import { apiDelete } from '@/lib/api'
+import { apiDelete, apiPost } from '@/lib/api'
 import { usePwaInstall } from '@/lib/usePwaInstall'
 import { usePush } from '@/lib/usePush'
 import { mergePrefs } from '@/lib/notifications'
@@ -60,6 +60,22 @@ export default function InstellingenPage() {
   useEffect(() => setTarget(savedTarget), [savedTarget])
   const [periodStart, setPeriodStart] = useState(savedPeriodStart)
   useEffect(() => setPeriodStart(savedPeriodStart), [savedPeriodStart])
+
+  // Testmelding voor push (verifieert VAPID-keys + abonnement end-to-end).
+  const [pushTestBusy, setPushTestBusy] = useState(false)
+  const [pushTestMsg, setPushTestMsg] = useState<string | null>(null)
+  const sendTestPush = async () => {
+    setPushTestBusy(true)
+    setPushTestMsg(null)
+    try {
+      await apiPost('/api/push/test', {})
+      setPushTestMsg('Verstuurd — de melding verschijnt binnen enkele seconden op dit apparaat.')
+    } catch (e) {
+      setPushTestMsg(e instanceof Error ? e.message : 'Versturen mislukt.')
+    } finally {
+      setPushTestBusy(false)
+    }
+  }
 
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleteBusy, setDeleteBusy] = useState(false)
@@ -143,26 +159,42 @@ export default function InstellingenPage() {
               je beginscherm staat.
             </p>
           ) : (
-            <div className="flex items-center gap-3">
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-slate-800">Meldingen op dit apparaat</p>
-                <p className="text-xs text-slate-500">
-                  Krijg een seintje op je telefoon, ook als de app dicht is.
-                </p>
+            <>
+              <div className="flex items-center gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-slate-800">Meldingen op dit apparaat</p>
+                  <p className="text-xs text-slate-500">
+                    Krijg een seintje op je telefoon, ook als de app dicht is.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => (push.subscribed ? push.disable() : push.enable())}
+                  disabled={push.busy}
+                  className={`pill px-4 py-2 text-sm font-semibold disabled:opacity-50 ${
+                    push.subscribed
+                      ? 'border border-cardborder bg-white text-slate-600 hover:bg-slate-50'
+                      : 'bg-brand text-white shadow-sm shadow-brand/20 hover:bg-brand-dark'
+                  }`}
+                >
+                  {push.busy ? 'Bezig…' : push.subscribed ? 'Uitzetten' : 'Aanzetten'}
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => (push.subscribed ? push.disable() : push.enable())}
-                disabled={push.busy}
-                className={`pill px-4 py-2 text-sm font-semibold disabled:opacity-50 ${
-                  push.subscribed
-                    ? 'border border-cardborder bg-white text-slate-600 hover:bg-slate-50'
-                    : 'bg-brand text-white shadow-sm shadow-brand/20 hover:bg-brand-dark'
-                }`}
-              >
-                {push.busy ? 'Bezig…' : push.subscribed ? 'Uitzetten' : 'Aanzetten'}
-              </button>
-            </div>
+              {push.subscribed && (
+                <div className="mt-3 border-t border-cardborder pt-3">
+                  <button
+                    type="button"
+                    disabled={pushTestBusy}
+                    onClick={sendTestPush}
+                    className="pill bg-amber-50 px-3.5 py-2 text-sm font-semibold text-amber-700 ring-1 ring-amber-200 hover:bg-amber-100 disabled:opacity-50 dark:text-amber-300 dark:ring-amber-800/50"
+                  >
+                    <BellRing className={`h-4 w-4 ${pushTestBusy ? 'animate-pulse' : ''}`} />
+                    {pushTestBusy ? 'Versturen…' : 'Stuur testmelding'}
+                  </button>
+                  {pushTestMsg && <p className="mt-1.5 text-xs font-medium text-slate-500">{pushTestMsg}</p>}
+                </div>
+              )}
+            </>
           )}
         </DashboardCard>
 
