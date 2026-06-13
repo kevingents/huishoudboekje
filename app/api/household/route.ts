@@ -77,6 +77,7 @@ export async function DELETE() {
     prisma.mailItem.deleteMany({ where }),
     prisma.reminderLog.deleteMany({ where }),
     prisma.hiddenIcalEvent.deleteMany({ where }),
+    prisma.outing.deleteMany({ where }),
     prisma.familyMember.deleteMany({ where }),
     // Push-abonnementen hangen aan userId, niet householdId.
     prisma.pushSubscription.deleteMany({ where: { userId: { in: userIds } } }),

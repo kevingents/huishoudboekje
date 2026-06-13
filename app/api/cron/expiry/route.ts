@@ -11,6 +11,7 @@ import {
 } from '@/lib/occasions'
 import { periodKeyOf, shiftPeriodKey, spendablePerMonth, isSpendingCategory } from '@/lib/budget'
 import { reviewPeriod } from '@/lib/periodReview'
+import { generateOutings } from '@/lib/outings'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -209,6 +210,28 @@ export async function GET(req: Request) {
     }
   }
 
+  // Weekend-uitjes: elke zaterdag (NL) 10 verse AI-ideeën voor gezinnen die Uitjes
+  // gebruiken (minstens één uitje toegevoegd). Best-effort + gededupliceerd per week.
+  let outingsGenerated = 0
+  const nlWeekday = new Intl.DateTimeFormat('en-US', { timeZone: 'Europe/Amsterdam', weekday: 'short' }).format(now)
+  if (process.env.ANTHROPIC_API_KEY && nlWeekday === 'Sat') {
+    const engaged = await prisma.outing.findMany({ distinct: ['householdId'], select: { householdId: true } })
+    for (const { householdId } of engaged) {
+      const sent = await once(householdId, `weekenduitjes:${nlDateStr}`, async () => {
+        const { created } = await generateOutings(householdId, 10)
+        if (created > 0) {
+          await notify({
+            householdId,
+            type: 'system',
+            title: 'Nieuwe weekend-uitjes',
+            body: `${created} verse ideeën om dit weekend met het gezin te doen staan klaar bij Uitjes.`,
+          }).catch(() => {})
+        }
+      })
+      if (sent) outingsGenerated++
+    }
+  }
+
   // Dagelijks de gekoppelde agenda's (Google/Outlook/Apple/Parro via iCal)
   // verversen, zodat nieuwe en terugkerende afspraken vanzelf binnenkomen.
   const icalHouseholds = await prisma.integration.findMany({
@@ -244,6 +267,7 @@ export async function GET(req: Request) {
     occasionNotified,
     birthdayNotified,
     periodNotified,
+    outingsGenerated,
     icalSynced: synced,
     cleaned: { chats: chatDeleted.count, notifications: notifDeleted.count },
   })

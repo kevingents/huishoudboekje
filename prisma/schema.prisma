@@ -393,6 +393,26 @@ model Document {
   @@index([householdId])
 }
 
+// Uitjes: ideeën voor dingen om met het gezin te doen (door AI verzonnen o.b.v. de
+// omgeving, of zelf toegevoegd). Status loopt van idee → gepland → gedaan; een
+// gepland uitje kan aan een agenda-afspraak gekoppeld zijn.
+model Outing {
+  id            Int      @id @default(autoincrement())
+  householdId   Int
+  title         String
+  description   String?
+  category      String? // natuur | speeltuin | water | cultuur | dieren | sport | creatief | eten | seizoen
+  cost          String? // gratis | laag | gemiddeld | hoog
+  area          String? // waar / in welke omgeving
+  date          String? // yyyy-mm-dd indien gepland
+  status        String   @default("idee") // idee | gepland | gedaan
+  source        String   @default("manual") // manual | ai
+  agendaEventId Int? // gekoppelde agenda-afspraak (bij gepland)
+  createdAt     DateTime @default(now())
+
+  @@index([householdId])
+}
+
 // Idempotentie voor de dagelijkse reminder-cron: per (huishouden, key) wordt een
 // reminder maar één keer verstuurd. De key codeert de bron + drempel + jaar,
 // bijv. "occ:Vaderdag:2026:b10", "bday:7:2026:b7", "doc:12:2026-12-01:b30",

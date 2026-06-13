@@ -877,6 +877,48 @@ export function useDocuments() {
   }
 }
 
+export interface Outing {
+  id: number
+  title: string
+  description: string | null
+  category: string | null
+  cost: string | null
+  area: string | null
+  date: string | null
+  status: string // idee | gepland | gedaan
+  source: string // manual | ai
+  agendaEventId: number | null
+}
+
+export function useOutings() {
+  const c = useCollection<Outing>('/api/outings')
+  return {
+    outings: c.items,
+    isLoading: c.isLoading,
+    mutate: c.mutate,
+    addOuting: (payload: { title: string; description?: string; category?: string; cost?: string; area?: string }) =>
+      c.create(payload as Record<string, unknown>, {
+        title: payload.title,
+        description: payload.description ?? null,
+        category: payload.category ?? null,
+        cost: payload.cost ?? null,
+        area: payload.area ?? null,
+        date: null,
+        status: 'idee',
+        source: 'manual',
+        agendaEventId: null,
+      }),
+    updateOuting: (id: number, payload: Partial<Outing>) => c.update(id, payload as Record<string, unknown>),
+    removeOuting: (id: number) => c.remove(id),
+    /** Laat de AI nieuwe uitjes verzinnen en ververs de lijst. */
+    generate: async (count = 10) => {
+      const res = await apiPost('/api/outings/generate', { count })
+      await c.mutate()
+      return res as { created: number }
+    },
+  }
+}
+
 /* -------------------------------------------------------------------------- */
 /*  Belangrijke contacten                                                     */
 /* -------------------------------------------------------------------------- */

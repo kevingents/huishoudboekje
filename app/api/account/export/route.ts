@@ -40,6 +40,7 @@ export async function GET() {
     documents,
     mail,
     familyBudgets,
+    outings,
   ] = await Promise.all([
     prisma.household.findUnique({ where: { id: hid } }),
     prisma.user.findMany({
@@ -83,6 +84,7 @@ export async function GET() {
     prisma.document.findMany({ where }),
     prisma.mailItem.findMany({ where }),
     prisma.familyBudget.findMany({ where }),
+    prisma.outing.findMany({ where }),
   ])
 
   const data = {
@@ -114,6 +116,7 @@ export async function GET() {
     documents,
     gezinsmail: mail,
     familyBudgets,
+    outings,
   }
 
   return new Response(JSON.stringify(data, null, 2), {

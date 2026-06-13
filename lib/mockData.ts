@@ -17,6 +17,7 @@ import {
   Phone,
   ListTodo,
   Mail,
+  Compass,
   type LucideIcon,
 } from 'lucide-react'
 import type { ChatMessage } from './types'
@@ -37,6 +38,7 @@ export const sidebarNav: NavItem[] = [
   { label: 'Boodschappen', icon: ShoppingCart, href: '/boodschappen' },
   { label: 'Recepten', icon: ChefHat, href: '/recepten' },
   { label: 'Koelkast', icon: Camera, href: '/koelkast' },
+  { label: 'Uitjes', icon: Compass, href: '/uitjes' },
   { label: 'Budget', icon: BarChart3, href: '/budget' },
   { label: 'Modules', icon: Package, href: '/modules' },
   { label: 'Gezin', icon: Users, href: '/gezin' },
@@ -54,7 +56,7 @@ export const sidebarNav: NavItem[] = [
    blijft. Verwijst naar hrefs uit sidebarNav. */
 export const mobileMenuGroups: { title: string; hrefs: string[] }[] = [
   { title: 'Vandaag', hrefs: ['/vandaag'] },
-  { title: 'Dagelijks', hrefs: ['/agenda', '/boodschappen', '/gezin'] },
+  { title: 'Dagelijks', hrefs: ['/agenda', '/boodschappen', '/gezin', '/uitjes'] },
   { title: 'Koken', hrefs: ['/recepten', '/koelkast'] },
   { title: 'Geldzaken', hrefs: ['/budget', '/modules'] },
   { title: 'Bewaren', hrefs: ['/pasjes', '/documenten', '/contacten', '/gezinsmail'] },
