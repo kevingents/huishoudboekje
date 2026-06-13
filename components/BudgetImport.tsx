@@ -108,7 +108,10 @@ export default function BudgetImport() {
           res.expenses ? ' Deel de uitgaven nu in onder "Categoriseren".' : ''
         }`
       } else {
-        text = `${res.expenses} nieuwe uitgaven${skip ? `, ${skip} al aanwezig` : ''} en ${res.categories} categorieën.`
+        const parts: string[] = []
+        if (res.expenses) parts.push(`${res.expenses} uitgaven`)
+        if (res.incomes) parts.push(`${res.incomes} inkomsten`)
+        text = `${parts.join(' en ') || 'Geen nieuwe transacties'}${skip ? `, ${skip} al aanwezig` : ''} en ${res.categories} categorieën.`
       }
       patch({ status: 'done', detail: text })
       setMsg({ ok: true, text })
@@ -126,17 +129,19 @@ export default function BudgetImport() {
     <DashboardCard title="Bestanden uploaden" icon={UploadCloud} iconClassName="text-brand" className="lg:col-span-2">
       <input ref={fileRef} type="file" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} />
 
-      {/* Wat uit een bankafschrift importeren — keuze wordt onthouden. */}
+      {/* Wat importeren — keuze wordt onthouden (geldt voor bankafschrift én budget-Excel). */}
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <span className="text-xs font-semibold text-slate-500">Uit bankafschrift:</span>
-        <div className="flex gap-1 rounded-xl bg-slate-100 p-1">
+        <span className="text-xs font-semibold text-slate-500">Wat importeren:</span>
+        <div className="flex gap-1 rounded-xl bg-slate-100 p-1 dark:bg-white/5">
           {MODES.map((m) => (
             <button
               key={m.key}
               type="button"
               onClick={() => setSetting('importMode', m.key)}
               className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
-                mode === m.key ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                mode === m.key
+                  ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-slate-100'
+                  : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
               }`}
             >
               {m.label}

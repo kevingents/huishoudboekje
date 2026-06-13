@@ -74,26 +74,45 @@ function titleCase(s: string): string {
     .join(' ')
 }
 
-/** Sleutel om een transactie te herkennen: datum + bedrag + (genormaliseerde) omschrijving. */
-function txKey(date: string, amount: number, label: string): string {
+/** Sleutel om een transactie te herkennen: richting (bij/af) + datum + bedrag +
+ *  (genormaliseerde) omschrijving. De richting voorkomt dat een afschrijving en
+ *  bijschrijving van hetzelfde bedrag/dag/omschrijving elkaar als dubbel zien. */
+function txKey(date: string, amount: number, label: string, isIncome = false): string {
   const l = label.toLowerCase().replace(/\s+/g, ' ').trim().slice(0, 80)
-  return `${date}|${amount.toFixed(2)}|${l}`
+  return `${isIncome ? 'C' : 'D'}|${date}|${amount.toFixed(2)}|${l}`
 }
 
 /** Telling (multiset) van bestaande transacties, zodat overlappende afschriften
  *  precies ontdubbeld worden: een transactie die al N keer in het budget staat,
- *  wordt N keer overgeslagen — echte dubbele binnen één afschrift blijven staan. */
+ *  wordt N keer overgeslagen — echte dubbele binnen één afschrift blijven staan.
+ *  Bestaande inkomsten staan in categorie 'Inkomsten' (= bijschrijving). */
 async function loadTxMultiset(hid: number): Promise<Map<string, number>> {
   const existing = await prisma.transaction.findMany({
     where: { householdId: hid },
-    select: { date: true, amount: true, label: true },
+    select: { date: true, amount: true, label: true, category: true },
   })
   const m = new Map<string, number>()
   for (const e of existing) {
-    const k = txKey(e.date, e.amount, e.label)
+    const k = txKey(e.date, e.amount, e.label, e.category === 'Inkomsten')
     m.set(k, (m.get(k) ?? 0) + 1)
   }
   return m
+}
+
+/** Sla transacties op in stukken (geen stille afkapping bij grote afschriften). */
+async function insertTransactions(
+  hid: number,
+  rows: { label: string; category: string; amount: number; date: string }[],
+): Promise<number> {
+  let stored = 0
+  for (let i = 0; i < rows.length; i += 1000) {
+    const chunk = rows.slice(i, i + 1000)
+    await prisma.transaction.createMany({
+      data: chunk.map((d) => ({ householdId: hid, label: d.label, category: d.category, amount: d.amount, date: d.date })),
+    })
+    stored += chunk.length
+  }
+  return stored
 }
 
 export async function POST(req: Request) {
@@ -187,12 +206,7 @@ export async function POST(req: Request) {
       ci++
     }
 
-    const slice = toStore.slice(0, 5000)
-    if (slice.length) {
-      await prisma.transaction.createMany({
-        data: slice.map((d) => ({ householdId: hid, label: d.label, category: d.category, amount: d.amount, date: d.date })),
-      })
-    }
+    const expensesStored = await insertTransactions(hid, toStore)
 
     // Vaste lasten uit fixed-regels aanmaken: maandbedrag = totaal ÷ aantal MAANDEN
     // (2× per maand, zoals een gesplitste hypotheek, telt zo op tot het maandbedrag).
@@ -225,7 +239,7 @@ export async function POST(req: Request) {
       for (const c of credits) {
         const label = (c.description || c.category).slice(0, 120)
         const date = c.date || 'Geïmporteerd'
-        const k = txKey(date, c.amount, label)
+        const k = txKey(date, c.amount, label, true)
         const cnt = seen.get(k) ?? 0
         if (cnt > 0) {
           seen.set(k, cnt - 1)
@@ -241,18 +255,14 @@ export async function POST(req: Request) {
             data: { householdId: hid, name: 'Inkomsten', color: 'emerald', icon: 'TrendingUp', limit: 0, spent: 0 },
           })
         }
-        const incSlice = incFresh.slice(0, 5000)
-        await prisma.transaction.createMany({
-          data: incSlice.map((d) => ({ householdId: hid, label: d.label, category: d.category, amount: d.amount, date: d.date })),
-        })
-        incomeStored = incSlice.length
+        incomeStored = await insertTransactions(hid, incFresh)
       }
     }
 
     return Response.json({
       ok: true,
       source: 'bank',
-      expenses: slice.length,
+      expenses: expensesStored,
       incomes: incomeStored,
       categories: cats.length,
       skipped,
@@ -268,53 +278,67 @@ export async function POST(req: Request) {
     return Response.json({ error: 'Kon het Excel-bestand niet lezen.' }, { status: 400 })
   }
 
-  const expenses = parseLog(wb, 'Uitgaven Logboek').slice(0, 3000)
-  if (expenses.length === 0) {
-    return Response.json(
-      { error: 'Geen herkenbare uitgaven gevonden. Verwacht een tabblad "Uitgaven Logboek".' },
-      { status: 400 },
-    )
+  // Tabbladen lezen volgens de gekozen modus (uitgaven / inkomsten / beide).
+  const expenses = wantExpenses ? parseLog(wb, 'Uitgaven Logboek').slice(0, 20000) : []
+  const incomeRows = wantIncome ? parseLog(wb, 'Inkomsten Logboek').slice(0, 20000) : []
+  if (expenses.length === 0 && incomeRows.length === 0) {
+    const what =
+      importMode === 'income'
+        ? 'inkomsten gevonden. Verwacht een tabblad "Inkomsten Logboek"'
+        : importMode === 'both'
+          ? 'transacties gevonden. Verwacht tabbladen "Uitgaven Logboek" en/of "Inkomsten Logboek"'
+          : 'uitgaven gevonden. Verwacht een tabblad "Uitgaven Logboek"'
+    return Response.json({ error: `Geen herkenbare ${what}.` }, { status: 400 })
   }
 
-  // Ontbrekende categorieën aanmaken.
+  // Ontbrekende categorieën aanmaken (uitgaven + 'Inkomsten' als er bijschrijvingen zijn).
   const existing = await prisma.budgetCategory.findMany({ where: { householdId: hid }, select: { name: true } })
   const have = new Set(existing.map((c) => c.name.toLowerCase()))
   const expCats = [...new Set(expenses.map((e) => e.category))]
-  let colorI = 0
+  let colorI = existing.length
   for (const cat of expCats) {
     if (have.has(cat.toLowerCase())) continue
     await prisma.budgetCategory.create({
       data: { householdId: hid, name: cat, color: COLORS[colorI % COLORS.length], icon: 'ShoppingCart', limit: 0, spent: 0 },
     })
+    have.add(cat.toLowerCase())
     colorI++
   }
-
-  // Uitgaven → transacties (ontdubbeld tegen wat al in het budget staat).
-  const seen = await loadTxMultiset(hid)
-  const freshExp: { label: string; category: string; amount: number; date: string }[] = []
-  let skipped = 0
-  for (const e of expenses) {
-    const label = e.label.slice(0, 120)
-    const date = e.date || 'Geïmporteerd'
-    const k = txKey(date, e.amount, label)
-    const cnt = seen.get(k) ?? 0
-    if (cnt > 0) {
-      seen.set(k, cnt - 1)
-      skipped++
-      continue
-    }
-    freshExp.push({ label, category: e.category, amount: e.amount, date })
-  }
-  if (freshExp.length) {
-    await prisma.transaction.createMany({
-      data: freshExp.map((e) => ({ householdId: hid, label: e.label, category: e.category, amount: e.amount, date: e.date })),
+  if (incomeRows.length && !have.has('inkomsten')) {
+    await prisma.budgetCategory.create({
+      data: { householdId: hid, name: 'Inkomsten', color: 'emerald', icon: 'TrendingUp', limit: 0, spent: 0 },
     })
+    have.add('inkomsten')
   }
+
+  // Uitgaven + inkomsten → transacties (ontdubbeld tegen wat al in het budget staat).
+  const seen = await loadTxMultiset(hid)
+  let skipped = 0
+  const dedup = (rows: typeof expenses, category: string | null, isIncome: boolean) => {
+    const fresh: { label: string; category: string; amount: number; date: string }[] = []
+    for (const e of rows) {
+      const label = e.label.slice(0, 120)
+      const date = e.date || 'Geïmporteerd'
+      const k = txKey(date, e.amount, label, isIncome)
+      const cnt = seen.get(k) ?? 0
+      if (cnt > 0) {
+        seen.set(k, cnt - 1)
+        skipped++
+        continue
+      }
+      fresh.push({ label, category: category ?? e.category, amount: e.amount, date })
+    }
+    return fresh
+  }
+  const freshExp = dedup(expenses, null, false)
+  const freshInc = dedup(incomeRows, 'Inkomsten', true)
+  const expStored = await insertTransactions(hid, freshExp)
+  const incStored = await insertTransactions(hid, freshInc)
 
   return Response.json({
     ok: true,
-    expenses: freshExp.length,
-    incomes: 0,
+    expenses: expStored,
+    incomes: incStored,
     categories: expCats.length,
     skipped,
   })

@@ -89,6 +89,7 @@ describe('isSpendingCategory', () => {
     expect(isSpendingCategory('Inkomsten')).toBe(false)
     expect(isSpendingCategory('Vaste lasten')).toBe(false)
     expect(isSpendingCategory('Negeren')).toBe(false)
+    expect(isSpendingCategory('Aflossingen')).toBe(false)
   })
 })
 

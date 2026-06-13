@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Wallet, ChevronRight } from 'lucide-react'
 import DashboardCard from './DashboardCard'
@@ -16,17 +17,25 @@ export default function BudgetCard() {
       : 1
   const periodWord = periodStart > 1 ? 'periode' : 'maand'
 
+  // Datum pas na mount bepalen (geen hydratie-mismatch tussen server en client).
+  const [currentKey, setCurrentKey] = useState<string | null>(null)
+  useEffect(() => {
+    const now = new Date()
+    const nowStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+    setCurrentKey(periodKeyOf(nowStr, periodStart) ?? '')
+  }, [periodStart])
+
   // Budget = som van de categorie-limieten. Uitgegeven = de echte transacties van
   // deze periode (niet het 'spent'-veld, dat 0 blijft bij import).
   const total = Math.round(categories.filter((c) => isSpendingCategory(c.name)).reduce((s, c) => s + c.limit, 0))
-  const now = new Date()
-  const nowStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
-  const currentKey = periodKeyOf(nowStr, periodStart) ?? ''
-  const spent = Math.round(
-    transactions
-      .filter((t) => isSpendingCategory(t.category) && (Number(t.amount) || 0) > 0 && txPeriodKey(t, periodStart) === currentKey)
-      .reduce((s, t) => s + (Number(t.amount) || 0), 0),
-  )
+  const spent =
+    currentKey == null
+      ? 0
+      : Math.round(
+          transactions
+            .filter((t) => isSpendingCategory(t.category) && (Number(t.amount) || 0) > 0 && txPeriodKey(t, periodStart) === currentKey)
+            .reduce((s, t) => s + (Number(t.amount) || 0), 0),
+        )
   const remaining = total - spent
   const over = remaining < 0
 
