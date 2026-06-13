@@ -1,7 +1,8 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { FileText, ShieldCheck, Plus, Trash2, Camera, CalendarClock, Receipt, FileSignature } from 'lucide-react'
+import { FileText, ShieldCheck, Plus, Trash2, Camera, CalendarClock, Receipt, FileSignature, BadgeCheck } from 'lucide-react'
+import { isIdDocument, expiryPhrase, daysUntil } from '@/lib/documents'
 import PageHeader from '@/components/PageHeader'
 import DashboardCard from '@/components/DashboardCard'
 import Modal from '@/components/Modal'
@@ -14,11 +15,20 @@ const TYPES = [
   { value: 'garantie', label: 'Garantiebewijs', icon: FileText, accent: 'bg-sky-100 text-sky-600' },
   { value: 'factuur', label: 'Factuur', icon: Receipt, accent: 'bg-emerald-100 text-emerald-600' },
   { value: 'contract', label: 'Contract', icon: FileSignature, accent: 'bg-indigo-100 text-indigo-600' },
+  { value: 'legitimatie', label: 'Paspoort, ID of rijbewijs', icon: BadgeCheck, accent: 'bg-rose-100 text-rose-600' },
   { value: 'officieel', label: 'Officieel document', icon: ShieldCheck, accent: 'bg-violet-100 text-violet-600' },
 ]
-// garantie → bon; factuur → rekening; contract → contract; al het andere → officieel.
+// garantie → bon; factuur → rekening; contract; legitimatie → ID-bewijs; rest → officieel.
 const typeMeta = (t: string) =>
-  t === 'garantie' ? TYPES[0] : t === 'factuur' ? TYPES[1] : t === 'contract' ? TYPES[2] : TYPES[3]
+  t === 'garantie'
+    ? TYPES[0]
+    : t === 'factuur'
+      ? TYPES[1]
+      : t === 'contract'
+        ? TYPES[2]
+        : t === 'legitimatie'
+          ? TYPES[3]
+          : TYPES[4]
 
 function downscale(file: File, max = 900): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -43,17 +53,24 @@ function downscale(file: File, max = 900): Promise<string> {
   })
 }
 
-function expiryInfo(iso: string | null): { label: string; tone: string } | null {
+function expiryInfo(iso: string | null, type: string): { label: string; tone: string } | null {
   if (!iso) return null
   const [y, m, d] = iso.split('-').map(Number)
   if (!y || !m || !d) return null
-  const target = new Date(y, m - 1, d)
-  const now = new Date()
-  now.setHours(0, 0, 0, 0)
-  const days = Math.round((target.getTime() - now.getTime()) / 86_400_000)
+  const days = daysUntil(iso)
+  if (days === null) return null
   if (days < 0) return { label: 'Verlopen', tone: 'bg-rose-100 text-rose-600' }
   if (days === 0) return { label: 'Verloopt vandaag', tone: 'bg-rose-100 text-rose-600' }
-  if (days <= 30) return { label: `Nog ${days} ${days === 1 ? 'dag' : 'dagen'}`, tone: 'bg-amber-100 text-amber-600' }
+  // ID-documenten lichten al 6 maanden vooruit op (afspraak gemeente kost tijd);
+  // overige documenten pas binnen 30 dagen.
+  const headsUp = isIdDocument(type) ? 180 : 30
+  if (days <= headsUp) {
+    const phrase = expiryPhrase(days) // "verloopt over 6 maanden" / "… 3 weken" / "… morgen"
+    return {
+      label: phrase.charAt(0).toUpperCase() + phrase.slice(1),
+      tone: days <= 30 ? 'bg-amber-100 text-amber-600' : 'bg-amber-50 text-amber-700',
+    }
+  }
   return { label: `Geldig t/m ${d}-${m}-${y}`, tone: 'bg-emerald-100 text-emerald-600' }
 }
 
@@ -209,7 +226,7 @@ export default function DocumentenPage() {
           {shown.map((doc) => {
             const meta = typeMeta(doc.type)
             const Icon = meta.icon
-            const exp = expiryInfo(doc.expiresAt)
+            const exp = expiryInfo(doc.expiresAt, doc.type)
             return (
               <DashboardCard key={doc.id} className="cursor-pointer" >
                 <button type="button" onClick={() => setActive(doc)} className="flex w-full items-center gap-4 text-left">
@@ -245,9 +262,9 @@ export default function DocumentenPage() {
                 {typeMeta(active.type).label}
               </span>
               {active.owner && <span className="text-slate-500">{active.owner}</span>}
-              {expiryInfo(active.expiresAt) && (
-                <span className={`pill px-2.5 py-1 font-semibold ${expiryInfo(active.expiresAt)!.tone}`}>
-                  {expiryInfo(active.expiresAt)!.label}
+              {expiryInfo(active.expiresAt, active.type) && (
+                <span className={`pill px-2.5 py-1 font-semibold ${expiryInfo(active.expiresAt, active.type)!.tone}`}>
+                  {expiryInfo(active.expiresAt, active.type)!.label}
                 </span>
               )}
             </div>
@@ -320,6 +337,12 @@ export default function DocumentenPage() {
               />
             </label>
           </div>
+          {form.type === 'legitimatie' && (
+            <p className="-mt-1 text-[11px] text-slate-400">
+              Vul de verloopdatum in — Fam seint dan al een half jaar van tevoren, zodat je op tijd een
+              afspraak bij de gemeente kunt maken (ook voor de kinderen).
+            </p>
+          )}
 
           <button
             type="button"
