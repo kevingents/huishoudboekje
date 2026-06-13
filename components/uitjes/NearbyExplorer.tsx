@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { MapPin, Plus, Check, RefreshCw, ExternalLink } from 'lucide-react'
 import DashboardCard from '../DashboardCard'
@@ -30,7 +30,7 @@ const CAT_LABEL: Record<string, string> = {
 const COST_LABEL: Record<string, string> = { gratis: 'Gratis', laag: '€', gemiddeld: '€€', hoog: '€€€' }
 
 export default function NearbyExplorer() {
-  const { addOuting } = useOutings()
+  const { outings, addOuting } = useOutings()
   const [cat, setCat] = useState('alles')
   const [radius, setRadius] = useState(10)
   const [loading, setLoading] = useState(false)
@@ -38,28 +38,40 @@ export default function NearbyExplorer() {
   const [home, setHome] = useState<{ lat: number; lon: number; name: string } | null>(null)
   const [places, setPlaces] = useState<NearbyPlace[]>([])
   const [added, setAdded] = useState<Set<string>>(new Set())
+  const acRef = useRef<AbortController | null>(null)
+
+  // 'added' uit de daadwerkelijk opgeslagen uitjes halen (osmId), zodat een plek
+  // die je al toevoegde "Toegevoegd" blijft — ook na tab-wissel of opnieuw scannen.
+  useEffect(() => {
+    setAdded(new Set(outings.filter((o) => o.osmId).map((o) => o.osmId as string)))
+  }, [outings])
 
   const scan = useCallback(async (category: string, r: number) => {
+    acRef.current?.abort()
+    const ac = new AbortController()
+    acRef.current = ac
     setLoading(true)
     setError(null)
     try {
       const qs = new URLSearchParams({ radius: String(r) })
       if (category !== 'alles') qs.set('categories', category)
-      const res = await fetch(`/api/outings/nearby?${qs}`)
+      const res = await fetch(`/api/outings/nearby?${qs}`, { signal: ac.signal })
       const data = await res.json()
       if (!res.ok) throw new Error(data?.error ?? 'mislukt')
       setHome(data.location)
       setPlaces(data.places ?? [])
     } catch (e) {
+      if ((e as Error)?.name === 'AbortError') return
       setError(e instanceof Error && e.message !== 'mislukt' ? e.message : 'Zoeken mislukt — probeer het zo nog eens.')
       setPlaces([])
     } finally {
-      setLoading(false)
+      if (acRef.current === ac) setLoading(false)
     }
   }, [])
 
   useEffect(() => {
     scan('alles', 10)
+    return () => acRef.current?.abort()
   }, [scan])
 
   const onFilter = (key: string) => {
@@ -72,14 +84,15 @@ export default function NearbyExplorer() {
   }
 
   const addPlace = async (p: NearbyPlace) => {
+    setAdded((s) => new Set(s).add(p.id)) // direct feedback; server dedupt op osmId
     await addOuting({
       title: p.name,
       category: p.category === 'park' || p.category === 'pretpark' ? 'uitstapje' : p.category,
       cost: p.cost ?? undefined,
       area: home?.name,
       source: 'osm',
+      osmId: p.id,
     })
-    setAdded((s) => new Set(s).add(p.id))
   }
 
   return (

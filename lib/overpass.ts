@@ -41,7 +41,8 @@ function categoryOf(t: Tags): string {
 
 const FREE_BY_DEFAULT = new Set(['speeltuin', 'park', 'natuur'])
 function costOf(category: string, t: Tags): string | null {
-  if (t.fee === 'no' || t.access === 'yes') return 'gratis'
+  if (t.natural === 'beach') return 'gratis' // stranden zijn gratis
+  if (t.fee === 'no') return 'gratis' // 'access' zegt iets over openbaarheid, niet over kosten
   if (t.fee === 'yes') return category === 'cultuur' || category === 'pretpark' || category === 'dieren' ? 'gemiddeld' : 'laag'
   if (FREE_BY_DEFAULT.has(category)) return 'gratis'
   if (category === 'zwemmen' || category === 'sport') return 'laag'
@@ -90,6 +91,7 @@ export async function findNearby(
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'Fam-gezinsapp/1.0 (huishoudboekje)' },
         body: 'data=' + encodeURIComponent(query),
+        signal: AbortSignal.timeout(20000), // hangende mirror → snel door naar de volgende
         next: { revalidate: 3600 },
       })
       if (!res.ok) {

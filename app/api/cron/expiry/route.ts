@@ -15,6 +15,7 @@ import { generateOutings } from '@/lib/outings'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
+export const maxDuration = 300 // de zaterdagse AI-generatie kost tijd
 
 export async function GET(req: Request) {
   const secret = process.env.CRON_SECRET
@@ -215,7 +216,9 @@ export async function GET(req: Request) {
   let outingsGenerated = 0
   const nlWeekday = new Intl.DateTimeFormat('en-US', { timeZone: 'Europe/Amsterdam', weekday: 'short' }).format(now)
   if (process.env.ANTHROPIC_API_KEY && nlWeekday === 'Sat') {
-    const engaged = await prisma.outing.findMany({ distinct: ['householdId'], select: { householdId: true } })
+    // Begrens het aantal huishoudens per run (AI-tijd/kosten); de rest valt onder
+    // de week-dedup en komt een volgende keer aan bod.
+    const engaged = (await prisma.outing.findMany({ distinct: ['householdId'], select: { householdId: true } })).slice(0, 40)
     for (const { householdId } of engaged) {
       const sent = await once(householdId, `weekenduitjes:${nlDateStr}`, async () => {
         const { created } = await generateOutings(householdId, 10)

@@ -31,7 +31,8 @@ export async function GET(req: Request) {
   const categories = catParam
     ? catParam.split(',').map((c) => c.trim()).filter((c) => NEARBY_CATEGORIES.includes(c))
     : undefined
-  const radiusKm = Number(url.searchParams.get('radius')) || 10
+  const rawRadius = Number(url.searchParams.get('radius'))
+  const radiusKm = Math.max(1, Math.min(25, Number.isFinite(rawRadius) && rawRadius > 0 ? rawRadius : 10))
 
   const loc = await getLocation(hid)
   try {

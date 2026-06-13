@@ -405,12 +405,14 @@ model Outing {
   cost          String? // gratis | laag | gemiddeld | hoog
   ageBand       String? // alle | 0-4 | 4-8 | 8-12 | 12+
   area          String? // waar / in welke omgeving
+  osmId         String? // OpenStreetMap-id (type/id) als het uit "in de buurt" komt
   date          String? // yyyy-mm-dd indien gepland
   status        String   @default("idee") // idee | gepland | gedaan
-  source        String   @default("manual") // manual | ai
+  source        String   @default("manual") // manual | ai | osm
   agendaEventId Int? // gekoppelde agenda-afspraak (bij gepland)
   createdAt     DateTime @default(now())
 
+  @@unique([householdId, osmId]) // zelfde OSM-plek niet dubbel (NULL telt als uniek)
   @@index([householdId])
 }
 

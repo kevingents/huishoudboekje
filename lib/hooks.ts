@@ -885,6 +885,7 @@ export interface Outing {
   cost: string | null
   ageBand: string | null
   area: string | null
+  osmId: string | null
   date: string | null
   status: string // idee | gepland | gedaan
   source: string // manual | ai | osm
@@ -905,6 +906,7 @@ export function useOutings() {
       ageBand?: string
       area?: string
       source?: string
+      osmId?: string
     }) =>
       c.create(payload as Record<string, unknown>, {
         title: payload.title,
@@ -913,6 +915,7 @@ export function useOutings() {
         cost: payload.cost ?? null,
         ageBand: payload.ageBand ?? null,
         area: payload.area ?? null,
+        osmId: payload.osmId ?? null,
         date: null,
         status: 'idee',
         source: payload.source ?? 'manual',
