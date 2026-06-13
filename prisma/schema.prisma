@@ -403,6 +403,7 @@ model Outing {
   description   String?
   category      String? // natuur | speeltuin | water | cultuur | dieren | sport | creatief | eten | seizoen
   cost          String? // gratis | laag | gemiddeld | hoog
+  ageBand       String? // alle | 0-4 | 4-8 | 8-12 | 12+
   area          String? // waar / in welke omgeving
   date          String? // yyyy-mm-dd indien gepland
   status        String   @default("idee") // idee | gepland | gedaan

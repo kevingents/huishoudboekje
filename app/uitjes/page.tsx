@@ -21,6 +21,7 @@ import {
 import PageHeader from '@/components/PageHeader'
 import DashboardCard from '@/components/DashboardCard'
 import Modal from '@/components/Modal'
+import NearbyExplorer from '@/components/uitjes/NearbyExplorer'
 import { useOutings, type Outing } from '@/lib/hooks'
 
 const inputClass =
@@ -46,30 +47,39 @@ const COST: Record<string, { label: string; cls: string }> = {
   hoog: { label: '€€€', cls: 'bg-slate-100 text-slate-600' },
 }
 
+const AGE_BANDS = ['alle', '0-4', '4-8', '8-12', '12+'] as const
 const TABS = [
   { key: 'idee', label: 'Ideeën' },
   { key: 'gepland', label: 'Gepland' },
   { key: 'gedaan', label: 'Gedaan' },
+  { key: 'buurt', label: 'In de buurt' },
 ] as const
 
 export default function UitjesPage() {
   const { outings, isLoading, addOuting, updateOuting, removeOuting, generate } = useOutings()
-  const [tab, setTab] = useState<'idee' | 'gepland' | 'gedaan'>('idee')
+  const [tab, setTab] = useState<'idee' | 'gepland' | 'gedaan' | 'buurt'>('idee')
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
+  const [ageFilter, setAgeFilter] = useState('alle')
+  const [costFilter, setCostFilter] = useState('alle')
 
   const [addOpen, setAddOpen] = useState(false)
-  const [form, setForm] = useState({ title: '', description: '', category: 'uitstapje', cost: 'gratis' })
+  const [form, setForm] = useState({ title: '', description: '', category: 'uitstapje', cost: 'gratis', ageBand: 'alle' })
 
   const [planFor, setPlanFor] = useState<Outing | null>(null)
   const [planDate, setPlanDate] = useState('')
 
-  const counts = {
+  const counts: Record<string, number> = {
     idee: outings.filter((o) => o.status === 'idee').length,
     gepland: outings.filter((o) => o.status === 'gepland').length,
     gedaan: outings.filter((o) => o.status === 'gedaan').length,
   }
-  const shown = outings.filter((o) => o.status === tab)
+  const shown = outings.filter(
+    (o) =>
+      o.status === tab &&
+      (ageFilter === 'alle' || !o.ageBand || o.ageBand === 'alle' || o.ageBand === ageFilter) &&
+      (costFilter === 'alle' || o.cost === costFilter),
+  )
 
   const onGenerate = async () => {
     setBusy(true)
@@ -93,8 +103,9 @@ export default function UitjesPage() {
       description: form.description.trim() || undefined,
       category: form.category,
       cost: form.cost,
+      ageBand: form.ageBand,
     })
-    setForm({ title: '', description: '', category: 'uitstapje', cost: 'gratis' })
+    setForm({ title: '', description: '', category: 'uitstapje', cost: 'gratis', ageBand: 'alle' })
     setAddOpen(false)
   }
 
@@ -147,12 +158,35 @@ export default function UitjesPage() {
               tab === t.key ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
             }`}
           >
-            {t.label} <span className="text-slate-400">({counts[t.key]})</span>
+            {t.label}
+            {t.key in counts && <span className="text-slate-400"> ({counts[t.key]})</span>}
           </button>
         ))}
       </div>
 
-      {isLoading && outings.length === 0 ? (
+      {tab === 'buurt' ? (
+        <NearbyExplorer />
+      ) : (
+        <>
+          <div className="mb-4 flex flex-wrap gap-2">
+            <select value={ageFilter} onChange={(e) => setAgeFilter(e.target.value)} className="rounded-xl border border-cardborder bg-white px-3 py-2 text-xs font-semibold text-slate-600 outline-none">
+              <option value="alle">Alle leeftijden</option>
+              {AGE_BANDS.filter((a) => a !== 'alle').map((a) => (
+                <option key={a} value={a}>
+                  {a} jaar
+                </option>
+              ))}
+            </select>
+            <select value={costFilter} onChange={(e) => setCostFilter(e.target.value)} className="rounded-xl border border-cardborder bg-white px-3 py-2 text-xs font-semibold text-slate-600 outline-none">
+              <option value="alle">Alle prijzen</option>
+              <option value="gratis">Gratis</option>
+              <option value="laag">€ laag</option>
+              <option value="gemiddeld">€€ gemiddeld</option>
+              <option value="hoog">€€€ hoog</option>
+            </select>
+          </div>
+
+          {isLoading && outings.length === 0 ? (
         <DashboardCard>
           <p className="text-sm text-slate-400">Laden…</p>
         </DashboardCard>
@@ -186,6 +220,9 @@ export default function UitjesPage() {
                     <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px]">
                       <span className={`rounded-full px-2 py-0.5 font-semibold ${meta.cls}`}>{meta.label}</span>
                       {cost && <span className={`rounded-full px-2 py-0.5 font-semibold ${cost.cls}`}>{cost.label}</span>}
+                      {o.ageBand && o.ageBand !== 'alle' && (
+                        <span className="rounded-full bg-slate-100 px-2 py-0.5 font-semibold text-slate-600">{o.ageBand} jr</span>
+                      )}
                       {o.area && (
                         <span className="inline-flex items-center gap-1 text-slate-400">
                           <MapPin className="h-3 w-3" />
@@ -239,6 +276,8 @@ export default function UitjesPage() {
             )
           })}
         </div>
+      )}
+        </>
       )}
 
       {/* Plannen → agenda */}
@@ -302,6 +341,16 @@ export default function UitjesPage() {
                 <option value="laag">€ laag</option>
                 <option value="gemiddeld">€€ gemiddeld</option>
                 <option value="hoog">€€€ hoog</option>
+              </select>
+            </label>
+            <label className="flex-1 text-xs font-semibold text-slate-500">
+              Leeftijd
+              <select value={form.ageBand} onChange={(e) => setForm({ ...form, ageBand: e.target.value })} className={`mt-1 ${inputClass}`}>
+                <option value="alle">Alle</option>
+                <option value="0-4">0-4 jr</option>
+                <option value="4-8">4-8 jr</option>
+                <option value="8-12">8-12 jr</option>
+                <option value="12+">12+ jr</option>
               </select>
             </label>
           </div>

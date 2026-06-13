@@ -27,6 +27,7 @@
     "@types/bcryptjs": "^2.4.6",
     "bcryptjs": "^3.0.3",
     "jsbarcode": "^3.12.3",
+    "leaflet": "^1.9.4",
     "lucide-react": "^0.408.0",
     "next": "^14.2.35",
     "node-ical": "^0.26.1",
@@ -38,6 +39,7 @@
   },
   "devDependencies": {
     "@types/jsbarcode": "^3.11.4",
+    "@types/leaflet": "^1.9.21",
     "@types/node": "^20.14.10",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",

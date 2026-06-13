@@ -23,9 +23,10 @@ export async function POST(req: Request) {
       description: body?.description ? String(body.description) : null,
       category: body?.category ? String(body.category) : null,
       cost: body?.cost ? String(body.cost) : null,
+      ageBand: body?.ageBand ? String(body.ageBand) : null,
       area: body?.area ? String(body.area) : null,
       status: 'idee',
-      source: 'manual',
+      source: body?.source === 'osm' ? 'osm' : 'manual',
     },
   })
   return Response.json(outing, { status: 201 })

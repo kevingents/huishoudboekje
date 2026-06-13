@@ -883,10 +883,11 @@ export interface Outing {
   description: string | null
   category: string | null
   cost: string | null
+  ageBand: string | null
   area: string | null
   date: string | null
   status: string // idee | gepland | gedaan
-  source: string // manual | ai
+  source: string // manual | ai | osm
   agendaEventId: number | null
 }
 
@@ -896,16 +897,25 @@ export function useOutings() {
     outings: c.items,
     isLoading: c.isLoading,
     mutate: c.mutate,
-    addOuting: (payload: { title: string; description?: string; category?: string; cost?: string; area?: string }) =>
+    addOuting: (payload: {
+      title: string
+      description?: string
+      category?: string
+      cost?: string
+      ageBand?: string
+      area?: string
+      source?: string
+    }) =>
       c.create(payload as Record<string, unknown>, {
         title: payload.title,
         description: payload.description ?? null,
         category: payload.category ?? null,
         cost: payload.cost ?? null,
+        ageBand: payload.ageBand ?? null,
         area: payload.area ?? null,
         date: null,
         status: 'idee',
-        source: 'manual',
+        source: payload.source ?? 'manual',
         agendaEventId: null,
       }),
     updateOuting: (id: number, payload: Partial<Outing>) => c.update(id, payload as Record<string, unknown>),

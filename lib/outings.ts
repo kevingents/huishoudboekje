@@ -36,9 +36,10 @@ const OUTINGS_SCHEMA = {
           description: { type: 'string', description: 'Eén zin: wat het is en waarom leuk voor het gezin.' },
           category: { type: 'string', enum: CATEGORIES },
           cost: { type: 'string', enum: ['gratis', 'laag', 'gemiddeld', 'hoog'] },
+          ageBand: { type: 'string', enum: ['alle', '0-4', '4-8', '8-12', '12+'], description: 'Voor welke leeftijd het meest geschikt is.' },
           area: { type: 'string', description: 'Waar/omgeving, bv. de plaatsnaam of "thuis".' },
         },
-        required: ['title', 'description', 'category', 'cost', 'area'],
+        required: ['title', 'description', 'category', 'cost', 'ageBand', 'area'],
       },
     },
   },
@@ -50,6 +51,7 @@ interface GeneratedOuting {
   description: string
   category: string
   cost: string
+  ageBand: string
   area: string
 }
 
@@ -106,6 +108,7 @@ export async function generateOutings(householdId: number, count = 10): Promise<
       description: o.description ? String(o.description).trim() : null,
       category: CATEGORIES.includes(String(o.category)) ? String(o.category) : 'uitstapje',
       cost: ['gratis', 'laag', 'gemiddeld', 'hoog'].includes(String(o.cost)) ? String(o.cost) : null,
+      ageBand: ['alle', '0-4', '4-8', '8-12', '12+'].includes(String(o.ageBand)) ? String(o.ageBand) : 'alle',
       area: o.area ? String(o.area).trim() : area,
       status: 'idee',
       source: 'ai',
