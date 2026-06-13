@@ -57,7 +57,6 @@ export default function PeriodReviewCard() {
   // Geen terugblik tonen zolang er in de vorige periode niets is uitgegeven.
   if (!now || !review || review.spent <= 0) return null
 
-  const activeCats = review.categories.filter((c) => c.spent > 0 || c.limit > 0)
   const selectedGoal = goals.find((g) => g.id === goalId) ?? goals[0]
 
   const onDeposit = async () => {
@@ -96,24 +95,7 @@ export default function PeriodReviewCard() {
         )}
       </div>
 
-      {activeCats.length > 0 && (
-        <ul className="mt-3 flex flex-col divide-y divide-cardborder">
-          {activeCats.slice(0, 6).map((c) => {
-            const over = c.limit > 0 && c.spent > c.limit
-            return (
-              <li key={c.name} className="flex items-center gap-3 py-2 text-sm">
-                <span className="min-w-0 flex-1 truncate text-slate-700 dark:text-slate-200">{c.name}</span>
-                <span className={over ? 'font-semibold text-rose-500' : 'text-slate-500'}>
-                  €{round(c.spent)}
-                  {c.limit > 0 ? <span className="text-slate-400"> / €{round(c.limit)}</span> : null}
-                </span>
-              </li>
-            )
-          })}
-        </ul>
-      )}
-
-      {/* Sparen-suggestie */}
+      {/* Sparen-suggestie (de vergelijking + per categorie staat in Inzichten). */}
       <div className="mt-4 rounded-2xl bg-brand-light/60 p-3 dark:bg-white/5">
         {done ? (
           <p className="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-700 dark:text-emerald-300">

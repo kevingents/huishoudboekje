@@ -30,8 +30,8 @@ import {
 import BudgetProgressCard from '@/components/budget/BudgetProgressCard'
 import AutoCategorizeSteps from '@/components/budget/AutoCategorizeSteps'
 import InsightsCard from '@/components/budget/InsightsCard'
-import CategoryDayPotsCard from '@/components/budget/CategoryDayPotsCard'
 import PeriodReviewCard from '@/components/budget/PeriodReviewCard'
+import { computeDailyBudget } from '@/lib/dailyBudget'
 import UpcomingPaymentsCard from '@/components/budget/UpcomingPaymentsCard'
 import QuickActions, { type QuickAction } from '@/components/budget/QuickActions'
 import GezinsbudgetCard from '@/components/budget/GezinsbudgetCard'
@@ -275,6 +275,16 @@ export default function BudgetPage() {
   const visibleCats = showAllCats ? spendingCats : nonEmptyCats.length ? nonEmptyCats : spendingCats.slice(0, 6)
   const hiddenCount = spendingCats.length - visibleCats.length
 
+  // Dagpotje per categorie: de limiet over de periode verdeeld, met rollover —
+  // "€X/dag · vandaag nog €Y" onder elke categorie met een limiet.
+  const potByCat = new Map<number, { dailyRate: number; availableToday: number }>()
+  for (const c of spendingCats) {
+    if (c.limit <= 0) continue
+    const catTx = transactions.filter((t) => (t.category || 'Overig') === c.name)
+    const r = computeDailyBudget({ now, salaryDay: periodStart, spendablePerPeriod: c.limit, transactions: catTx })
+    potByCat.set(c.id, { dailyRate: r.dailyRate, availableToday: r.availableToday })
+  }
+
   const totalLimit = Math.round(spendingCats.reduce((sum, c) => sum + c.limit, 0))
   // Geen categorie-limieten ingesteld? Val terug op de maandtarget als referentie.
   const hasLimits = totalLimit > 0
@@ -492,6 +502,20 @@ export default function BudgetPage() {
                       style={{ width: `${Math.max(spent > 0 ? 4 : 0, pct)}%` }}
                     />
                   </div>
+                  {potByCat.has(cat.id) && (
+                    <p className="mt-1 text-[11px] text-slate-400">
+                      €{Math.round(potByCat.get(cat.id)!.dailyRate)}/dag · vandaag nog{' '}
+                      <span
+                        className={
+                          potByCat.get(cat.id)!.availableToday < 0
+                            ? 'font-semibold text-rose-500'
+                            : 'font-semibold text-emerald-600 dark:text-emerald-400'
+                        }
+                      >
+                        €{Math.round(potByCat.get(cat.id)!.availableToday)}
+                      </span>
+                    </p>
+                  )}
                 </li>
               )
             })}
@@ -506,9 +530,6 @@ export default function BudgetPage() {
             </button>
           )}
         </DashboardCard>
-
-        {/* Dagpotjes: categorielimiet → dagbudget met rollover */}
-        <CategoryDayPotsCard />
 
         {/* Inzichten + coach (samengevoegd): deze vs vorige periode, prognose, besparingen */}
         <InsightsCard
