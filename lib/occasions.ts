@@ -2,6 +2,10 @@
 // Moederdag, Sinterklaas, …) en verjaardagen van gezinsleden. Bewust
 // dagscherp (de cron draait dagelijks), met een ruime aanlooptijd voor
 // cadeaudagen zodat je nog iets kunt regelen.
+//
+// Reminders werken band-gebaseerd: per drempel (bijv. 10 dagen vooruit) vuurt
+// er één reminder. De cron dedupt op (huishouden, key) zodat een gemiste
+// cron-dag de reminder niet permanent verliest én er geen dagelijkse spam komt.
 
 const MONTHS_SHORT = ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec']
 const MONTHS_LONG = [
@@ -18,6 +22,7 @@ function nthSunday(year: number, month: number, n: number): number {
 
 export interface Occasion {
   name: string
+  year: number
   month: number // 1-12
   day: number
   gift: boolean // cadeaudag → langere aanlooptijd
@@ -26,13 +31,13 @@ export interface Occasion {
 /** Alle vaste en berekende gelegenheden voor een kalenderjaar. */
 export function occasionsForYear(year: number): Occasion[] {
   return [
-    { name: 'Valentijnsdag', month: 2, day: 14, gift: true },
-    { name: 'Moederdag', month: 5, day: nthSunday(year, 5, 2), gift: true },
-    { name: 'Vaderdag', month: 6, day: nthSunday(year, 6, 3), gift: true },
-    { name: 'Koningsdag', month: 4, day: 27, gift: false },
-    { name: 'Sinterklaas', month: 12, day: 5, gift: true },
-    { name: 'Eerste Kerstdag', month: 12, day: 25, gift: true },
-    { name: 'Oudjaarsavond', month: 12, day: 31, gift: false },
+    { name: 'Valentijnsdag', year, month: 2, day: 14, gift: true },
+    { name: 'Moederdag', year, month: 5, day: nthSunday(year, 5, 2), gift: true },
+    { name: 'Vaderdag', year, month: 6, day: nthSunday(year, 6, 3), gift: true },
+    { name: 'Koningsdag', year, month: 4, day: 27, gift: false },
+    { name: 'Sinterklaas', year, month: 12, day: 5, gift: true },
+    { name: 'Eerste Kerstdag', year, month: 12, day: 25, gift: true },
+    { name: 'Oudjaarsavond', year, month: 12, day: 31, gift: false },
   ]
 }
 
@@ -42,30 +47,42 @@ function daysBetweenUTC(from: Date, y: number, m: number, d: number): number {
   return Math.round((target - today) / 86_400_000)
 }
 
-export interface OccasionReminder {
-  name: string
-  day: number
-  month: number
-  daysUntil: number
-  gift: boolean
+/**
+ * Welke reminder-"band" hoort bij d dagen-tot? Geeft de strakste drempel die d
+ * al bereikt heeft (de kleinste drempel >= d), of null als het nog te vroeg is.
+ * Zo vuurt elke band één keer en vangt een gemiste cron-dag de eerstvolgende dag.
+ */
+export function bandFor(thresholds: number[], d: number): number | null {
+  const eligible = thresholds.filter((t) => t >= d)
+  return eligible.length ? Math.min(...eligible) : null
 }
 
 // Cadeaudagen seinen ruim vooruit (plannen + kopen); overige dagen kort.
 const GIFT_THRESHOLDS = [10, 3, 0]
 const PLAIN_THRESHOLDS = [1, 0]
 
-/** Gelegenheden waarvan de reminder vandaag (op een drempeldag) moet afgaan. */
+export interface OccasionReminder {
+  name: string
+  day: number
+  month: number
+  year: number
+  daysUntil: number
+  gift: boolean
+  band: number
+}
+
+/** Gelegenheden waarvan vandaag een reminder-band actief is. */
 export function dueOccasionReminders(now: Date): OccasionReminder[] {
   const out: OccasionReminder[] = []
-  // Kijk naar dit jaar én volgend jaar, zodat eind december een gelegenheid in
-  // januari ook al binnen de aanlooptijd valt.
+  // Dit jaar én volgend jaar, zodat eind december een gelegenheid begin volgend
+  // jaar ook binnen de aanlooptijd valt. Elk exemplaar draagt zijn eigen jaar.
   const candidates = [...occasionsForYear(now.getUTCFullYear()), ...occasionsForYear(now.getUTCFullYear() + 1)]
   for (const o of candidates) {
-    let d = daysBetweenUTC(now, now.getUTCFullYear(), o.month, o.day)
-    if (d < 0) continue // hoort bij het volgend-jaar-exemplaar
-    const thresholds = o.gift ? GIFT_THRESHOLDS : PLAIN_THRESHOLDS
-    if (!thresholds.includes(d)) continue
-    out.push({ name: o.name, day: o.day, month: o.month, daysUntil: d, gift: o.gift })
+    const d = daysBetweenUTC(now, o.year, o.month, o.day)
+    if (d < 0) continue // al voorbij — hoort bij het volgend-jaar-exemplaar
+    const band = bandFor(o.gift ? GIFT_THRESHOLDS : PLAIN_THRESHOLDS, d)
+    if (band === null) continue // nog te vroeg
+    out.push({ name: o.name, day: o.day, month: o.month, year: o.year, daysUntil: d, gift: o.gift, band })
   }
   return out
 }
@@ -91,17 +108,31 @@ export function occasionMessage(r: OccasionReminder): { title: string; body: str
 
 /* --------------------------------- Verjaardagen --------------------------- */
 
-/** Parse een vrij ingevulde verjaardag ("12 april", "12 apr", "12-4") → maand/dag. */
+/** Parse een vrij ingevulde verjaardag ("12 april", "12 apr", "12-4") → maand/dag.
+ *  Robuust tegen dubbelzinnige afkortingen: eerst exacte korte code, dan exacte
+ *  volledige naam, dan een prefix die maar op één maand past. */
 export function parseBirthday(value: string): { month: number; day: number } | null {
   const v = value.trim().toLowerCase()
   if (!v) return null
+
+  const monthFromToken = (token: string): number => {
+    const short = MONTHS_SHORT.indexOf(token) // exacte 3-letter code (jun/jul los van elkaar)
+    if (short >= 0) return short + 1
+    const exact = MONTHS_LONG.indexOf(token) // exacte volledige naam
+    if (exact >= 0) return exact + 1
+    if (token.length >= 3) {
+      const matches = MONTHS_LONG.map((m, i) => (m.startsWith(token) ? i : -1)).filter((i) => i >= 0)
+      if (matches.length === 1) return matches[0] + 1 // alleen een ÉÉNduidige prefix
+    }
+    return 0
+  }
+
   // "12 april" / "12 apr"
   const named = v.match(/(\d{1,2})\s+([a-z]+)/)
   if (named) {
     const day = Number(named[1])
-    const mi = MONTHS_LONG.findIndex((m) => m.startsWith(named[2])) // april, apr → 3
-    const mi2 = mi >= 0 ? mi : MONTHS_SHORT.findIndex((m) => m === named[2].slice(0, 3))
-    if (mi2 >= 0 && day >= 1 && day <= 31) return { month: mi2 + 1, day }
+    const month = monthFromToken(named[2])
+    if (month >= 1 && day >= 1 && day <= 31) return { month, day }
     return null
   }
   // "12-4" / "12/04" / "12.4"
@@ -120,17 +151,24 @@ export interface BirthdayReminder {
   name: string
   day: number
   month: number
+  year: number
   daysUntil: number
+  band: number
 }
 
-/** Verjaardag-reminder die vandaag (op een drempeldag) moet afgaan, of null. */
+/** Verjaardag-reminder waarvan vandaag een band actief is, of null. */
 export function dueBirthdayReminder(now: Date, memberName: string, birthday: string): BirthdayReminder | null {
   const parsed = parseBirthday(birthday)
   if (!parsed) return null
-  let d = daysBetweenUTC(now, now.getUTCFullYear(), parsed.month, parsed.day)
-  if (d < 0) d = daysBetweenUTC(now, now.getUTCFullYear() + 1, parsed.month, parsed.day)
-  if (!BIRTHDAY_THRESHOLDS.includes(d)) return null
-  return { name: memberName, day: parsed.day, month: parsed.month, daysUntil: d }
+  let year = now.getUTCFullYear()
+  let d = daysBetweenUTC(now, year, parsed.month, parsed.day)
+  if (d < 0) {
+    year += 1
+    d = daysBetweenUTC(now, year, parsed.month, parsed.day)
+  }
+  const band = bandFor(BIRTHDAY_THRESHOLDS, d)
+  if (band === null) return null
+  return { name: memberName, day: parsed.day, month: parsed.month, year, daysUntil: d, band }
 }
 
 /** Bericht voor een verjaardag-reminder. */

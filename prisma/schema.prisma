@@ -393,6 +393,21 @@ model Document {
   @@index([householdId])
 }
 
+// Idempotentie voor de dagelijkse reminder-cron: per (huishouden, key) wordt een
+// reminder maar één keer verstuurd. De key codeert de bron + drempel + jaar,
+// bijv. "occ:Vaderdag:2026:b10", "bday:7:2026:b7", "doc:12:2026-12-01:b30",
+// "agenda:45:2026-06-15". Zo verliest een gemiste cron-dag de reminder niet en
+// ontstaat er geen dagelijkse spam.
+model ReminderLog {
+  id          Int      @id @default(autoincrement())
+  householdId Int
+  key         String
+  createdAt   DateTime @default(now())
+
+  @@unique([householdId, key])
+  @@index([householdId])
+}
+
 // Gezinsmail (premium): doorgestuurde mails (facturen, garanties, afspraken) die
 // via Resend Inbound binnenkomen, door de AI worden geclassificeerd en automatisch
 // op de juiste plek worden gezet. Eén record per ontvangen mail = de inbox.

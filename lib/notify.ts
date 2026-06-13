@@ -72,11 +72,12 @@ export async function notify(opts: {
         where: { householdId: opts.householdId, name: { equals: opts.targetMember, mode: 'insensitive' } },
         select: { id: true },
       })
-      const linked = users.filter((u) => {
-        if (member && u.memberId === member.id) return true
-        const uname = u.name.trim().toLowerCase()
-        return uname === target || uname.split(/\s+/)[0] === targetFirst
-      })
+      // Voorkeur: account gekoppeld aan het gezinslid → exacte volledige naam →
+      // pas als laatste een voornaam-match (voorkomt dat een naamgenoot meekrijgt).
+      const memberLinked = member ? users.filter((u) => u.memberId === member.id) : []
+      const exact = users.filter((u) => u.name.trim().toLowerCase() === target)
+      const byFirst = users.filter((u) => u.name.trim().toLowerCase().split(/\s+/)[0] === targetFirst)
+      const linked = memberLinked.length ? memberLinked : exact.length ? exact : byFirst
       userIds = (linked.length > 0 ? linked : users.filter((u) => u.role !== 'child')).map((u) => u.id)
     } else {
       userIds = users.map((u) => u.id)
