@@ -163,15 +163,19 @@ export function periodKeyOf(dateStr: string | null | undefined, startDay = 1): s
   return `${y}-${String(mo).padStart(2, '0')}`
 }
 
-/** Periode-sleutel van een transactie: gebruik de (ISO-)datum, en val terug op
- *  createdAt voor posten met een niet-parseerbare datum ("Vandaag"/"Geïmporteerd"/
- *  leeg) — anders vallen die buiten elke periode en tellen ze nergens mee. */
+/** Periode-sleutel van een transactie: gebruik de (ISO-)datum. Alleen voor échte
+ *  "nu"-posten (handmatig toegevoegd met "Vandaag" of leeg) vallen we terug op
+ *  createdAt. Een geïmporteerde post zónder echte datum ("Geïmporteerd") krijgen
+ *  we NIET op import-tijd ingedeeld — die import-tijd zegt niets over wanneer de
+ *  uitgave was — dus die valt buiten de periode-indeling (null). */
 export function txPeriodKey(
   t: { date?: string | null; createdAt?: string | Date | null },
   startDay = 1,
 ): string | null {
   const direct = periodKeyOf(t.date, startDay)
   if (direct) return direct
+  const label = (t.date ?? '').trim().toLowerCase()
+  if (label !== '' && label !== 'vandaag') return null
   if (!t.createdAt) return null
   const iso = typeof t.createdAt === 'string' ? t.createdAt : t.createdAt.toISOString()
   return periodKeyOf(iso, startDay)

@@ -3,24 +3,41 @@
 import Link from 'next/link'
 import { Wallet, ChevronRight } from 'lucide-react'
 import DashboardCard from './DashboardCard'
-import { useBudget } from '@/lib/hooks'
+import { useBudget, useSettings } from '@/lib/hooks'
+import { isSpendingCategory, periodKeyOf, txPeriodKey } from '@/lib/budget'
 
 export default function BudgetCard() {
-  const { categories } = useBudget()
-  const spent = Math.round(categories.reduce((sum, c) => sum + c.spent, 0))
-  const total = Math.round(categories.reduce((sum, c) => sum + c.limit, 0))
-  const remaining = total - spent
+  const { categories, transactions } = useBudget()
+  const { settings } = useSettings()
 
-  // Circular progress maths.
+  const periodStart =
+    typeof settings.budgetPeriodStart === 'number' && settings.budgetPeriodStart >= 1 && settings.budgetPeriodStart <= 28
+      ? settings.budgetPeriodStart
+      : 1
+  const periodWord = periodStart > 1 ? 'periode' : 'maand'
+
+  // Budget = som van de categorie-limieten. Uitgegeven = de echte transacties van
+  // deze periode (niet het 'spent'-veld, dat 0 blijft bij import).
+  const total = Math.round(categories.filter((c) => isSpendingCategory(c.name)).reduce((s, c) => s + c.limit, 0))
+  const now = new Date()
+  const nowStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+  const currentKey = periodKeyOf(nowStr, periodStart) ?? ''
+  const spent = Math.round(
+    transactions
+      .filter((t) => isSpendingCategory(t.category) && (Number(t.amount) || 0) > 0 && txPeriodKey(t, periodStart) === currentKey)
+      .reduce((s, t) => s + (Number(t.amount) || 0), 0),
+  )
+  const remaining = total - spent
+  const over = remaining < 0
+
   const radius = 54
   const circumference = 2 * Math.PI * radius
   const progress = total ? Math.min(spent / total, 1) : 0
   const offset = circumference * (1 - progress)
 
   return (
-    <DashboardCard title="Budget boodschappen deze maand" icon={Wallet}>
+    <DashboardCard title={`Budget deze ${periodWord}`} icon={Wallet}>
       <div className="flex items-center gap-5">
-        {/* Circular progress */}
         <div className="relative h-36 w-36 shrink-0">
           <svg viewBox="0 0 128 128" className="h-full w-full -rotate-90">
             <circle cx="64" cy="64" r={radius} fill="none" stroke="#EBF1F4" strokeWidth="13" />
@@ -29,7 +46,7 @@ export default function BudgetCard() {
               cy="64"
               r={radius}
               fill="none"
-              stroke="#35B558"
+              stroke={over ? '#F43F5E' : '#35B558'}
               strokeWidth="13"
               strokeLinecap="round"
               strokeDasharray={circumference}
@@ -38,17 +55,18 @@ export default function BudgetCard() {
             />
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-            <span className="text-2xl font-extrabold text-slate-800">€{spent}</span>
+            <span className="text-2xl font-extrabold text-slate-800 dark:text-slate-100">€{spent}</span>
             <span className="text-xs text-slate-500">van €{total}</span>
             <span className="text-xs text-slate-500">gebruikt</span>
           </div>
         </div>
 
-        {/* Remaining */}
         <div className="min-w-0">
-          <p className="text-sm text-slate-500">Je hebt nog</p>
-          <p className="text-3xl font-extrabold text-slate-800">€{remaining}</p>
-          <p className="text-sm text-slate-500">te besteden</p>
+          <p className="text-sm text-slate-500">{over ? 'Je zit' : 'Je hebt nog'}</p>
+          <p className={`text-3xl font-extrabold ${over ? 'text-rose-500' : 'text-slate-800 dark:text-slate-100'}`}>
+            {over ? '−' : ''}€{Math.abs(remaining)}
+          </p>
+          <p className="text-sm text-slate-500">{over ? 'over budget' : 'te besteden'}</p>
         </div>
       </div>
 

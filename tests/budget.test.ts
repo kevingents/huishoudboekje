@@ -32,10 +32,12 @@ describe('txPeriodKey (sentinel-datum → createdAt fallback)', () => {
   it('gebruikt de ISO-datum als die er is', () => {
     expect(txPeriodKey({ date: '2026-05-20', createdAt: '2026-06-01T10:00:00Z' }, 1)).toBe('2026-05')
   })
-  it('valt terug op createdAt bij "Vandaag"/"Geïmporteerd"/leeg', () => {
+  it('valt terug op createdAt bij "Vandaag"/leeg (echte "nu"-posten)', () => {
     expect(txPeriodKey({ date: 'Vandaag', createdAt: '2026-06-13T10:00:00Z' }, 1)).toBe('2026-06')
-    expect(txPeriodKey({ date: 'Geïmporteerd', createdAt: '2026-04-02T10:00:00Z' }, 1)).toBe('2026-04')
     expect(txPeriodKey({ date: '', createdAt: '2026-04-02T10:00:00Z' }, 1)).toBe('2026-04')
+  })
+  it('deelt "Geïmporteerd" (geen echte datum) NIET in op import-tijd', () => {
+    expect(txPeriodKey({ date: 'Geïmporteerd', createdAt: '2026-04-02T10:00:00Z' }, 1)).toBeNull()
   })
   it('accepteert een Date-object voor createdAt (server/Prisma)', () => {
     expect(txPeriodKey({ date: 'Vandaag', createdAt: new Date('2026-03-10T09:00:00Z') }, 1)).toBe('2026-03')
