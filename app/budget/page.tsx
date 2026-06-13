@@ -29,6 +29,7 @@ import {
 import BudgetProgressCard from '@/components/budget/BudgetProgressCard'
 import AutoCategorizeSteps from '@/components/budget/AutoCategorizeSteps'
 import InsightsCard from '@/components/budget/InsightsCard'
+import CategoryDayPotsCard from '@/components/budget/CategoryDayPotsCard'
 import UpcomingPaymentsCard from '@/components/budget/UpcomingPaymentsCard'
 import QuickActions, { type QuickAction } from '@/components/budget/QuickActions'
 import GezinsbudgetCard from '@/components/budget/GezinsbudgetCard'
@@ -499,6 +500,9 @@ export default function BudgetPage() {
             </button>
           )}
         </DashboardCard>
+
+        {/* Dagpotjes: categorielimiet → dagbudget met rollover */}
+        <CategoryDayPotsCard />
 
         {/* Inzichten + coach (samengevoegd): deze vs vorige periode, prognose, besparingen */}
         <InsightsCard
