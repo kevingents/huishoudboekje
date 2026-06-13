@@ -9,6 +9,7 @@ import {
   dueBirthdayReminder,
   birthdayMessage,
 } from '@/lib/occasions'
+import { periodKeyOf } from '@/lib/budget'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -114,6 +115,42 @@ export async function GET(req: Request) {
     if (sent) birthdayNotified++
   }
 
+  // Nieuwe budgetperiode: als vandaag de startdag van een huishouden is (1 =
+  // kalendermaand, of bijv. de 15e), één seintje met wat er te besteden is.
+  const todayUTC = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-${String(now.getUTCDate()).padStart(2, '0')}`
+  const periodStartSettings = await prisma.setting.findMany({ where: { key: 'budgetPeriodStart' } })
+  const startDayByHh = new Map<number, number>()
+  for (const s of periodStartSettings) {
+    let v = 1
+    try {
+      v = Math.min(28, Math.max(1, Math.floor(Number(JSON.parse(s.value))) || 1))
+    } catch {
+      v = 1
+    }
+    startDayByHh.set(s.householdId, v)
+  }
+  const budgetTotals = await prisma.budgetCategory.groupBy({ by: ['householdId'], _sum: { limit: true } })
+  const limitByHh = new Map<number, number>()
+  for (const b of budgetTotals) limitByHh.set(b.householdId, b._sum.limit ?? 0)
+  let periodNotified = 0
+  for (const { id } of households) {
+    const startDay = startDayByHh.get(id) ?? 1
+    if (now.getUTCDate() !== startDay) continue // vandaag is niet de startdag
+    const total = Math.round(limitByHh.get(id) ?? 0)
+    if (total <= 0) continue // geen actief variabel budget ingesteld
+    const periodKey = periodKeyOf(todayUTC, startDay)
+    const word = startDay > 1 ? 'periode' : 'maand'
+    const sent = await once(id, `budgetperiod:${periodKey}`, () =>
+      notify({
+        householdId: id,
+        type: 'budget',
+        title: 'Nieuwe budgetperiode begonnen',
+        body: `Een nieuwe budget${word} is begonnen. Je hebt deze ${word} €${total} te besteden aan variabele uitgaven.`,
+      }),
+    )
+    if (sent) periodNotified++
+  }
+
   // Dagelijks de gekoppelde agenda's (Google/Outlook/Apple/Parro via iCal)
   // verversen, zodat nieuwe en terugkerende afspraken vanzelf binnenkomen.
   const icalHouseholds = await prisma.integration.findMany({
@@ -148,6 +185,7 @@ export async function GET(req: Request) {
     agendaNotified,
     occasionNotified,
     birthdayNotified,
+    periodNotified,
     icalSynced: synced,
     cleaned: { chats: chatDeleted.count, notifications: notifDeleted.count },
   })

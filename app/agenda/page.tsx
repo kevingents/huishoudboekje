@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { Calendar, Plus, Clock, Trash2, Link2, ChevronLeft, ChevronRight, BellRing } from 'lucide-react'
+import { Calendar, Plus, Clock, Trash2, Link2, ChevronLeft, ChevronRight, BellRing, Pencil } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
 import DashboardCard from '@/components/DashboardCard'
 import Modal from '@/components/Modal'
@@ -48,11 +48,13 @@ function groupByDate(events: AgendaEvent[]) {
 }
 
 export default function AgendaPage() {
-  const { events, isLoading, addEvent, removeEvent } = useAgenda()
+  const { events, isLoading, addEvent, updateEvent, removeEvent } = useAgenda()
   const { members } = useFamily()
   const { linked: coLinked } = useCoParent()
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState({ date: '', title: '', time: '', who: 'Gezin', accent: 'sky', coShared: false, remind: false, remindLead: '1' })
+  const [editingId, setEditingId] = useState<number | null>(null)
+  const [editingDetach, setEditingDetach] = useState(false)
   const [customWho, setCustomWho] = useState('')
 
   const days = useMemo(() => groupByDate(events), [events])
@@ -109,14 +111,47 @@ export default function AgendaPage() {
     if (new URLSearchParams(window.location.search).get('nieuw')) setOpen(true)
   }, [])
 
+  const resetForm = () => {
+    setForm({ date: '', title: '', time: '', who: 'Gezin', accent: 'sky', coShared: false, remind: false, remindLead: '1' })
+    setCustomWho('')
+    setEditingId(null)
+    setEditingDetach(false)
+  }
+
+  const openAdd = () => {
+    resetForm()
+    setOpen(true)
+  }
+
+  /** Bewerk een bestaande afspraak (ook een gesynct iCal-item; dat wordt dan
+   *  losgekoppeld als je eigen afspraak). Co-ouder-afspraken zijn read-only. */
+  const openEdit = (event: (typeof events)[number]) => {
+    const isPreset = event.who === 'Gezin' || members.some((m) => m.name === event.who)
+    setForm({
+      date: event.dateKey,
+      title: event.title,
+      time: event.time ?? '',
+      who: isPreset ? event.who : '__anders',
+      accent: event.accent ?? 'sky',
+      coShared: Boolean((event as { coShared?: boolean }).coShared),
+      remind: event.remindDays != null,
+      remindLead: event.remindDays != null ? String(event.remindDays) : '1',
+    })
+    setCustomWho(isPreset ? '' : event.who)
+    setEditingId(event.id)
+    setEditingDetach(event.source === 'ical')
+    setOpen(true)
+  }
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.title.trim() || !form.date) return
     const who = form.who === '__anders' ? customWho.trim() || 'Gezin' : form.who
     const { remind, remindLead, ...rest } = form
-    await addEvent({ ...rest, who, remindDays: remind ? Number(remindLead) : null })
-    setForm({ date: '', title: '', time: '', who: 'Gezin', accent: 'sky', coShared: false, remind: false, remindLead: '1' })
-    setCustomWho('')
+    const payload = { ...rest, who, remindDays: remind ? Number(remindLead) : null }
+    if (editingId !== null) await updateEvent(editingId, payload)
+    else await addEvent(payload)
+    resetForm()
     setOpen(false)
   }
 
@@ -130,7 +165,7 @@ export default function AgendaPage() {
         actions={
           <button
             type="button"
-            onClick={() => setOpen(true)}
+            onClick={openAdd}
             className="pill bg-brand px-4 py-2.5 text-white shadow-sm shadow-brand/20 hover:bg-brand-dark"
           >
             <Plus className="h-4 w-4" />
@@ -232,7 +267,7 @@ export default function AgendaPage() {
               <ul className="flex flex-col gap-1">
                 {selectedEvents.map((event) => {
                   const accent = accentClasses[event.accent] ?? accentClasses.sky
-                  const external = event.source !== 'manual'
+                  const readOnly = event.source === 'coparent' // alleen co-ouder is echt read-only
                   return (
                     <li key={event.id} className="group flex items-center gap-3 rounded-2xl px-2 py-2.5 hover:bg-slate-50">
                       <span className={`h-10 w-1.5 shrink-0 rounded-full ${accent.bar}`} />
@@ -246,15 +281,25 @@ export default function AgendaPage() {
                       <span className={`pill shrink-0 px-2.5 py-1 text-xs font-semibold ${accent.badge}`}>
                         {event.who}
                       </span>
-                      {!external && (
-                        <button
-                          type="button"
-                          onClick={() => removeEvent(event.id)}
-                          aria-label={`${event.title} verwijderen`}
-                          className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-slate-300 opacity-0 transition-all hover:bg-rose-50 hover:text-rose-500 group-hover:opacity-100"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                      {!readOnly && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => openEdit(event)}
+                            aria-label={`${event.title} bewerken`}
+                            className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-slate-300 opacity-0 transition-all hover:bg-slate-100 hover:text-brand group-hover:opacity-100"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => removeEvent(event.id)}
+                            aria-label={`${event.title} verwijderen`}
+                            className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-slate-300 opacity-0 transition-all hover:bg-rose-50 hover:text-rose-500 group-hover:opacity-100"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </>
                       )}
                     </li>
                   )
@@ -322,15 +367,25 @@ export default function AgendaPage() {
                         <span className={`pill shrink-0 px-2.5 py-1 text-xs font-semibold ${accent.badge}`}>
                           {event.who}
                         </span>
-                        {!external && (
-                          <button
-                            type="button"
-                            onClick={() => removeEvent(event.id)}
-                            aria-label={`${event.title} verwijderen`}
-                            className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-slate-300 opacity-0 transition-all hover:bg-rose-50 hover:text-rose-500 group-hover:opacity-100"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+                        {event.source !== 'coparent' && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => openEdit(event)}
+                              aria-label={`${event.title} bewerken`}
+                              className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-slate-300 opacity-0 transition-all hover:bg-slate-100 hover:text-brand group-hover:opacity-100"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => removeEvent(event.id)}
+                              aria-label={`${event.title} verwijderen`}
+                              className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-slate-300 opacity-0 transition-all hover:bg-rose-50 hover:text-rose-500 group-hover:opacity-100"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </>
                         )}
                       </li>
                     )
@@ -342,8 +397,21 @@ export default function AgendaPage() {
         </div>
       )}
 
-      <Modal open={open} onClose={() => setOpen(false)} title="Nieuwe afspraak">
+      <Modal
+        open={open}
+        onClose={() => {
+          setOpen(false)
+          setEditingId(null)
+        }}
+        title={editingId !== null ? 'Afspraak bewerken' : 'Nieuwe afspraak'}
+      >
         <form onSubmit={submit} className="flex flex-col gap-3">
+          {editingDetach && (
+            <p className="rounded-xl bg-amber-50 px-3 py-2 text-[11px] text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">
+              Dit is een gekoppelde (gesynchroniseerde) afspraak. Als je 'm opslaat wordt het je eigen
+              afspraak — toekomstige updates uit de agenda-koppeling overschrijven 'm dan niet meer.
+            </p>
+          )}
           <label className="text-xs font-semibold text-slate-500">
             Titel
             <input
