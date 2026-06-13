@@ -5,6 +5,14 @@ import { mutate } from 'swr'
 import { UploadCloud, FileText, Check, Loader2, AlertCircle, RotateCcw } from 'lucide-react'
 import DashboardCard from './DashboardCard'
 import { apiPost } from '@/lib/api'
+import { useSettings } from '@/lib/hooks'
+
+type ImportMode = 'expenses' | 'income' | 'both'
+const MODES: { key: ImportMode; label: string }[] = [
+  { key: 'expenses', label: 'Alleen uitgaven' },
+  { key: 'income', label: 'Alleen inkomsten' },
+  { key: 'both', label: 'Beide' },
+]
 
 type UploadedFile = {
   id: number
@@ -21,6 +29,10 @@ function formatSize(bytes: number) {
 }
 
 export default function BudgetImport() {
+  const { settings, setSetting } = useSettings()
+  const mode: ImportMode = MODES.some((m) => m.key === settings.importMode)
+    ? (settings.importMode as ImportMode)
+    : 'expenses'
   const fileRef = useRef<HTMLInputElement>(null)
   const idRef = useRef(0)
   const [busy, setBusy] = useState(false)
@@ -71,7 +83,7 @@ export default function BudgetImport() {
         r.onerror = () => rej(new Error('Bestand kon niet worden gelezen'))
         r.readAsDataURL(file)
       })
-      const res = (await apiPost('/api/budget/import', { file: dataUrl, filename: file.name })) as {
+      const res = (await apiPost('/api/budget/import', { file: dataUrl, filename: file.name, importMode: mode })) as {
         source?: string
         expenses: number
         incomes: number
@@ -89,7 +101,12 @@ export default function BudgetImport() {
       if (res.expenses === 0 && res.incomes === 0 && skip > 0) {
         text = `Niets nieuws — alle ${skip} transacties stonden al in je budget.`
       } else if (res.source === 'bank') {
-        text = `${res.expenses} afschrijvingen${skip ? `, ${skip} dubbel overgeslagen` : ''}. Deel ze nu in onder "Categoriseren".`
+        const parts: string[] = []
+        if (res.expenses) parts.push(`${res.expenses} afschrijvingen`)
+        if (res.incomes) parts.push(`${res.incomes} bijschrijvingen`)
+        text = `${parts.join(' en ') || 'Geen nieuwe transacties'}${skip ? `, ${skip} dubbel overgeslagen` : ''}.${
+          res.expenses ? ' Deel de uitgaven nu in onder "Categoriseren".' : ''
+        }`
       } else {
         text = `${res.expenses} nieuwe uitgaven${skip ? `, ${skip} al aanwezig` : ''} en ${res.categories} categorieën.`
       }
@@ -108,6 +125,25 @@ export default function BudgetImport() {
   return (
     <DashboardCard title="Bestanden uploaden" icon={UploadCloud} iconClassName="text-brand" className="lg:col-span-2">
       <input ref={fileRef} type="file" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} />
+
+      {/* Wat uit een bankafschrift importeren — keuze wordt onthouden. */}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <span className="text-xs font-semibold text-slate-500">Uit bankafschrift:</span>
+        <div className="flex gap-1 rounded-xl bg-slate-100 p-1">
+          {MODES.map((m) => (
+            <button
+              key={m.key}
+              type="button"
+              onClick={() => setSetting('importMode', m.key)}
+              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+                mode === m.key ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         {/* Drag & drop zone */}

@@ -109,13 +109,22 @@ export async function POST(req: Request) {
   const isXlsx = filename.endsWith('.xlsx') || (buf.length > 1 && buf[0] === 0x50 && buf[1] === 0x4b)
 
   // Bankafschrift (CSV / CAMT.053 (XML) / MT940) — werkt voor alle SEPA-banken.
+  // Wat importeren: alleen uitgaven (standaard), alleen inkomsten, of beide.
+  const importMode = ['expenses', 'income', 'both'].includes(String(body?.importMode))
+    ? (String(body.importMode) as 'expenses' | 'income' | 'both')
+    : 'expenses'
+  const wantExpenses = importMode !== 'income'
+  const wantIncome = importMode !== 'expenses'
+
   if (!isXlsx) {
     const text = buf.toString('utf8')
     const txs = parseBankStatement(filename, text)
-    const debits = txs.filter((t) => !t.isIncome && t.amount > 0)
-    if (debits.length === 0) {
+    const debits = wantExpenses ? txs.filter((t) => !t.isIncome && t.amount > 0) : []
+    const credits = wantIncome ? txs.filter((t) => t.isIncome && t.amount > 0) : []
+    if (debits.length === 0 && credits.length === 0) {
+      const what = importMode === 'income' ? 'bijschrijvingen' : importMode === 'expenses' ? 'afschrijvingen' : 'transacties'
       return Response.json(
-        { error: 'Geen afschrijvingen herkend. Upload een CSV, CAMT.053 (XML) of MT940 van je bank.' },
+        { error: `Geen ${what} herkend. Upload een CSV, CAMT.053 (XML) of MT940 van je bank.` },
         { status: 400 },
       )
     }
@@ -208,13 +217,43 @@ export async function POST(req: Request) {
       }
     }
 
-    // Bijschrijvingen (inkomsten) worden NIET geïmporteerd — inkomsten voer je zelf
-    // toe (altijd per maand) via de Inkomsten-kaart.
+    // Bijschrijvingen (inkomsten): alleen als gekozen. Ontdubbeld en opgeslagen in
+    // de categorie 'Inkomsten' (telt niet mee als variabele uitgave).
+    let incomeStored = 0
+    if (credits.length) {
+      const incFresh: { label: string; category: string; amount: number; date: string }[] = []
+      for (const c of credits) {
+        const label = (c.description || c.category).slice(0, 120)
+        const date = c.date || 'Geïmporteerd'
+        const k = txKey(date, c.amount, label)
+        const cnt = seen.get(k) ?? 0
+        if (cnt > 0) {
+          seen.set(k, cnt - 1)
+          skipped++
+          continue
+        }
+        incFresh.push({ label, category: 'Inkomsten', amount: c.amount, date })
+      }
+      if (incFresh.length) {
+        const hasInkomsten = await prisma.budgetCategory.findFirst({ where: { householdId: hid, name: 'Inkomsten' } })
+        if (!hasInkomsten) {
+          await prisma.budgetCategory.create({
+            data: { householdId: hid, name: 'Inkomsten', color: 'emerald', icon: 'TrendingUp', limit: 0, spent: 0 },
+          })
+        }
+        const incSlice = incFresh.slice(0, 5000)
+        await prisma.transaction.createMany({
+          data: incSlice.map((d) => ({ householdId: hid, label: d.label, category: d.category, amount: d.amount, date: d.date })),
+        })
+        incomeStored = incSlice.length
+      }
+    }
+
     return Response.json({
       ok: true,
       source: 'bank',
       expenses: slice.length,
-      incomes: 0,
+      incomes: incomeStored,
       categories: cats.length,
       skipped,
       skippedKind,
