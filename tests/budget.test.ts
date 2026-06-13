@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   periodKeyOf,
+  txPeriodKey,
   shiftPeriodKey,
   periodRangeOf,
   merchantKey,
@@ -24,6 +25,23 @@ describe('periodKeyOf', () => {
   it('ongeldige invoer geeft null', () => {
     expect(periodKeyOf('', 1)).toBeNull()
     expect(periodKeyOf(null, 1)).toBeNull()
+  })
+})
+
+describe('txPeriodKey (sentinel-datum → createdAt fallback)', () => {
+  it('gebruikt de ISO-datum als die er is', () => {
+    expect(txPeriodKey({ date: '2026-05-20', createdAt: '2026-06-01T10:00:00Z' }, 1)).toBe('2026-05')
+  })
+  it('valt terug op createdAt bij "Vandaag"/"Geïmporteerd"/leeg', () => {
+    expect(txPeriodKey({ date: 'Vandaag', createdAt: '2026-06-13T10:00:00Z' }, 1)).toBe('2026-06')
+    expect(txPeriodKey({ date: 'Geïmporteerd', createdAt: '2026-04-02T10:00:00Z' }, 1)).toBe('2026-04')
+    expect(txPeriodKey({ date: '', createdAt: '2026-04-02T10:00:00Z' }, 1)).toBe('2026-04')
+  })
+  it('accepteert een Date-object voor createdAt (server/Prisma)', () => {
+    expect(txPeriodKey({ date: 'Vandaag', createdAt: new Date('2026-03-10T09:00:00Z') }, 1)).toBe('2026-03')
+  })
+  it('null als er niets bruikbaars is', () => {
+    expect(txPeriodKey({ date: 'Vandaag' }, 1)).toBeNull()
   })
 })
 

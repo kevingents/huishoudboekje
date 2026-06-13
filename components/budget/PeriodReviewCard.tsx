@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { TrendingUp, PiggyBank, Check, AlertTriangle } from 'lucide-react'
 import DashboardCard from '../DashboardCard'
 import {
@@ -36,6 +36,7 @@ export default function PeriodReviewCard() {
   const [goalId, setGoalId] = useState<number | ''>('')
   const [busy, setBusy] = useState(false)
   const [done, setDone] = useState<string | null>(null)
+  const depositing = useRef(false) // synchrone guard tegen dubbelklik (state is async)
 
   const periodStart =
     typeof settings.budgetPeriodStart === 'number' && settings.budgetPeriodStart >= 1 && settings.budgetPeriodStart <= 28
@@ -60,13 +61,15 @@ export default function PeriodReviewCard() {
   const selectedGoal = goals.find((g) => g.id === goalId) ?? goals[0]
 
   const onDeposit = async () => {
-    if (!selectedGoal || review.surplus <= 0) return
+    if (!selectedGoal || review.surplus <= 0 || depositing.current) return
+    depositing.current = true
     setBusy(true)
     try {
       await deposit(selectedGoal, Math.round(review.surplus))
       setDone(`€${round(review.surplus)} bijgeschreven bij ${selectedGoal.name}.`)
     } catch {
       setDone('Inleggen mislukt — probeer het opnieuw.')
+      depositing.current = false // bij fout opnieuw kunnen proberen
     } finally {
       setBusy(false)
     }
@@ -127,7 +130,7 @@ export default function PeriodReviewCard() {
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 {goals.length > 1 && (
                   <select
-                    value={goalId}
+                    value={selectedGoal?.id ?? ''}
                     onChange={(e) => setGoalId(e.target.value ? Number(e.target.value) : '')}
                     className="rounded-xl border border-cardborder bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-brand/40 focus:ring-2 focus:ring-brand/20"
                   >

@@ -1,7 +1,7 @@
 // Terugblik op een budgetperiode: hoe is het gegaan en wat houd je over (om te
 // sparen)? Pure functie, gedeeld door de in-app kaart en (later) de cron.
 
-import { periodKeyOf, isSpendingCategory } from './budget'
+import { txPeriodKey, isSpendingCategory } from './budget'
 
 export interface PeriodCategoryLine {
   name: string
@@ -19,7 +19,7 @@ export interface PeriodReviewResult {
 }
 
 export function reviewPeriod(opts: {
-  transactions: { category?: string | null; amount: number; date?: string }[]
+  transactions: { category?: string | null; amount: number; date?: string; createdAt?: string | Date | null }[]
   spendingCategories: { name: string; limit: number }[]
   spendable: number
   periodKey: string
@@ -31,7 +31,8 @@ export function reviewPeriod(opts: {
   for (const t of transactions) {
     const amount = Number(t.amount) || 0
     if (amount <= 0 || !isSpendingCategory(t.category || '')) continue
-    if (periodKeyOf(t.date, periodStart) !== periodKey) continue
+    // Datum kan een sentinel zijn ("Vandaag"/"Geïmporteerd"); val terug op createdAt.
+    if (txPeriodKey(t, periodStart) !== periodKey) continue
     const name = t.category || 'Overig'
     byCat.set(name, (byCat.get(name) ?? 0) + amount)
     spent += amount

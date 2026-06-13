@@ -24,6 +24,7 @@ import {
   merchantKey,
   monthlyEquivalent,
   periodKeyOf,
+  txPeriodKey,
   periodRangeOf,
 } from '@/lib/budget'
 import BudgetProgressCard from '@/components/budget/BudgetProgressCard'
@@ -234,7 +235,7 @@ export default function BudgetPage() {
   const spendMonths = new Set<string>()
   const sumByCat = new Map<string, number>()
   for (const t of spendingTx) {
-    const pk = periodKeyOf(t.date, periodStart)
+    const pk = txPeriodKey(t, periodStart)
     if (pk) spendMonths.add(pk)
     const k = t.category || 'Overig'
     sumByCat.set(k, (sumByCat.get(k) ?? 0) + (Number(t.amount) || 0))
@@ -255,7 +256,7 @@ export default function BudgetPage() {
   const currentByCat = new Map<string, number>()
   let currentSpent = 0
   for (const t of spendingTx) {
-    if (periodKeyOf(t.date, periodStart) !== currentKey) continue
+    if (txPeriodKey(t, periodStart) !== currentKey) continue
     const a = Number(t.amount) || 0
     currentByCat.set(t.category || 'Overig', (currentByCat.get(t.category || 'Overig') ?? 0) + a)
     currentSpent += a

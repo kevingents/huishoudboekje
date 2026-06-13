@@ -145,45 +145,68 @@ export async function GET(req: Request) {
     startDayByHh.set(s.householdId, v)
   }
   let periodNotified = 0
-  for (const { id } of households) {
-    const startDay = startDayByHh.get(id) ?? 1
-    if (nlDayOfMonth !== startDay) continue // vandaag (NL) is niet de startdag
-
-    // Terugblik op de zojuist afgesloten periode: hoeveel uitgegeven en wat over
-    // (om te sparen). Zware queries alleen voor de huishoudens die vandaag wisselen.
-    const [incomes, costs, subscriptions, loans, txns, spendingCats] = await Promise.all([
-      prisma.income.findMany({ where: { householdId: id }, select: { amount: true, interval: true } }),
+  // Alleen de huishoudens waarvoor vandaag (NL) de startdag is; default = de 1e.
+  const startToday = households.map((h) => h.id).filter((id) => (startDayByHh.get(id) ?? 1) === nlDayOfMonth)
+  if (startToday.length > 0) {
+    // Eén query per tabel voor álle relevante huishoudens (geen N+1 op de 1e).
+    const inIds = { householdId: { in: startToday } }
+    const [incomesAll, costsAll, subsAll, loansAll, txnsAll, catsAll] = await Promise.all([
+      prisma.income.findMany({ where: inIds, select: { householdId: true, amount: true, interval: true } }),
       prisma.fixedCost.findMany({
-        where: { householdId: id },
-        select: { amount: true, isSubscription: true, subscriptionInterval: true },
+        where: inIds,
+        select: { householdId: true, amount: true, isSubscription: true, subscriptionInterval: true },
       }),
-      prisma.subscription.findMany({ where: { householdId: id }, select: { amount: true, interval: true, status: true } }),
-      prisma.loan.findMany({ where: { householdId: id }, select: { termAmount: true } }),
-      prisma.transaction.findMany({ where: { householdId: id }, select: { category: true, amount: true, date: true } }),
-      prisma.budgetCategory.findMany({ where: { householdId: id }, select: { name: true, limit: true } }),
+      prisma.subscription.findMany({ where: inIds, select: { householdId: true, amount: true, interval: true, status: true } }),
+      prisma.loan.findMany({ where: inIds, select: { householdId: true, termAmount: true } }),
+      prisma.transaction.findMany({ where: inIds, select: { householdId: true, category: true, amount: true, date: true, createdAt: true } }),
+      prisma.budgetCategory.findMany({ where: inIds, select: { householdId: true, name: true, limit: true } }),
     ])
-    const spendable = spendablePerMonth({ incomes, costs, subscriptions, loans })
-    const prevKey = shiftPeriodKey(periodKeyOf(nlDateStr, startDay) ?? '', -1)
-    const review = reviewPeriod({
-      transactions: txns,
-      spendingCategories: spendingCats.filter((c) => isSpendingCategory(c.name)),
-      spendable,
-      periodKey: prevKey,
-      periodStart: startDay,
-    })
-    if (review.spent <= 0 && spendable <= 0) continue // niks te melden
+    const group = <T extends { householdId: number }>(rows: T[]) => {
+      const m = new Map<number, T[]>()
+      for (const r of rows) {
+        const arr = m.get(r.householdId)
+        if (arr) arr.push(r)
+        else m.set(r.householdId, [r])
+      }
+      return m
+    }
+    const incByHh = group(incomesAll)
+    const costByHh = group(costsAll)
+    const subByHh = group(subsAll)
+    const loanByHh = group(loansAll)
+    const txByHh = group(txnsAll)
+    const catByHh = group(catsAll)
 
-    const word = startDay > 1 ? 'periode' : 'maand'
-    const body =
-      review.surplus > 0
-        ? `Vorige ${word}: €${Math.round(review.spent)} van €${Math.round(spendable)} uitgegeven. Je hield €${Math.round(review.surplus)} over — mooi om naar je spaarrekening over te maken.`
-        : review.overspend > 0
-          ? `Vorige ${word}: €${Math.round(review.spent)} uitgegeven — €${Math.round(review.overspend)} boven je budget van €${Math.round(spendable)}. Deze ${word} wat strakker?`
-          : `Vorige ${word}: €${Math.round(review.spent)} van €${Math.round(spendable)} uitgegeven.`
-    const sent = await once(id, `periodreview:${prevKey}`, () =>
-      notify({ householdId: id, type: 'budget', title: `Terugblik vorige ${word}`, body }),
-    )
-    if (sent) periodNotified++
+    for (const id of startToday) {
+      const startDay = startDayByHh.get(id) ?? 1
+      const spendable = spendablePerMonth({
+        incomes: incByHh.get(id) ?? [],
+        costs: costByHh.get(id) ?? [],
+        subscriptions: subByHh.get(id) ?? [],
+        loans: loanByHh.get(id) ?? [],
+      })
+      const prevKey = shiftPeriodKey(periodKeyOf(nlDateStr, startDay) ?? '', -1)
+      const review = reviewPeriod({
+        transactions: txByHh.get(id) ?? [],
+        spendingCategories: (catByHh.get(id) ?? []).filter((c) => isSpendingCategory(c.name)),
+        spendable,
+        periodKey: prevKey,
+        periodStart: startDay,
+      })
+      if (review.spent <= 0 && spendable <= 0) continue // niks te melden
+
+      const word = startDay > 1 ? 'periode' : 'maand'
+      const body =
+        review.surplus > 0
+          ? `Vorige ${word}: €${Math.round(review.spent)} van €${Math.round(spendable)} uitgegeven. Je hield €${Math.round(review.surplus)} over — mooi om naar je spaarrekening over te maken.`
+          : review.overspend > 0
+            ? `Vorige ${word}: €${Math.round(review.spent)} uitgegeven — €${Math.round(review.overspend)} boven je budget van €${Math.round(spendable)}. Deze ${word} wat strakker?`
+            : `Vorige ${word}: €${Math.round(review.spent)} van €${Math.round(spendable)} uitgegeven.`
+      const sent = await once(id, `periodreview:${prevKey}`, () =>
+        notify({ householdId: id, type: 'budget', title: `Terugblik vorige ${word}`, body }),
+      )
+      if (sent) periodNotified++
+    }
   }
 
   // Dagelijks de gekoppelde agenda's (Google/Outlook/Apple/Parro via iCal)
