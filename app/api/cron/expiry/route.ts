@@ -9,7 +9,7 @@ import {
   dueBirthdayReminder,
   birthdayMessage,
 } from '@/lib/occasions'
-import { periodKeyOf } from '@/lib/budget'
+import { periodKeyOf, EXCLUDED_CATEGORIES } from '@/lib/budget'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -26,11 +26,18 @@ export async function GET(req: Request) {
   // Zo verliest een gemiste cron-dag de reminder niet en ontstaat er geen spam.
   const once = async (householdId: number, key: string, send: () => Promise<void>): Promise<boolean> => {
     try {
-      await prisma.reminderLog.create({ data: { householdId, key } })
+      await prisma.reminderLog.create({ data: { householdId, key } }) // claim de slot
     } catch {
+      return false // al verstuurd (unieke index)
+    }
+    try {
+      await send()
+    } catch {
+      // Verzenden faalde: claim weer vrijgeven zodat de volgende cron-run het
+      // opnieuw probeert (anders zou de reminder die dag definitief verloren zijn).
+      await prisma.reminderLog.deleteMany({ where: { householdId, key } }).catch(() => {})
       return false
     }
-    await send().catch(() => {})
     return true
   }
 
@@ -117,7 +124,14 @@ export async function GET(req: Request) {
 
   // Nieuwe budgetperiode: als vandaag de startdag van een huishouden is (1 =
   // kalendermaand, of bijv. de 15e), één seintje met wat er te besteden is.
-  const todayUTC = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-${String(now.getUTCDate()).padStart(2, '0')}`
+  // Reken in NL-tijd (niet UTC), zodat de startdag-match niet een dag verschuift.
+  const nlDateStr = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Amsterdam',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(now) // "2026-06-13"
+  const nlDayOfMonth = Number(nlDateStr.slice(8, 10))
   const periodStartSettings = await prisma.setting.findMany({ where: { key: 'budgetPeriodStart' } })
   const startDayByHh = new Map<number, number>()
   for (const s of periodStartSettings) {
@@ -129,16 +143,22 @@ export async function GET(req: Request) {
     }
     startDayByHh.set(s.householdId, v)
   }
-  const budgetTotals = await prisma.budgetCategory.groupBy({ by: ['householdId'], _sum: { limit: true } })
+  // Alleen variabele uitgave-categorieën meetellen (geen Inkomsten/Negeren/Vaste lasten),
+  // zodat het "te besteden"-bedrag klopt met de begroting in de app.
+  const budgetTotals = await prisma.budgetCategory.groupBy({
+    by: ['householdId'],
+    where: { name: { notIn: [...EXCLUDED_CATEGORIES] } },
+    _sum: { limit: true },
+  })
   const limitByHh = new Map<number, number>()
   for (const b of budgetTotals) limitByHh.set(b.householdId, b._sum.limit ?? 0)
   let periodNotified = 0
   for (const { id } of households) {
     const startDay = startDayByHh.get(id) ?? 1
-    if (now.getUTCDate() !== startDay) continue // vandaag is niet de startdag
+    if (nlDayOfMonth !== startDay) continue // vandaag (NL) is niet de startdag
     const total = Math.round(limitByHh.get(id) ?? 0)
     if (total <= 0) continue // geen actief variabel budget ingesteld
-    const periodKey = periodKeyOf(todayUTC, startDay)
+    const periodKey = periodKeyOf(nlDateStr, startDay)
     const word = startDay > 1 ? 'periode' : 'maand'
     const sent = await once(id, `budgetperiod:${periodKey}`, () =>
       notify({

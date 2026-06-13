@@ -171,18 +171,17 @@ export async function syncHouseholdIcal(
     // Items die de gebruiker zelf heeft losgekoppeld (bewerkt → source 'manual',
     // externalId behouden) of verwijderd ('ical_hidden') NIET opnieuw toevoegen,
     // anders verschijnen ze dubbel of komen verwijderde items terug.
-    const detached = await prisma.agendaEvent.findMany({
-      where: { householdId, source: { not: 'ical' }, externalId: { not: null } },
-      select: { externalId: true },
-    })
-    const hiddenSetting = await prisma.setting.findFirst({ where: { householdId, key: 'ical_hidden' } })
-    const skip = new Set<string>(detached.map((d) => d.externalId as string))
-    try {
-      const parsed = hiddenSetting ? JSON.parse(hiddenSetting.value) : []
-      if (Array.isArray(parsed)) for (const x of parsed) if (typeof x === 'string') skip.add(x)
-    } catch {
-      /* corrupte instelling negeren */
-    }
+    const [detached, hidden] = await Promise.all([
+      prisma.agendaEvent.findMany({
+        where: { householdId, source: { not: 'ical' }, externalId: { not: null } },
+        select: { externalId: true },
+      }),
+      prisma.hiddenIcalEvent.findMany({ where: { householdId }, select: { externalId: true } }),
+    ])
+    const skip = new Set<string>([
+      ...detached.map((d) => d.externalId as string),
+      ...hidden.map((h) => h.externalId),
+    ])
 
     await prisma.agendaEvent.deleteMany({ where: { householdId, source: 'ical' } })
     for (const r of upcoming) {

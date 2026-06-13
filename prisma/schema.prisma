@@ -408,6 +408,19 @@ model ReminderLog {
   @@index([householdId])
 }
 
+// Uit een iCal-feed verwijderde afspraken: onthoud de externalId zodat de sync
+// ze niet opnieuw toevoegt. Atomair (unieke index) i.p.v. een JSON-lijst, zodat
+// gelijktijdige verwijderingen elkaar niet overschrijven.
+model HiddenIcalEvent {
+  id          Int      @id @default(autoincrement())
+  householdId Int
+  externalId  String
+  createdAt   DateTime @default(now())
+
+  @@unique([householdId, externalId])
+  @@index([householdId])
+}
+
 // Gezinsmail (premium): doorgestuurde mails (facturen, garanties, afspraken) die
 // via Resend Inbound binnenkomen, door de AI worden geclassificeerd en automatisch
 // op de juiste plek worden gezet. Eén record per ontvangen mail = de inbox.

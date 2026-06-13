@@ -92,6 +92,21 @@ export function shortDate(day: number, month: number): string {
   return `${day} ${MONTHS_SHORT[month - 1] ?? ''}`
 }
 
+/** Aankomende gelegenheden binnen `within` dagen (voor het dashboard, niet de
+ *  drempel-cron) — gesorteerd op nabijheid, zonder dubbele namen. */
+export function upcomingOccasions(now: Date, within = 21): OccasionReminder[] {
+  const candidates = [...occasionsForYear(now.getUTCFullYear()), ...occasionsForYear(now.getUTCFullYear() + 1)]
+  const out: OccasionReminder[] = []
+  const seen = new Set<string>()
+  for (const o of candidates) {
+    const d = daysBetweenUTC(now, o.year, o.month, o.day)
+    if (d < 0 || d > within || seen.has(o.name)) continue
+    seen.add(o.name)
+    out.push({ name: o.name, day: o.day, month: o.month, year: o.year, daysUntil: d, gift: o.gift, band: 0 })
+  }
+  return out.sort((a, b) => a.daysUntil - b.daysUntil)
+}
+
 /** Bericht voor een gelegenheid-reminder. */
 export function occasionMessage(r: OccasionReminder): { title: string; body: string } {
   const date = shortDate(r.day, r.month)

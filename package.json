@@ -13,7 +13,9 @@
     "db:reset": "prisma migrate reset --force",
     "gen:icons": "node scripts/gen-icons.mjs",
     "dev:db": "node scripts/dev-db.mjs",
-    "db:fresh": "node scripts/fresh-db.mjs"
+    "db:fresh": "node scripts/fresh-db.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -46,6 +48,7 @@
     "prisma": "^6.19.3",
     "tailwindcss": "^3.4.6",
     "tsx": "^4.22.4",
-    "typescript": "^5.5.3"
+    "typescript": "^5.5.3",
+    "vitest": "^4.1.8"
   }
 }

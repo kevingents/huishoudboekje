@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 
 import DashboardCard from '@/components/DashboardCard'
+import UpcomingRemindersCard from '@/components/UpcomingRemindersCard'
 import BudgetCard from '@/components/BudgetCard'
 import DayBudgetCard from '@/components/DayBudgetCard'
 import AgendaCard from '@/components/AgendaCard'
@@ -261,6 +262,10 @@ export default function Vandaag() {
           </p>
         </div>
       )}
+
+      {/* Aankomende seintjes (verloopdata, verjaardagen, feestdagen) — altijd
+          bovenaan, los van de instelbare widgets. Verbergt zich als er niks speelt. */}
+      <UpcomingRemindersCard />
 
       {order.length === 0 ? (
         <DashboardCard>

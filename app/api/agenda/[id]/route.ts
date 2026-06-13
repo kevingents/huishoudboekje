@@ -2,27 +2,6 @@ import { prisma } from '@/lib/db'
 import { describeDate } from '@/lib/date'
 import { requireHousehold, notFound } from '@/lib/guard'
 
-/** Voeg een externalId toe aan de "verborgen" lijst van een huishouden, zodat een
- *  uit een iCal-feed verwijderd/bewerkt item niet bij de volgende sync terugkomt. */
-async function hideExternalId(householdId: number, externalId: string) {
-  const setting = await prisma.setting.findFirst({ where: { householdId, key: 'ical_hidden' } })
-  let list: string[] = []
-  try {
-    const parsed = setting ? JSON.parse(setting.value) : []
-    if (Array.isArray(parsed)) list = parsed.filter((x): x is string => typeof x === 'string')
-  } catch {
-    list = []
-  }
-  if (list.includes(externalId)) return
-  list.push(externalId)
-  const value = JSON.stringify(list.slice(-1000)) // begrens; meer dan genoeg
-  if (setting) {
-    await prisma.setting.update({ where: { id: setting.id }, data: { value } })
-  } else {
-    await prisma.setting.create({ data: { householdId, key: 'ical_hidden', value } })
-  }
-}
-
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
   const hid = await requireHousehold()
   if (hid instanceof Response) return hid
@@ -68,8 +47,13 @@ export async function DELETE(_req: Request, { params }: { params: { id: string }
     return Response.json({ error: 'Gedeelde afspraken van de andere ouder kun je niet verwijderen.' }, { status: 403 })
   }
   // Verwijder je een (ooit) gesynct item, onthoud de externalId zodat het niet
-  // bij de volgende iCal-sync terugkomt.
-  if (existing.externalId) await hideExternalId(hid, existing.externalId)
+  // bij de volgende iCal-sync terugkomt. Atomaire upsert: dubbele/gelijktijdige
+  // verwijderingen botsen niet (unieke index), en dit gebeurt vóór de delete.
+  if (existing.externalId) {
+    await prisma.hiddenIcalEvent
+      .create({ data: { householdId: hid, externalId: existing.externalId } })
+      .catch(() => {}) // al verborgen → prima
+  }
   await prisma.agendaEvent.deleteMany({ where: { id, householdId: hid } })
   return new Response(null, { status: 204 })
 }

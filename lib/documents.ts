@@ -2,7 +2,15 @@
 // een paspoort/ID/rijbewijs wil je een half jaar vooruit weten (afspraak bij de
 // gemeente + verwerkingstijd), een garantie pas vlak van tevoren.
 
-export type DocumentType = 'garantie' | 'factuur' | 'contract' | 'officieel' | 'legitimatie' | string
+export type DocumentType =
+  | 'garantie'
+  | 'factuur'
+  | 'contract'
+  | 'officieel'
+  | 'legitimatie'
+  | 'apk'
+  | 'verzekering'
+  | string
 
 /** Is dit een identiteitsdocument (lange aanlooptijd nodig)? */
 export function isIdDocument(type: string): boolean {
@@ -12,11 +20,14 @@ export function isIdDocument(type: string): boolean {
 /**
  * Op welke dagen-vóór-verloop sturen we een reminder. Vaste drempels i.p.v.
  * dagelijks, zodat het niet spamt. Identiteitsdocumenten beginnen 6 maanden
- * vooruit; contracten 2 maanden; overige documenten ~1 maand.
+ * vooruit; verzekeringen 3 maanden (opzegtermijn); APK en contracten 2 maanden;
+ * overige documenten ~1 maand. De eerste waarde is meteen het "binnenkort"-venster
+ * dat de UI gebruikt.
  */
 export function reminderThresholds(type: string): number[] {
   if (isIdDocument(type)) return [180, 90, 60, 30, 14, 7, 1, 0]
-  if (type === 'contract' || type === 'officieel') return [60, 30, 14, 7, 1, 0]
+  if (type === 'verzekering') return [90, 60, 30, 14, 7, 1, 0]
+  if (type === 'apk' || type === 'contract' || type === 'officieel') return [60, 30, 14, 7, 1, 0]
   return [30, 14, 7, 1, 0]
 }
 
@@ -47,8 +58,16 @@ export function expiryPhrase(days: number): string {
 /** Concrete vervolgactie per documenttype (wat moet de gebruiker dóen). */
 export function expiryAction(type: string): string {
   if (isIdDocument(type)) return 'Plan op tijd een afspraak bij de gemeente voor een nieuwe.'
+  if (type === 'apk') return 'Plan op tijd een APK-afspraak bij de garage.'
+  if (type === 'verzekering') return 'Let op de opzegtermijn — overstappen of verlengen?'
   if (type === 'contract') return 'Let op de opzegtermijn — wil je verlengen of opzeggen?'
   if (type === 'garantie') return 'Daarna vervalt de garantie.'
   if (type === 'factuur') return ''
   return 'Vraag op tijd een nieuwe aan.'
+}
+
+/** "Binnenkort"-venster (dagen) dat de UI gebruikt om een verloopdatum te
+ *  laten oplichten — gelijk aan de ruimste reminder-drempel van het type. */
+export function headsUpWindow(type: string): number {
+  return reminderThresholds(type)[0] ?? 30
 }

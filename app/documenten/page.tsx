@@ -1,8 +1,8 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { FileText, ShieldCheck, Plus, Trash2, Camera, CalendarClock, Receipt, FileSignature, BadgeCheck } from 'lucide-react'
-import { isIdDocument, expiryPhrase, daysUntil } from '@/lib/documents'
+import { FileText, ShieldCheck, Plus, Trash2, Camera, CalendarClock, Receipt, FileSignature, BadgeCheck, Car, Umbrella } from 'lucide-react'
+import { expiryPhrase, daysUntil, headsUpWindow } from '@/lib/documents'
 import PageHeader from '@/components/PageHeader'
 import DashboardCard from '@/components/DashboardCard'
 import Modal from '@/components/Modal'
@@ -16,19 +16,12 @@ const TYPES = [
   { value: 'factuur', label: 'Factuur', icon: Receipt, accent: 'bg-emerald-100 text-emerald-600' },
   { value: 'contract', label: 'Contract', icon: FileSignature, accent: 'bg-indigo-100 text-indigo-600' },
   { value: 'legitimatie', label: 'Paspoort, ID of rijbewijs', icon: BadgeCheck, accent: 'bg-rose-100 text-rose-600' },
+  { value: 'apk', label: 'APK / keuring', icon: Car, accent: 'bg-amber-100 text-amber-600' },
+  { value: 'verzekering', label: 'Verzekering', icon: Umbrella, accent: 'bg-teal-100 text-teal-600' },
   { value: 'officieel', label: 'Officieel document', icon: ShieldCheck, accent: 'bg-violet-100 text-violet-600' },
 ]
-// garantie → bon; factuur → rekening; contract; legitimatie → ID-bewijs; rest → officieel.
-const typeMeta = (t: string) =>
-  t === 'garantie'
-    ? TYPES[0]
-    : t === 'factuur'
-      ? TYPES[1]
-      : t === 'contract'
-        ? TYPES[2]
-        : t === 'legitimatie'
-          ? TYPES[3]
-          : TYPES[4]
+// Onbekende/oude types vallen terug op "officieel".
+const typeMeta = (t: string) => TYPES.find((x) => x.value === t) ?? TYPES[TYPES.length - 1]
 
 function downscale(file: File, max = 900): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -61,9 +54,8 @@ function expiryInfo(iso: string | null, type: string): { label: string; tone: st
   if (days === null) return null
   if (days < 0) return { label: 'Verlopen', tone: 'bg-rose-100 text-rose-600' }
   if (days === 0) return { label: 'Verloopt vandaag', tone: 'bg-rose-100 text-rose-600' }
-  // ID-documenten lichten al 6 maanden vooruit op (afspraak gemeente kost tijd);
-  // overige documenten pas binnen 30 dagen.
-  const headsUp = isIdDocument(type) ? 180 : 30
+  // Venster per type: ID 6 mnd, verzekering 3 mnd, APK/contract 2 mnd, rest 30 dgn.
+  const headsUp = headsUpWindow(type)
   if (days <= headsUp) {
     const phrase = expiryPhrase(days) // "verloopt over 6 maanden" / "… 3 weken" / "… morgen"
     return {
@@ -341,6 +333,18 @@ export default function DocumentenPage() {
             <p className="-mt-1 text-[11px] text-slate-400">
               Vul de verloopdatum in — Fam seint dan al een half jaar van tevoren, zodat je op tijd een
               afspraak bij de gemeente kunt maken (ook voor de kinderen).
+            </p>
+          )}
+          {form.type === 'apk' && (
+            <p className="-mt-1 text-[11px] text-slate-400">
+              Vul de APK-vervaldatum in — Fam seint al 2 maanden vooruit, zodat je op tijd een keuring
+              bij de garage kunt plannen.
+            </p>
+          )}
+          {form.type === 'verzekering' && (
+            <p className="-mt-1 text-[11px] text-slate-400">
+              Vul de einddatum/verlengdatum in — Fam seint 3 maanden vooruit, zodat je nog binnen de
+              opzegtermijn kunt overstappen of verlengen.
             </p>
           )}
 
