@@ -28,7 +28,7 @@ import NotificationBell from '@/components/NotificationBell'
 import Crest from '@/components/Crest'
 import SponsoredAds from '@/components/SponsoredAds'
 import Modal from '@/components/Modal'
-import { useFamily, useRecipes, useWeather, useAuth, useSettings } from '@/lib/hooks'
+import { useFamily, useRecipes, useWeather, useAuth, useSettings, useGeolocation } from '@/lib/hooks'
 import { resolveWeatherIcon } from '@/lib/icons'
 import { rankRecipes } from '@/lib/recommend'
 import { readCoParenting, coParentNow } from '@/lib/coparent'
@@ -52,7 +52,12 @@ const labelOf = (key: string) => ALL_WIDGETS.find((w) => w.key === key)?.label ?
 export default function Vandaag() {
   const { members } = useFamily()
   const { recipes } = useRecipes()
-  const { weather } = useWeather()
+  // Weer voor de telefoon-locatie (GPS); valt terug op de ingestelde woonplaats.
+  const geo = useGeolocation(true)
+  useEffect(() => {
+    geo.request()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  const { weather } = useWeather(geo.coords)
   const { user } = useAuth()
   const { settings, setSetting } = useSettings()
 

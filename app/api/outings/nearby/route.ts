@@ -34,7 +34,13 @@ export async function GET(req: Request) {
   const rawRadius = Number(url.searchParams.get('radius'))
   const radiusKm = Math.max(1, Math.min(25, Number.isFinite(rawRadius) && rawRadius > 0 ? rawRadius : 10))
 
-  const loc = await getLocation(hid)
+  // Locatie-override (GPS of een ingetypte vakantieplek); anders de woonplaats.
+  const qlat = Number(url.searchParams.get('lat'))
+  const qlon = Number(url.searchParams.get('lon'))
+  const loc =
+    Number.isFinite(qlat) && Number.isFinite(qlon) && (qlat !== 0 || qlon !== 0)
+      ? { name: url.searchParams.get('name') || 'Hier', lat: qlat, lon: qlon }
+      : await getLocation(hid)
   try {
     const places = await findNearby(loc.lat, loc.lon, { categories, radiusKm })
     return Response.json({ location: loc, places })

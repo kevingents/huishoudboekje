@@ -25,10 +25,18 @@ async function getLocation(householdId: number): Promise<Location> {
   return DEFAULT_LOCATION
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   const hid = await requireHousehold()
   if (hid instanceof Response) return hid
-  const location = await getLocation(hid)
+  // Override met de telefoon-locatie (GPS) als die wordt meegegeven; anders de
+  // ingestelde woonplaats.
+  const sp = new URL(req.url).searchParams
+  const qlat = Number(sp.get('lat'))
+  const qlon = Number(sp.get('lon'))
+  const location =
+    Number.isFinite(qlat) && Number.isFinite(qlon) && (qlat !== 0 || qlon !== 0)
+      ? { name: sp.get('name') || 'Mijn locatie', lat: qlat, lon: qlon }
+      : await getLocation(hid)
   const url =
     `https://api.open-meteo.com/v1/forecast?latitude=${location.lat}&longitude=${location.lon}` +
     `&current=temperature_2m,weather_code` +

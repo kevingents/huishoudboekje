@@ -1,5 +1,6 @@
 'use client'
 
+import { useCallback, useEffect, useState } from 'react'
 import useSWR, { mutate as globalMutate } from 'swr'
 import { fetcher, apiPost, apiPatch, apiPut, apiDelete } from './api'
 import { hasModule, normalizeTier, type Tier } from './modules'
@@ -639,8 +640,61 @@ export interface WeatherData {
   wet: boolean
 }
 
-export function useWeather() {
-  const { data, isLoading, error } = useSWR<WeatherData>('/api/weather', fetcher, {
+export type GeoStatus = 'idle' | 'loading' | 'granted' | 'denied' | 'unsupported'
+
+/** Telefoon-locatie (GPS). `auto`: gebruik gecachte coördinaten en vraag alleen
+ *  automatisch opnieuw als toestemming al gegeven is (geen ongevraagde prompt). */
+export function useGeolocation(auto = false) {
+  const [coords, setCoords] = useState<{ lat: number; lon: number } | null>(null)
+  const [status, setStatus] = useState<GeoStatus>('idle')
+
+  const request = useCallback(() => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      setStatus('unsupported')
+      return
+    }
+    setStatus('loading')
+    navigator.geolocation.getCurrentPosition(
+      (p) => {
+        const c = { lat: p.coords.latitude, lon: p.coords.longitude }
+        setCoords(c)
+        setStatus('granted')
+        try {
+          localStorage.setItem('fam-geo', JSON.stringify(c))
+        } catch {
+          /* localStorage niet beschikbaar — geen ramp */
+        }
+      },
+      () => setStatus('denied'),
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 10 * 60 * 1000 },
+    )
+  }, [])
+
+  useEffect(() => {
+    try {
+      const c = JSON.parse(localStorage.getItem('fam-geo') || 'null')
+      if (c?.lat && c?.lon) setCoords(c)
+    } catch {
+      /* genegeerd */
+    }
+    if (!auto || typeof navigator === 'undefined') return
+    navigator.permissions
+      ?.query?.({ name: 'geolocation' as PermissionName })
+      .then((r) => {
+        if (r.state === 'granted') request()
+      })
+      .catch(() => {})
+  }, [auto, request])
+
+  return { coords, status, request }
+}
+
+export function useWeather(coords?: { lat: number; lon: number } | null) {
+  // Met telefoon-locatie (GPS) → weer voor díe plek; anders de ingestelde woonplaats.
+  const key = coords
+    ? `/api/weather?lat=${coords.lat.toFixed(4)}&lon=${coords.lon.toFixed(4)}&name=${encodeURIComponent('Mijn locatie')}`
+    : '/api/weather'
+  const { data, isLoading, error } = useSWR<WeatherData>(key, fetcher, {
     refreshInterval: 30 * 60 * 1000, // elk half uur verversen
   })
   return { weather: data, isLoading, error }

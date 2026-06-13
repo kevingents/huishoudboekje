@@ -2,10 +2,13 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
-import { MapPin, Plus, Check, RefreshCw, ExternalLink } from 'lucide-react'
+import { MapPin, Plus, Check, RefreshCw, ExternalLink, Navigation, Home, Search } from 'lucide-react'
 import DashboardCard from '../DashboardCard'
-import { useOutings } from '@/lib/hooks'
+import { useOutings, useGeolocation } from '@/lib/hooks'
 import type { NearbyPlace } from '@/lib/overpass'
+import type { GeoResult } from '@/lib/geocode'
+
+type Override = { lat: number; lon: number; name: string } | null
 
 const NearbyMap = dynamic(() => import('./NearbyMap'), {
   ssr: false,
@@ -31,6 +34,7 @@ const COST_LABEL: Record<string, string> = { gratis: 'Gratis', laag: '€', gemi
 
 export default function NearbyExplorer() {
   const { outings, addOuting } = useOutings()
+  const geo = useGeolocation(false)
   const [cat, setCat] = useState('alles')
   const [radius, setRadius] = useState(10)
   const [loading, setLoading] = useState(false)
@@ -39,6 +43,14 @@ export default function NearbyExplorer() {
   const [places, setPlaces] = useState<NearbyPlace[]>([])
   const [added, setAdded] = useState<Set<string>>(new Set())
   const acRef = useRef<AbortController | null>(null)
+
+  // Locatie-override: GPS of een ingetypte vakantieplek (null = woonplaats).
+  const [override, setOverride] = useState<Override>(null)
+  const overrideRef = useRef<Override>(null)
+  const wantGps = useRef(false)
+  const [showPlace, setShowPlace] = useState(false)
+  const [placeQuery, setPlaceQuery] = useState('')
+  const [placeResults, setPlaceResults] = useState<GeoResult[]>([])
 
   // 'added' uit de daadwerkelijk opgeslagen uitjes halen (osmId), zodat een plek
   // die je al toevoegde "Toegevoegd" blijft — ook na tab-wissel of opnieuw scannen.
@@ -55,6 +67,12 @@ export default function NearbyExplorer() {
     try {
       const qs = new URLSearchParams({ radius: String(r) })
       if (category !== 'alles') qs.set('categories', category)
+      const ovr = overrideRef.current
+      if (ovr) {
+        qs.set('lat', String(ovr.lat))
+        qs.set('lon', String(ovr.lon))
+        qs.set('name', ovr.name)
+      }
       const res = await fetch(`/api/outings/nearby?${qs}`, { signal: ac.signal })
       const data = await res.json()
       if (!res.ok) throw new Error(data?.error ?? 'mislukt')
@@ -81,6 +99,31 @@ export default function NearbyExplorer() {
   const onRadius = (r: number) => {
     setRadius(r)
     scan(cat, r)
+  }
+
+  // Locatie wisselen (woonplaats ↔ GPS ↔ ingetypte plek), daarna opnieuw scannen.
+  const applyOverride = (o: Override) => {
+    overrideRef.current = o
+    setOverride(o)
+    scan(cat, radius)
+  }
+  useEffect(() => {
+    if (wantGps.current && geo.coords) {
+      wantGps.current = false
+      applyOverride({ lat: geo.coords.lat, lon: geo.coords.lon, name: 'Mijn locatie' })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [geo.coords])
+  const searchPlace = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (placeQuery.trim().length < 2) return
+    try {
+      const res = await fetch(`/api/geocode?q=${encodeURIComponent(placeQuery.trim())}`)
+      const data = await res.json()
+      setPlaceResults(data.results ?? [])
+    } catch {
+      setPlaceResults([])
+    }
   }
 
   const addPlace = async (p: NearbyPlace) => {
@@ -112,6 +155,83 @@ export default function NearbyExplorer() {
         </button>
       }
     >
+      {/* Locatie: thuis (woonplaats), GPS, of een ingetypte vakantieplek. */}
+      <div className="mb-3 flex flex-wrap items-center gap-2 text-xs">
+        <span className="inline-flex items-center gap-1 font-semibold text-slate-700 dark:text-slate-200">
+          <MapPin className="h-3.5 w-3.5 text-brand" />
+          {home?.name ?? '…'}
+        </span>
+        <button
+          type="button"
+          onClick={() => {
+            wantGps.current = true
+            geo.request()
+          }}
+          className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 font-semibold text-slate-600 hover:bg-slate-200"
+        >
+          <Navigation className={`h-3 w-3 ${geo.status === 'loading' ? 'animate-pulse' : ''}`} />
+          Hier
+        </button>
+        <button
+          type="button"
+          onClick={() => setShowPlace((s) => !s)}
+          className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 font-semibold text-slate-600 hover:bg-slate-200"
+        >
+          <Search className="h-3 w-3" />
+          Andere plaats
+        </button>
+        {override && (
+          <button
+            type="button"
+            onClick={() => applyOverride(null)}
+            className="inline-flex items-center gap-1 rounded-full bg-brand-light px-2.5 py-1 font-semibold text-brand hover:bg-brand/15"
+          >
+            <Home className="h-3 w-3" />
+            Thuis
+          </button>
+        )}
+      </div>
+
+      {showPlace && (
+        <form onSubmit={searchPlace} className="mb-3 flex flex-col gap-2">
+          <div className="flex gap-2">
+            <input
+              value={placeQuery}
+              onChange={(e) => setPlaceQuery(e.target.value)}
+              placeholder="Vakantieplek, bijv. Barcelona of Texel"
+              className="w-full rounded-xl border border-cardborder bg-white px-3 py-2 text-sm text-slate-700 outline-none placeholder:text-slate-400 focus:border-brand/40 focus:ring-2 focus:ring-brand/20"
+            />
+            <button type="submit" className="pill shrink-0 bg-brand px-3 py-2 text-xs font-semibold text-white hover:bg-brand-dark">
+              Zoek
+            </button>
+          </div>
+          {placeResults.length > 0 && (
+            <ul className="flex flex-col divide-y divide-cardborder rounded-2xl border border-cardborder">
+              {placeResults.map((r) => (
+                <li key={`${r.lat},${r.lon}`}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      applyOverride({ lat: r.lat, lon: r.lon, name: r.name })
+                      setShowPlace(false)
+                      setPlaceResults([])
+                      setPlaceQuery('')
+                    }}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-slate-50 dark:hover:bg-white/5"
+                  >
+                    <MapPin className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                    <span className="truncate">
+                      <span className="font-semibold text-slate-800 dark:text-slate-100">{r.name}</span>
+                      {(r.admin || r.country) && <span className="text-slate-400"> · {[r.admin, r.country].filter(Boolean).join(', ')}</span>}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </form>
+      )}
+
       <div className="-mx-1 mb-3 flex gap-1.5 overflow-x-auto px-1 pb-1">
         {FILTERS.map((f) => (
           <button

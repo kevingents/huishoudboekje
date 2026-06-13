@@ -8,6 +8,7 @@ import DashboardCard from '@/components/DashboardCard'
 import IntegrationsSection from '@/components/IntegrationsSection'
 import CoParentCard from '@/components/CoParentCard'
 import ProfileCard from '@/components/ProfileCard'
+import LocationCard from '@/components/LocationCard'
 import { useA11y, type FontScale, type Theme } from '@/components/A11yProvider'
 import { useSettings, useFamily, useAuth } from '@/lib/hooks'
 import { apiDelete, apiPost } from '@/lib/api'
@@ -382,6 +383,9 @@ export default function InstellingenPage() {
             Het budgetscherm groepeert je uitgaven en gemiddelden dan op deze periodes.
           </p>
         </DashboardCard>
+
+        {/* Locatie (woonplaats → weer + uitjes) */}
+        <LocationCard />
 
         {/* Integraties */}
         <IntegrationsSection />
