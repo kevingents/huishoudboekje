@@ -18,6 +18,7 @@ function atMidnight(d: Date): Date {
 export interface DailyBudget {
   availableToday: number // wat je vandaag nog kunt uitgeven (incl. doorgeschoven)
   dailyRate: number // het 'kale' dagbudget zonder rollover
+  weeklyRate: number // het kale weekbudget (dagbudget × 7)
   rolledOver: number // hoeveel daarvan is doorgeschoven van eerdere dagen
   spentInPeriod: number
   totalDays: number
@@ -100,6 +101,7 @@ export function computeDailyBudget(opts: {
   return {
     availableToday,
     dailyRate,
+    weeklyRate: dailyRate * 7,
     rolledOver,
     spentInPeriod,
     totalDays,

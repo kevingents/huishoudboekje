@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { Wallet, Settings, ChevronRight, ArrowDownCircle } from 'lucide-react'
 import DashboardCard from './DashboardCard'
 import Modal from './Modal'
-import { useBudget, useFixedCosts, useSubscriptions, useIncome, useSettings } from '@/lib/hooks'
+import { useBudget, useFixedCosts, useSubscriptions, useIncome, useLoans, useSettings } from '@/lib/hooks'
 import { fixedCostMonthly, monthlyEquivalent } from '@/lib/budget'
 import { computeDailyBudget } from '@/lib/dailyBudget'
 
@@ -20,10 +20,11 @@ interface DayBudgetConfig {
 }
 
 export default function DayBudgetCard() {
-  const { categories, transactions } = useBudget()
+  const { transactions } = useBudget()
   const { costs } = useFixedCosts()
   const { subscriptions } = useSubscriptions()
   const { incomes } = useIncome()
+  const { loans } = useLoans()
   const { settings, setSetting } = useSettings()
 
   // Datum pas na mount bepalen (geen hydratie-mismatch).
@@ -31,35 +32,36 @@ export default function DayBudgetCard() {
   useEffect(() => setNow(new Date()), [])
 
   const cfg = (settings.dailyBudget ?? {}) as DayBudgetConfig
-  const salaryDay = cfg.salaryDay && cfg.salaryDay >= 1 && cfg.salaryDay <= 31 ? cfg.salaryDay : 25
+  // Periode volgt je budgetperiode (Instellingen → Budgetperiode), zodat dag,
+  // week en maand allemaal van dezelfde startdag (bijv. de 15e) lopen.
+  const periodDay =
+    typeof settings.budgetPeriodStart === 'number' && settings.budgetPeriodStart >= 1 && settings.budgetPeriodStart <= 28
+      ? settings.budgetPeriodStart
+      : 1
 
   const fixedTotal = costs.reduce((s, c) => s + fixedCostMonthly(c), 0)
   const subsMonthly = subscriptions
     .filter((s) => s.status === 'active')
     .reduce((s, x) => s + monthlyEquivalent(x.amount, x.interval), 0)
   const incomeMonthly = incomes.reduce((s, i) => s + monthlyEquivalent(i.amount, i.interval), 0)
-  const totalLimit = categories.reduce((s, c) => s + c.limit, 0)
+  const loansMonthly = loans.reduce((s, l) => s + (l.termAmount || 0), 0)
 
   const manual = typeof cfg.monthlyAmount === 'number' && cfg.monthlyAmount > 0
-  const auto = Math.max(0, incomeMonthly - fixedTotal - subsMonthly)
-  const spendablePerMonth = manual ? (cfg.monthlyAmount as number) : auto > 0 ? auto : totalLimit
+  // "Wat overblijft": inkomen − vaste lasten − abonnementen − aflossingen.
+  const auto = Math.max(0, incomeMonthly - fixedTotal - subsMonthly - loansMonthly)
+  const spendablePerMonth = manual ? (cfg.monthlyAmount as number) : auto
 
   // Instellen-modal
   const [open, setOpen] = useState(false)
-  const [form, setForm] = useState({ salaryDay: '25', mode: 'auto' as 'auto' | 'manual', amount: '' })
+  const [form, setForm] = useState({ mode: 'auto' as 'auto' | 'manual', amount: '' })
   const openSettings = () => {
-    setForm({
-      salaryDay: String(salaryDay),
-      mode: manual ? 'manual' : 'auto',
-      amount: manual ? String(cfg.monthlyAmount) : '',
-    })
+    setForm({ mode: manual ? 'manual' : 'auto', amount: manual ? String(cfg.monthlyAmount) : '' })
     setOpen(true)
   }
   const save = async (e: React.FormEvent) => {
     e.preventDefault()
-    const day = Math.min(31, Math.max(1, Number(form.salaryDay) || 25))
     const amount = form.mode === 'manual' ? Number(form.amount.replace(',', '.')) || 0 : null
-    await setSetting('dailyBudget', { salaryDay: day, monthlyAmount: amount })
+    await setSetting('dailyBudget', { monthlyAmount: amount })
     setOpen(false)
   }
 
@@ -76,7 +78,7 @@ export default function DayBudgetCard() {
 
   const result =
     now && spendablePerMonth > 0
-      ? computeDailyBudget({ now, salaryDay, spendablePerPeriod: spendablePerMonth, transactions })
+      ? computeDailyBudget({ now, salaryDay: periodDay, spendablePerPeriod: spendablePerMonth, transactions })
       : null
 
   return (
@@ -93,8 +95,8 @@ export default function DayBudgetCard() {
       ) : spendablePerMonth <= 0 ? (
         <div className="flex flex-col items-start gap-2">
           <p className="text-sm text-slate-600">
-            Stel je besteedbare bedrag en salarisdag in, dan verdeel ik het per dag — wat je niet
-            opmaakt, schuift door naar morgen.
+            Vul je inkomsten en vaste lasten in bij Budget (of stel zelf een bedrag in), dan verdeel ik
+            het per dag en week — wat je niet opmaakt, schuift door naar morgen.
           </p>
           <button
             type="button"
@@ -128,18 +130,31 @@ export default function DayBudgetCard() {
             <p className="mt-1 text-sm text-slate-500">om netjes op budget te blijven</p>
           )}
 
+          {/* Dag / week / maand op een rij — alles van hetzelfde besteedbare bedrag. */}
+          <div className="mt-4 grid grid-cols-3 gap-2">
+            {[
+              { label: 'Per dag', value: result.dailyRate },
+              { label: 'Per week', value: result.weeklyRate },
+              { label: 'Per maand', value: spendablePerMonth },
+            ].map((b) => (
+              <div key={b.label} className="rounded-2xl bg-white/70 p-3 text-center dark:bg-white/5">
+                <p className="text-[11px] font-medium text-slate-500">{b.label}</p>
+                <p className="text-base font-extrabold text-slate-800 dark:text-slate-100">€{round(b.value)}</p>
+              </div>
+            ))}
+          </div>
+
           <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
-            <span>≈ €{round(result.dailyRate)} per dag</span>
             <span>
               {result.daysLeft === 0
-                ? 'laatste dag voor je salaris'
-                : `nog ${result.daysLeft} ${result.daysLeft === 1 ? 'dag' : 'dagen'} tot je salaris`}
+                ? 'laatste dag van deze periode'
+                : `nog ${result.daysLeft} ${result.daysLeft === 1 ? 'dag' : 'dagen'} in deze periode`}
             </span>
             <span>
-              deze periode: €{round(result.spentInPeriod)} van €{round(spendablePerMonth)}
+              deze periode al uit: €{round(result.spentInPeriod)} van €{round(spendablePerMonth)}
             </span>
             <button type="button" onClick={openSettings} className="font-semibold text-brand hover:underline">
-              salaris op de {salaryDay}e · wijzig
+              periode vanaf de {periodDay}e · wijzig
             </button>
           </div>
 
@@ -155,19 +170,12 @@ export default function DayBudgetCard() {
         </>
       ) : null}
 
-      <Modal open={open} onClose={() => setOpen(false)} title="Dagbudget instellen">
+      <Modal open={open} onClose={() => setOpen(false)} title="Budget instellen">
         <form onSubmit={save} className="flex flex-col gap-3">
-          <label className="text-xs font-semibold text-slate-500">
-            Op welke dag krijg je salaris?
-            <input
-              inputMode="numeric"
-              value={form.salaryDay}
-              onChange={(e) => setForm({ ...form, salaryDay: e.target.value })}
-              placeholder="25"
-              className={`mt-1 ${inputClass}`}
-            />
-            <span className="mt-1 block text-[11px] text-slate-400">Dag van de maand (1–31).</span>
-          </label>
+          <p className="rounded-xl bg-slate-50 px-3 py-2 text-[11px] text-slate-500 dark:bg-white/5">
+            De periode loopt volgens je <span className="font-semibold">budgetperiode</span> (nu vanaf de{' '}
+            {periodDay}e) — die stel je in bij Instellingen → Budgetperiode.
+          </p>
 
           <div>
             <p className="text-xs font-semibold text-slate-500">Te besteden per maand</p>
@@ -193,8 +201,8 @@ export default function DayBudgetCard() {
             </div>
             {form.mode === 'auto' ? (
               <p className="mt-1.5 text-[11px] text-slate-400">
-                = inkomsten − vaste lasten − abonnementen (€{round(auto)} p/m). Vul je inkomsten en
-                vaste lasten in bij Budget.
+                = inkomsten − vaste lasten − abonnementen − aflossingen (€{round(auto)} p/m). Vul je
+                inkomsten en lasten in bij Budget.
               </p>
             ) : (
               <label className="mt-2 block text-xs font-semibold text-slate-500">
