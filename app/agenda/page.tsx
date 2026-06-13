@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { Calendar, Plus, Clock, Trash2, Link2, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Calendar, Plus, Clock, Trash2, Link2, ChevronLeft, ChevronRight, BellRing } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
 import DashboardCard from '@/components/DashboardCard'
 import Modal from '@/components/Modal'
@@ -52,7 +52,7 @@ export default function AgendaPage() {
   const { members } = useFamily()
   const { linked: coLinked } = useCoParent()
   const [open, setOpen] = useState(false)
-  const [form, setForm] = useState({ date: '', title: '', time: '', who: 'Gezin', accent: 'sky', coShared: false })
+  const [form, setForm] = useState({ date: '', title: '', time: '', who: 'Gezin', accent: 'sky', coShared: false, remind: false, remindLead: '1' })
   const [customWho, setCustomWho] = useState('')
 
   const days = useMemo(() => groupByDate(events), [events])
@@ -113,8 +113,9 @@ export default function AgendaPage() {
     e.preventDefault()
     if (!form.title.trim() || !form.date) return
     const who = form.who === '__anders' ? customWho.trim() || 'Gezin' : form.who
-    await addEvent({ ...form, who })
-    setForm({ date: '', title: '', time: '', who: 'Gezin', accent: 'sky', coShared: false })
+    const { remind, remindLead, ...rest } = form
+    await addEvent({ ...rest, who, remindDays: remind ? Number(remindLead) : null })
+    setForm({ date: '', title: '', time: '', who: 'Gezin', accent: 'sky', coShared: false, remind: false, remindLead: '1' })
     setCustomWho('')
     setOpen(false)
   }
@@ -426,6 +427,37 @@ export default function AgendaPage() {
               Delen met de andere ouder
             </label>
           )}
+
+          <div className="rounded-2xl bg-slate-50 p-3 dark:bg-white/5">
+            <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
+              <input
+                type="checkbox"
+                checked={form.remind}
+                onChange={(e) => setForm({ ...form, remind: e.target.checked })}
+                className="h-4 w-4 accent-brand"
+              />
+              <BellRing className="h-4 w-4 text-amber-500" />
+              Herinner mij met een melding
+            </label>
+            {form.remind && (
+              <label className="mt-2 block text-xs font-semibold text-slate-500">
+                Wanneer
+                <select
+                  value={form.remindLead}
+                  onChange={(e) => setForm({ ...form, remindLead: e.target.value })}
+                  className={`mt-1 ${inputClass}`}
+                >
+                  <option value="0">Op de ochtend zelf</option>
+                  <option value="1">1 dag van tevoren</option>
+                  <option value="2">2 dagen van tevoren</option>
+                  <option value="7">1 week van tevoren</option>
+                </select>
+                <span className="mt-1 block text-[11px] font-normal text-slate-400">
+                  De melding komt &apos;s ochtends rond 8 uur — naar {form.who === 'Gezin' ? 'het hele gezin' : form.who === '__anders' ? (customWho.trim() || 'het gezin') : form.who}.
+                </span>
+              </label>
+            )}
+          </div>
           <button
             type="submit"
             className="pill mt-2 bg-brand px-4 py-2.5 text-white shadow-sm shadow-brand/20 hover:bg-brand-dark"

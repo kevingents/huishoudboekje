@@ -12,6 +12,10 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   for (const key of ['title', 'time', 'who', 'accent'] as const) {
     if (body[key] !== undefined) data[key] = String(body[key])
   }
+  if (body.remindDays !== undefined) {
+    data.remindDays =
+      body.remindDays === null ? null : Math.max(0, Math.min(30, Math.floor(Number(body.remindDays)) || 0))
+  }
   const result = await prisma.agendaEvent.updateMany({ where: { id, householdId: hid }, data })
   if (result.count === 0) return notFound()
   const event = await prisma.agendaEvent.findUnique({ where: { id } })

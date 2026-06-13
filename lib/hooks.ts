@@ -109,6 +109,7 @@ interface NewEvent {
   who: string
   accent: string
   coShared?: boolean
+  remindDays?: number | null
 }
 
 export function useAgenda() {
@@ -119,7 +120,7 @@ export function useAgenda() {
     addEvent: (e: NewEvent) =>
       c.create(
         { ...e },
-        { dateKey: e.date, day: e.date.split('-')[2] ?? '', month: '', weekday: '', title: e.title, time: e.time, who: e.who, accent: e.accent, source: 'manual', externalId: null },
+        { dateKey: e.date, day: e.date.split('-')[2] ?? '', month: '', weekday: '', title: e.title, time: e.time, who: e.who, accent: e.accent, source: 'manual', externalId: null, remindDays: e.remindDays ?? null },
       ),
     updateEvent: (id: number, payload: Partial<NewEvent>) => c.update(id, payload),
     removeEvent: (id: number) => c.remove(id),

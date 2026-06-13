@@ -26,9 +26,12 @@ export async function notify(opts: {
   }
   const prefs = mergePrefs(stored)
   const pref = prefs.find((p) => p.key === opts.type)
+  // Eén knop voor "wil ik dit type melding": stuurt zowel de in-app- als de
+  // pushmelding aan/uit. Onbekende types (bijv. 'system') staan standaard aan.
+  const wantInApp = !pref || pref.inApp
 
   // In-app
-  if (!pref || pref.inApp) {
+  if (wantInApp) {
     await prisma.notification.create({
       data: {
         householdId: opts.householdId,
@@ -55,6 +58,7 @@ export async function notify(opts: {
   // niemand gekoppeld, dan als vangnet naar de volwassenen. Zonder targetMember
   // krijgt het hele gezin de push. De uitvoerder zelf wordt overgeslagen.
   try {
+    if (!wantInApp) return // type uitgezet → ook geen push
     const { sendPushToUsers } = await import('./push')
     let userIds: number[]
     const users = await prisma.user.findMany({

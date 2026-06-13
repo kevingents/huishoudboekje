@@ -12,6 +12,7 @@ export interface NotificationPref {
 export const NOTIFICATION_TYPES: NotificationPref[] = [
   { key: 'stock', label: 'Voorraadmeldingen', description: 'Krijg een seintje als iets bijna op is.', inApp: true, email: false },
   { key: 'agenda', label: 'Agenda-herinneringen', description: 'Herinnering voor een afspraak.', inApp: true, email: false },
+  { key: 'gelegenheden', label: 'Feestdagen & verjaardagen', description: 'Seintje vóór Vaderdag, Moederdag, Sinterklaas en verjaardagen.', inApp: true, email: false },
   { key: 'budget', label: 'Budgetwaarschuwingen', description: 'Melding bij 90% van een maandlimiet.', inApp: true, email: true },
   { key: 'menu', label: 'Wekelijks menu', description: 'Overzicht van het menu en de boodschappen.', inApp: false, email: true },
   { key: 'ai', label: 'AI-suggesties', description: 'Tips van je assistent.', inApp: true, email: false },
