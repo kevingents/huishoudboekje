@@ -30,6 +30,7 @@ import BudgetProgressCard from '@/components/budget/BudgetProgressCard'
 import AutoCategorizeSteps from '@/components/budget/AutoCategorizeSteps'
 import InsightsCard from '@/components/budget/InsightsCard'
 import CategoryDayPotsCard from '@/components/budget/CategoryDayPotsCard'
+import PeriodReviewCard from '@/components/budget/PeriodReviewCard'
 import UpcomingPaymentsCard from '@/components/budget/UpcomingPaymentsCard'
 import QuickActions, { type QuickAction } from '@/components/budget/QuickActions'
 import GezinsbudgetCard from '@/components/budget/GezinsbudgetCard'
@@ -421,6 +422,10 @@ export default function BudgetPage() {
         <>
         {/* Budgetvoortgang — gauge van deze periode */}
         <BudgetProgressCard spent={currentSpent} budget={budgetRef} projected={projected} periodWord={periodWord} />
+
+        {/* Terugblik op de vorige periode + sparen-suggestie (toont zich vanzelf
+            zodra er een afgesloten periode met uitgaven is). */}
+        <PeriodReviewCard />
 
         {/* Categories */}
         <DashboardCard

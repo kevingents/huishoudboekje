@@ -259,3 +259,21 @@ export function fixedCostMonthly(cost: {
   if (cost.isSubscription && cost.subscriptionInterval) return monthlyEquivalent(cost.amount, cost.subscriptionInterval)
   return cost.amount
 }
+
+/** "Wat overblijft" om vrij te besteden per maand: inkomen − vaste lasten −
+ *  abonnementen − aflossingen. Gedeeld zodat het dagbudget en de periode-terugblik
+ *  exact hetzelfde bedrag gebruiken. Nooit negatief. */
+export function spendablePerMonth(opts: {
+  incomes: { amount: number; interval: string }[]
+  costs: { amount: number; isSubscription?: boolean; subscriptionInterval?: string | null }[]
+  subscriptions: { amount: number; interval: string; status?: string }[]
+  loans: { termAmount?: number | null }[]
+}): number {
+  const income = opts.incomes.reduce((s, i) => s + monthlyEquivalent(i.amount, i.interval), 0)
+  const fixed = opts.costs.reduce((s, c) => s + fixedCostMonthly(c), 0)
+  const subs = opts.subscriptions
+    .filter((s) => (s.status ?? 'active') === 'active')
+    .reduce((s, x) => s + monthlyEquivalent(x.amount, x.interval), 0)
+  const loansMonthly = opts.loans.reduce((s, l) => s + (l.termAmount || 0), 0)
+  return Math.max(0, income - fixed - subs - loansMonthly)
+}

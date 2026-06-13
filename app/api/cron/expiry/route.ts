@@ -9,7 +9,8 @@ import {
   dueBirthdayReminder,
   birthdayMessage,
 } from '@/lib/occasions'
-import { periodKeyOf, EXCLUDED_CATEGORIES } from '@/lib/budget'
+import { periodKeyOf, shiftPeriodKey, spendablePerMonth, isSpendingCategory } from '@/lib/budget'
+import { reviewPeriod } from '@/lib/periodReview'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -143,30 +144,44 @@ export async function GET(req: Request) {
     }
     startDayByHh.set(s.householdId, v)
   }
-  // Alleen variabele uitgave-categorieën meetellen (geen Inkomsten/Negeren/Vaste lasten),
-  // zodat het "te besteden"-bedrag klopt met de begroting in de app.
-  const budgetTotals = await prisma.budgetCategory.groupBy({
-    by: ['householdId'],
-    where: { name: { notIn: [...EXCLUDED_CATEGORIES] } },
-    _sum: { limit: true },
-  })
-  const limitByHh = new Map<number, number>()
-  for (const b of budgetTotals) limitByHh.set(b.householdId, b._sum.limit ?? 0)
   let periodNotified = 0
   for (const { id } of households) {
     const startDay = startDayByHh.get(id) ?? 1
     if (nlDayOfMonth !== startDay) continue // vandaag (NL) is niet de startdag
-    const total = Math.round(limitByHh.get(id) ?? 0)
-    if (total <= 0) continue // geen actief variabel budget ingesteld
-    const periodKey = periodKeyOf(nlDateStr, startDay)
-    const word = startDay > 1 ? 'periode' : 'maand'
-    const sent = await once(id, `budgetperiod:${periodKey}`, () =>
-      notify({
-        householdId: id,
-        type: 'budget',
-        title: 'Nieuwe budgetperiode begonnen',
-        body: `Een nieuwe budget${word} is begonnen. Je hebt deze ${word} €${total} te besteden aan variabele uitgaven.`,
+
+    // Terugblik op de zojuist afgesloten periode: hoeveel uitgegeven en wat over
+    // (om te sparen). Zware queries alleen voor de huishoudens die vandaag wisselen.
+    const [incomes, costs, subscriptions, loans, txns, spendingCats] = await Promise.all([
+      prisma.income.findMany({ where: { householdId: id }, select: { amount: true, interval: true } }),
+      prisma.fixedCost.findMany({
+        where: { householdId: id },
+        select: { amount: true, isSubscription: true, subscriptionInterval: true },
       }),
+      prisma.subscription.findMany({ where: { householdId: id }, select: { amount: true, interval: true, status: true } }),
+      prisma.loan.findMany({ where: { householdId: id }, select: { termAmount: true } }),
+      prisma.transaction.findMany({ where: { householdId: id }, select: { category: true, amount: true, date: true } }),
+      prisma.budgetCategory.findMany({ where: { householdId: id }, select: { name: true, limit: true } }),
+    ])
+    const spendable = spendablePerMonth({ incomes, costs, subscriptions, loans })
+    const prevKey = shiftPeriodKey(periodKeyOf(nlDateStr, startDay) ?? '', -1)
+    const review = reviewPeriod({
+      transactions: txns,
+      spendingCategories: spendingCats.filter((c) => isSpendingCategory(c.name)),
+      spendable,
+      periodKey: prevKey,
+      periodStart: startDay,
+    })
+    if (review.spent <= 0 && spendable <= 0) continue // niks te melden
+
+    const word = startDay > 1 ? 'periode' : 'maand'
+    const body =
+      review.surplus > 0
+        ? `Vorige ${word}: €${Math.round(review.spent)} van €${Math.round(spendable)} uitgegeven. Je hield €${Math.round(review.surplus)} over — mooi om naar je spaarrekening over te maken.`
+        : review.overspend > 0
+          ? `Vorige ${word}: €${Math.round(review.spent)} uitgegeven — €${Math.round(review.overspend)} boven je budget van €${Math.round(spendable)}. Deze ${word} wat strakker?`
+          : `Vorige ${word}: €${Math.round(review.spent)} van €${Math.round(spendable)} uitgegeven.`
+    const sent = await once(id, `periodreview:${prevKey}`, () =>
+      notify({ householdId: id, type: 'budget', title: `Terugblik vorige ${word}`, body }),
     )
     if (sent) periodNotified++
   }
