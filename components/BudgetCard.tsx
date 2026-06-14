@@ -49,7 +49,7 @@ export default function BudgetCard() {
       <div className="flex items-center gap-5">
         <div className="relative h-36 w-36 shrink-0">
           <svg viewBox="0 0 128 128" className="h-full w-full -rotate-90">
-            <circle cx="64" cy="64" r={radius} fill="none" stroke="#EBF1F4" strokeWidth="13" />
+            <circle cx="64" cy="64" r={radius} fill="none" stroke="currentColor" strokeWidth="13" className="text-slate-100 dark:text-slate-700" />
             <circle
               cx="64"
               cy="64"

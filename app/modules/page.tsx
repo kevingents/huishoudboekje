@@ -28,7 +28,7 @@ function modulesUnlockedAt(tier: Tier) {
 
 const accent: Record<Tier, { ring: string; badge: string; btn: string }> = {
   basis: {
-    ring: 'ring-slate-200',
+    ring: 'ring-cardborder',
     badge: 'bg-slate-100 text-slate-500',
     btn: 'bg-slate-800 hover:bg-slate-900',
   },

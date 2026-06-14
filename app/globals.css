@@ -119,6 +119,18 @@ html.dark .bg-white\/70 {
 html.dark .bg-white\/90 {
   background-color: rgba(30, 41, 59, 0.9) !important;
 }
+html.dark .bg-white\/85 {
+  background-color: rgba(30, 41, 59, 0.85) !important;
+}
+html.dark .bg-amber-50\/70 {
+  background-color: rgba(245, 158, 11, 0.18) !important;
+}
+html.dark .bg-rose-50\/70 {
+  background-color: rgba(244, 63, 94, 0.18) !important;
+}
+html.dark .bg-brand-light\/40 {
+  background-color: rgba(53, 181, 88, 0.16) !important;
+}
 
 /* Verlopen (gradient-kaarten) afvlakken naar het donkere kaartvlak. */
 html.dark [class*='from-brand-light'],
@@ -148,6 +160,43 @@ html.dark .text-slate-500 {
 html.dark .text-slate-400,
 html.dark .text-slate-300 {
   color: #94a3b8 !important;
+}
+/* Gekleurde accent-tekst (badges, bedragen, icoon-chips) lichter in dark mode:
+   het pastel-/witte vlak eronder wordt donker, dus -600/-700/-800 tekst zou
+   anders donker-op-donker en slecht leesbaar zijn. */
+html.dark .text-amber-600,
+html.dark .text-amber-700,
+html.dark .text-amber-800 {
+  color: #fcd34d !important;
+}
+html.dark .text-rose-600,
+html.dark .text-rose-700 {
+  color: #fda4af !important;
+}
+html.dark .text-emerald-600,
+html.dark .text-emerald-700 {
+  color: #6ee7b7 !important;
+}
+html.dark .text-sky-600,
+html.dark .text-sky-700 {
+  color: #7dd3fc !important;
+}
+html.dark .text-violet-600,
+html.dark .text-violet-700 {
+  color: #c4b5fd !important;
+}
+html.dark .text-pink-600 {
+  color: #f9a8d4 !important;
+}
+html.dark .text-orange-500,
+html.dark .text-orange-600 {
+  color: #fdba74 !important;
+}
+html.dark .text-teal-600 {
+  color: #5eead4 !important;
+}
+html.dark .text-indigo-600 {
+  color: #a5b4fc !important;
 }
 
 /* Randen + ringen */
@@ -227,6 +276,22 @@ html.dark .bg-rose-50,
 html.dark .bg-rose-100 {
   background-color: rgba(244, 63, 94, 0.18) !important;
 }
+html.dark .bg-teal-50,
+html.dark .bg-teal-100 {
+  background-color: rgba(20, 184, 166, 0.18) !important;
+}
+html.dark .bg-orange-50,
+html.dark .bg-orange-100 {
+  background-color: rgba(249, 115, 22, 0.18) !important;
+}
+html.dark .bg-indigo-50,
+html.dark .bg-indigo-100 {
+  background-color: rgba(99, 102, 241, 0.18) !important;
+}
+html.dark .bg-pink-50,
+html.dark .bg-pink-100 {
+  background-color: rgba(236, 72, 153, 0.18) !important;
+}
 /* Opacity-boxen van de Maandprognose. */
 html.dark .bg-emerald-500\/10 {
   background-color: rgba(16, 185, 129, 0.18) !important;
@@ -264,4 +329,17 @@ html.dark .hover\:bg-rose-50:hover {
 }
 .scrollbar-thin::-webkit-scrollbar-track {
   background-color: transparent;
+}
+html.dark .scrollbar-thin {
+  scrollbar-color: #475569 transparent;
+}
+html.dark .scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: #475569;
+}
+
+/* Leaflet OSM-tegels zijn altijd licht — in dark mode alleen de tegellaag
+   inverten naar een donkere kaart. Markers/popups zitten in andere panes en
+   blijven dus hun eigen kleur houden. */
+html.dark .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) brightness(0.95) contrast(0.9);
 }

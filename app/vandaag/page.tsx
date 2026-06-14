@@ -114,7 +114,7 @@ export default function Vandaag() {
       case 'recept':
         return (
           <DashboardCard key={key} title="Vandaag eten we dit" icon={UtensilsCrossed}>
-            <div className="relative mb-4 aspect-[16/10] overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-100 to-amber-100">
+            <div className="relative mb-4 aspect-[16/10] overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-100 to-amber-100 dark:from-slate-800 dark:to-slate-800">
               {recipe && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={recipe.image} alt={recipe.title} loading="lazy" className="h-full w-full object-cover" />
@@ -172,7 +172,7 @@ export default function Vandaag() {
             bordered={false}
           >
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-              <div className="relative aspect-[4/3] w-full shrink-0 overflow-hidden rounded-2xl bg-gradient-to-br from-violet-100 to-amber-100 sm:h-24 sm:w-28">
+              <div className="relative aspect-[4/3] w-full shrink-0 overflow-hidden rounded-2xl bg-gradient-to-br from-violet-100 to-amber-100 dark:from-slate-800 dark:to-slate-800 sm:h-24 sm:w-28">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={aiSuggestion.image} alt="Suggestie" loading="lazy" className="h-full w-full object-cover" />
               </div>

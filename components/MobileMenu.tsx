@@ -105,13 +105,13 @@ export default function MobileMenu({ open, onClose }: { open: boolean; onClose: 
               {shownMembers.map((m) => (
                 <span
                   key={m.id}
-                  className={`grid h-9 w-9 place-items-center rounded-full border-2 border-white bg-gradient-to-br text-[11px] font-bold text-white shadow-sm ${m.color}`}
+                  className={`grid h-9 w-9 place-items-center rounded-full border-2 border-white dark:border-slate-800bg-gradient-to-br text-[11px] font-bold text-white shadow-sm ${m.color}`}
                 >
                   {m.initials}
                 </span>
               ))}
               {extraMembers > 0 && (
-                <span className="grid h-9 w-9 place-items-center rounded-full border-2 border-white bg-slate-100 text-[11px] font-bold text-slate-500 shadow-sm">
+                <span className="grid h-9 w-9 place-items-center rounded-full border-2 border-white dark:border-slate-800bg-slate-100 text-[11px] font-bold text-slate-500 shadow-sm">
                   +{extraMembers}
                 </span>
               )}
@@ -133,7 +133,7 @@ export default function MobileMenu({ open, onClose }: { open: boolean; onClose: 
           onClick={onClose}
           className="mb-5 flex items-center gap-4 rounded-card bg-gradient-to-br from-brand-light to-white p-4 ring-1 ring-emerald-100"
         >
-          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white text-brand shadow-sm">
+          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white text-brand shadow-sm dark:bg-slate-700 dark:ring-1 dark:ring-white/10">
             <CalendarCheck className="h-6 w-6" strokeWidth={2.2} />
           </span>
           <div className="min-w-0 flex-1">

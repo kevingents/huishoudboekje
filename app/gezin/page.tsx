@@ -301,7 +301,7 @@ export default function GezinPage() {
           {crest ? (
             <Crest svg={crest} className="h-20 w-16 shrink-0 object-contain drop-shadow-sm" />
           ) : (
-            <span className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-white text-brand shadow-sm">
+            <span className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-white text-brand shadow-sm dark:bg-slate-700 dark:ring-1 dark:ring-cardborder">
               <Shield className="h-8 w-8" strokeWidth={2} />
             </span>
           )}

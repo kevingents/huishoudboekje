@@ -889,7 +889,7 @@ export default function BudgetPage() {
                   onClick={() => setNewCat({ ...newCat, color: c })}
                   aria-label={c}
                   className={`h-8 w-8 rounded-full ${colorClasses[c].bar} ${
-                    newCat.color === c ? 'ring-2 ring-slate-400 ring-offset-2' : ''
+                    newCat.color === c ? 'ring-2 ring-slate-400 ring-offset-2 dark:ring-offset-slate-800' : ''
                   }`}
                 />
               ))}
@@ -933,7 +933,7 @@ export default function BudgetPage() {
                       onClick={() => setMDraft({ ...mDraft, color: c })}
                       aria-label={c}
                       className={`h-8 w-8 rounded-full ${colorClasses[c].bar} ${
-                        mDraft.color === c ? 'ring-2 ring-slate-400 ring-offset-2' : ''
+                        mDraft.color === c ? 'ring-2 ring-slate-400 ring-offset-2 dark:ring-offset-slate-800' : ''
                       }`}
                     />
                   ))}

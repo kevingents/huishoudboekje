@@ -4,7 +4,6 @@ import {
   Calendar,
   ShoppingCart,
   ChefHat,
-  Camera,
   BarChart3,
   Users,
   Sparkles,
@@ -14,13 +13,21 @@ import {
   Check,
   ArrowRight,
   ShieldCheck,
+  MapPin,
+  BellRing,
+  FileText,
+  PiggyBank,
+  Mail,
+  Wallet,
+  UserPlus,
+  Link2,
 } from 'lucide-react'
 import PricingSection from '@/components/PricingSection'
 
 export const metadata: Metadata = {
   title: 'Fam — Eén rustig overzicht voor het hele gezin',
   description:
-    'Fam brengt agenda, boodschappen, recepten, budget en je gezin samen op één plek. Slim ondersteund door AI. Gratis te beginnen, in seconden op je telefoon.',
+    'Fam brengt agenda, boodschappen, recepten, budget, uitjes en je gezin samen op één plek. Importeer je bankafschrift, krijg op tijd een seintje voor paspoort of APK, en laat de AI meedenken. Gratis te beginnen, in seconden op je telefoon.',
 }
 
 const HERO_IMG =
@@ -29,21 +36,33 @@ const FOOD_IMG =
   'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1080&q=80'
 
 const FEATURES = [
-  { icon: Calendar, color: 'bg-violet-100 text-violet-600', title: 'Gedeelde agenda', text: 'Alle afspraken van het gezin op één plek — gevuld vanuit je eigen Google-, Outlook- of Parro-agenda.' },
+  { icon: Calendar, color: 'bg-violet-100 text-violet-600', title: 'Gedeelde agenda', text: 'Alle afspraken op één plek — automatisch gevuld vanuit je Google-, Outlook- of Parro-agenda, met een herinnering precies wanneer je die nodig hebt.' },
   { icon: ShoppingCart, color: 'bg-emerald-100 text-emerald-600', title: 'Boodschappenlijst', text: 'Wat de één toevoegt, ziet de ander direct in de winkel. Nooit meer dubbel of vergeten.' },
-  { icon: ChefHat, color: 'bg-amber-100 text-amber-600', title: 'Recepten', text: 'Een receptenboek met duimpjes. Wat in de smaak valt, komt vaker terug.' },
-  { icon: BarChart3, color: 'bg-sky-100 text-sky-600', title: 'Budget', text: 'Grip op het huishoudgeld met budgetten per categorie en een heldere maandprognose.' },
-  { icon: Camera, color: 'bg-rose-100 text-rose-600', title: 'Koelkast-scan', text: 'Maak een foto van je koelkast — de AI ziet wat je hebt, wat bijna op is en wat je kunt koken.' },
-  { icon: Sun, color: 'bg-orange-100 text-orange-500', title: 'Weer', text: 'De verwachting gekoppeld aan jullie plannen, zodat je weet of die training doorgaat.' },
+  { icon: BarChart3, color: 'bg-sky-100 text-sky-600', title: 'Slim budget', text: 'Importeer je bankafschrift, laat het automatisch indelen en zie per dag wat je nog kunt uitgeven — vaste lasten, abonnementen en leningen netjes apart.' },
+  { icon: PiggyBank, color: 'bg-emerald-100 text-emerald-600', title: 'Sparen & potjes', text: 'Per categorie een dag-potje dat doorrolt, spaardoelen met streefdatum en aan het eind van de maand advies wat je opzij kunt zetten.' },
+  { icon: MapPin, color: 'bg-teal-100 text-teal-600', title: 'Uitjes in de buurt', text: 'Ontdek gratis uitjes en álle speeltuinen op de kaart — gefilterd op leeftijd en prijs. Ook als je op vakantie bent.' },
+  { icon: BellRing, color: 'bg-amber-100 text-amber-600', title: 'Slimme herinneringen', text: 'Een seintje een half jaar vóór je paspoort, ID, APK of verzekering verloopt — en op tijd voor verjaardagen, Vaderdag en Sinterklaas.' },
+  { icon: ChefHat, color: 'bg-orange-100 text-orange-500', title: 'Recepten', text: 'Een receptenboek met duimpjes. Wat in de smaak valt, komt vaker terug — of laat de AI een weekmenu maken.' },
+  { icon: FileText, color: 'bg-indigo-100 text-indigo-600', title: 'Documenten & pasjes', text: 'Bewaar belangrijke documenten en al je klantenkaarten met barcode — altijd bij de hand aan de kassa.' },
   { icon: Sparkles, color: 'bg-violet-100 text-violet-600', title: 'AI-assistent', text: 'Vraag wat je vanavond eet of laat een weekmenu maken. Slimme hulp die jullie week kent.' },
-  { icon: Gift, color: 'bg-pink-100 text-pink-600', title: 'Gezinsspel', text: 'Maak van klusjes een spel: taken verdelen, punten verdienen en samen sparen voor een beloning.' },
+  { icon: Gift, color: 'bg-pink-100 text-pink-600', title: 'Gezinsspel & taken', text: 'Maak van klusjes een spel: taken verdelen, punten verdienen en samen sparen voor een beloning.' },
+  { icon: Mail, color: 'bg-sky-100 text-sky-600', title: 'Gezinsmail', text: 'Een eigen inbox-adres voor school en clubs — de AI sorteert post automatisch in je agenda en documenten. (Premium)' },
+  { icon: Sun, color: 'bg-amber-100 text-amber-600', title: 'Weer', text: 'De verwachting voor jullie plek, gekoppeld aan jullie plannen — zodat je weet of die training doorgaat.' },
+]
+
+const STEPS = [
+  { icon: UserPlus, title: 'Maak gratis een gezin aan', text: 'In een halve minuut een eigen, veilige omgeving voor jullie gezin — zonder appstore.' },
+  { icon: Link2, title: 'Koppel je agenda & bank', text: 'Plak je agenda-link en sleep je bankafschrift erin. Fam vult de boel automatisch.' },
+  { icon: Users, title: 'Nodig het gezin uit', text: 'Iedereen een eigen login, alles gedeeld. Vanaf nu staat alles op één plek.' },
 ]
 
 const FAQ = [
-  { q: 'Is Fam echt gratis?', a: 'Ja. Het Basis-pakket met agenda, boodschappen, recepten en gezinsoverzicht is gratis, voor altijd. Wil je meer, dan kies je Plus of Compleet — maandelijks opzegbaar.' },
+  { q: 'Is Fam echt gratis?', a: 'Ja. Het Basis-pakket met agenda, boodschappen, recepten en gezinsoverzicht is gratis, voor altijd. Wil je meer — zoals de slimme budget-tools of gezinsmail — dan kies je Plus of Compleet, maandelijks opzegbaar.' },
+  { q: 'Hoe werkt het importeren van mijn bankafschrift?', a: 'Je downloadt het afschrift bij je bank (CSV, MT940, CAMT of Excel) en sleept het in Fam. Het wordt op je eigen apparaat ingelezen en automatisch ingedeeld. Je kiest zelf of je alleen uitgaven, alleen inkomsten of beide importeert.' },
   { q: 'Moet ik iets downloaden uit een appstore?', a: 'Nee. Je installeert Fam rechtstreeks vanuit je browser op je telefoon of tablet. Eén tik vanaf je startscherm en je bent startklaar.' },
-  { q: 'Kan het hele gezin meedoen?', a: 'Zeker. Nodig gezinsleden uit via e-mail; ieder krijgt een eigen veilige login binnen jullie gezin.' },
-  { q: 'Wat doet de AI met onze gegevens?', a: 'Je bepaalt zelf of de AI aan staat en welke gegevens hij mag gebruiken. Alles is per categorie in te stellen en helemaal uit te zetten.' },
+  { q: 'Kan het hele gezin meedoen?', a: 'Zeker. Nodig gezinsleden uit via e-mail; ieder krijgt een eigen veilige login binnen jullie gezin. Meldingen kun je per persoon richten.' },
+  { q: 'Werkt het ook ’s avonds en op kleine schermen?', a: 'Ja. Fam heeft een rustige donkere modus, instelbare lettergrootte en hoog contrast, en is volledig gemaakt voor de telefoon.' },
+  { q: 'Wat doet de AI met onze gegevens?', a: 'Je bepaalt zelf of de AI aan staat en welke gegevens hij mag gebruiken. Alles is per categorie in te stellen en helemaal uit te zetten. Je kunt je gegevens exporteren of je account met één klik verwijderen.' },
 ]
 
 export default function Landing() {
@@ -60,8 +79,8 @@ export default function Landing() {
           </Link>
           <nav className="hidden items-center gap-6 text-sm font-semibold text-slate-600 md:flex">
             <a href="#functies" className="transition-colors hover:text-brand">Functies</a>
+            <a href="#hoe" className="transition-colors hover:text-brand">Hoe het werkt</a>
             <a href="#pakketten" className="transition-colors hover:text-brand">Pakketten</a>
-            <a href="#installeren" className="transition-colors hover:text-brand">App</a>
             <a href="#faq" className="transition-colors hover:text-brand">Vragen</a>
           </nav>
           <div className="flex items-center gap-2">
@@ -88,8 +107,9 @@ export default function Landing() {
             Eén rustig overzicht voor het hele gezin
           </h1>
           <p className="mt-5 text-lg leading-relaxed text-slate-500">
-            Fam brengt je agenda, boodschappen, recepten, budget en je gezin samen op één plek.
-            Slim ondersteund door AI, zodat jullie minder regelen en meer samen zijn.
+            Agenda, boodschappen, recepten, budget en uitjes op één plek. Importeer je bankafschrift,
+            krijg op tijd een seintje voor paspoort of APK, en laat de AI meedenken — zodat jullie
+            minder regelen en meer samen zijn.
           </p>
           <div className="mt-7 flex flex-wrap gap-3">
             <Link
@@ -153,6 +173,89 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* Hoe het werkt */}
+      <section id="hoe" className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
+        <div className="mx-auto max-w-2xl text-center">
+          <h2 className="text-3xl font-extrabold sm:text-4xl">In drie stappen startklaar</h2>
+          <p className="mt-3 text-slate-500">Geen gedoe met installeren of instellen. Binnen een minuut staat alles klaar.</p>
+        </div>
+        <div className="mt-10 grid gap-5 sm:grid-cols-3">
+          {STEPS.map((s, i) => {
+            const Icon = s.icon
+            return (
+              <div key={s.title} className="relative rounded-card border border-cardborder bg-white p-6 shadow-card">
+                <span className="absolute right-5 top-5 text-3xl font-extrabold text-slate-100">{i + 1}</span>
+                <span className="grid h-12 w-12 place-items-center rounded-2xl bg-brand-light text-brand">
+                  <Icon className="h-6 w-6" strokeWidth={2.1} />
+                </span>
+                <h3 className="mt-4 text-base font-bold text-slate-800">{s.title}</h3>
+                <p className="mt-1 text-sm leading-relaxed text-slate-500">{s.text}</p>
+              </div>
+            )
+          })}
+        </div>
+      </section>
+
+      {/* Highlight: slim budget */}
+      <section className="bg-canvas py-16 sm:py-20">
+        <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 sm:px-6 lg:grid-cols-2">
+          <div>
+            <span className="pill inline-flex bg-sky-100 px-3 py-1 text-xs font-semibold text-sky-600">Slim budget</span>
+            <h2 className="mt-4 text-3xl font-extrabold sm:text-4xl">Grip op het huishoudgeld, zonder spreadsheets</h2>
+            <p className="mt-4 text-lg leading-relaxed text-slate-500">
+              Sleep je bankafschrift erin en Fam doet de rest: uitgaven automatisch ingedeeld, vaste
+              lasten apart, en in één oogopslag wat je vandaag nog kunt uitgeven. Aan het eind van de
+              maand zie je precies wat je opzij kunt zetten.
+            </p>
+            <ul className="mt-6 flex flex-col gap-2.5">
+              {['Bankafschrift importeren (CSV, MT940, CAMT, Excel)', 'Automatisch indelen in categorieën', 'Dag-potjes die doorrollen als je ze niet opmaakt', 'Spaardoelen en maandelijks spaaradvies'].map((b) => (
+                <li key={b} className="flex items-center gap-2 text-sm text-slate-600">
+                  <Check className="h-4 w-4 shrink-0 text-emerald-500" strokeWidth={2.4} />
+                  {b}
+                </li>
+              ))}
+            </ul>
+          </div>
+          {/* Zelfgemaakte preview (geen externe afbeelding) */}
+          <div className="rounded-card border border-cardborder bg-white p-5 shadow-soft">
+            <div className="flex items-center gap-2">
+              <span className="grid h-9 w-9 place-items-center rounded-xl bg-brand-light text-brand">
+                <Wallet className="h-5 w-5" />
+              </span>
+              <div>
+                <p className="text-sm font-bold text-slate-800">Vandaag te besteden</p>
+                <p className="text-xs text-slate-500">periode 15 mei – 15 jun</p>
+              </div>
+              <span className="ml-auto text-2xl font-extrabold text-brand">€23</span>
+            </div>
+            <div className="mt-4 h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
+              <div className="h-full w-[64%] rounded-full bg-brand" />
+            </div>
+            <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+              {[
+                { l: 'Boodschappen', v: '€12' },
+                { l: 'Vervoer', v: '€6' },
+                { l: 'Vrij', v: '€5' },
+              ].map((p) => (
+                <div key={p.l} className="rounded-2xl bg-slate-50 p-3">
+                  <p className="text-xs text-slate-500">{p.l}</p>
+                  <p className="text-base font-extrabold text-slate-800">{p.v}</p>
+                </div>
+              ))}
+            </div>
+            <div className="mt-4 flex items-center gap-3 rounded-2xl bg-emerald-100 p-3">
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-emerald-500/15 text-emerald-600">
+                <PiggyBank className="h-5 w-5" />
+              </span>
+              <div>
+                <p className="text-sm font-bold text-emerald-700 dark:text-emerald-300">€340 over deze maand</p>
+                <p className="text-xs text-emerald-700/80 dark:text-emerald-300/80">mooi om naar je spaarrekening te zetten</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Highlight: koelkast-scan */}
       <section className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-16 sm:px-6 lg:grid-cols-2">
         <div className="order-2 lg:order-1">
@@ -175,6 +278,37 @@ export default function Landing() {
         <div className="order-1 lg:order-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={FOOD_IMG} alt="Verse ingrediënten" className="aspect-[4/3] w-full rounded-card object-cover shadow-soft" />
+        </div>
+      </section>
+
+      {/* Highlight: nooit meer een datum vergeten */}
+      <section className="bg-canvas py-16 sm:py-20">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+          <div className="mx-auto max-w-2xl text-center">
+            <span className="pill inline-flex bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-600">Altijd op tijd</span>
+            <h2 className="mt-4 text-3xl font-extrabold sm:text-4xl">Nooit meer verrast door een datum</h2>
+            <p className="mt-3 text-slate-500">
+              Fam houdt de belangrijke datums voor je in de gaten en geeft op tijd een seintje — op je telefoon, bij de juiste persoon.
+            </p>
+          </div>
+          <div className="mx-auto mt-10 grid max-w-4xl gap-4 sm:grid-cols-3">
+            {[
+              { icon: ShieldCheck, t: 'Paspoort & ID', d: 'Een half jaar van tevoren een seintje — ook voor de kinderen.' },
+              { icon: BellRing, t: 'APK & verzekering', d: 'Ruim op tijd herinnerd, zodat je nooit te laat bent.' },
+              { icon: Gift, t: 'Verjaardagen & feesten', d: 'Vaderdag, Moederdag, Sinterklaas en elke verjaardag op tijd.' },
+            ].map((c) => {
+              const Icon = c.icon
+              return (
+                <div key={c.t} className="rounded-card border border-cardborder bg-white p-5 shadow-card">
+                  <span className="grid h-11 w-11 place-items-center rounded-2xl bg-amber-100 text-amber-600">
+                    <Icon className="h-6 w-6" strokeWidth={2.1} />
+                  </span>
+                  <h3 className="mt-4 text-base font-bold text-slate-800">{c.t}</h3>
+                  <p className="mt-1 text-sm leading-relaxed text-slate-500">{c.d}</p>
+                </div>
+              )
+            })}
+          </div>
         </div>
       </section>
 
@@ -226,7 +360,7 @@ export default function Landing() {
           <div className="mt-8 flex flex-col gap-3">
             {FAQ.map((item) => (
               <details key={item.q} className="group rounded-card border border-cardborder bg-white p-5 shadow-card">
-                <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-bold text-slate-800">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-bold text-slate-800">
                   {item.q}
                   <span className="text-slate-400 transition-transform group-open:rotate-45">+</span>
                 </summary>

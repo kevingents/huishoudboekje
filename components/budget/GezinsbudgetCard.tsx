@@ -191,7 +191,7 @@ export default function GezinsbudgetCard({ className = '' }: { className?: strin
                   onClick={() => setForm({ ...form, color: c })}
                   aria-label={c}
                   className={`h-8 w-8 rounded-full ${barClass[c]} ${
-                    form.color === c ? 'ring-2 ring-slate-400 ring-offset-2' : ''
+                    form.color === c ? 'ring-2 ring-slate-400 ring-offset-2 dark:ring-offset-slate-800' : ''
                   }`}
                 />
               ))}

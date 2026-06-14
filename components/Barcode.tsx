@@ -24,7 +24,8 @@ export default function Barcode({
         margin: 0,
         height: 90,
         width: 2,
-        background: 'transparent',
+        background: '#ffffff',
+        lineColor: '#000000',
       })
     } catch {
       // Waarde past niet bij dit barcodeformaat — laat leeg.

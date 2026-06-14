@@ -44,7 +44,7 @@ export default function NotificationBell() {
       >
         <Bell className="h-5 w-5" strokeWidth={2.2} />
         {unread > 0 && (
-          <span className="absolute -right-0.5 -top-0.5 grid h-5 min-w-5 place-items-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white ring-2 ring-white">
+          <span className="absolute -right-0.5 -top-0.5 grid h-5 min-w-5 place-items-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white ring-2 ring-white dark:ring-slate-800">
             {unread > 9 ? '9+' : unread}
           </span>
         )}

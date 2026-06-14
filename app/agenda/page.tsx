@@ -478,7 +478,7 @@ export default function AgendaPage() {
                   className={[
                     'h-8 w-8 rounded-full transition-all',
                     accentClasses[accent].dot,
-                    form.accent === accent ? 'ring-2 ring-slate-400 ring-offset-2' : '',
+                    form.accent === accent ? 'ring-2 ring-slate-400 ring-offset-2 dark:ring-offset-slate-800' : '',
                   ].join(' ')}
                 />
               ))}
