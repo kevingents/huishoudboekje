@@ -7,6 +7,8 @@ import DashboardCard from './DashboardCard'
 import { useBudget, useSettings, useFamilyBudgets } from '@/lib/hooks'
 import { isSpendingCategory, periodKeyOf, txPeriodKey } from '@/lib/budget'
 
+const nl = (v: number) => Math.round(v).toLocaleString('nl-NL')
+
 export default function BudgetCard() {
   const { categories, transactions } = useBudget()
   const { budgets } = useFamilyBudgets()
@@ -70,8 +72,8 @@ export default function BudgetCard() {
             />
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-            <span className="text-2xl font-extrabold text-slate-800 dark:text-slate-100">€{spent}</span>
-            <span className="text-xs text-slate-500">van €{total}</span>
+            <span className="text-2xl font-extrabold text-slate-800 dark:text-slate-100">€{nl(spent)}</span>
+            <span className="text-xs text-slate-500">van €{nl(total)}</span>
             <span className="text-xs text-slate-500">gebruikt</span>
           </div>
         </div>
@@ -79,7 +81,7 @@ export default function BudgetCard() {
         <div className="min-w-0">
           <p className="text-sm text-slate-500">{over ? 'Je zit' : 'Je hebt nog'}</p>
           <p className={`text-3xl font-extrabold ${over ? 'text-rose-500' : 'text-slate-800 dark:text-slate-100'}`}>
-            {over ? '−' : ''}€{Math.abs(remaining)}
+            {over ? '−' : ''}€{nl(Math.abs(remaining))}
           </p>
           <p className="text-sm text-slate-500">{over ? 'over budget' : 'te besteden'}</p>
         </div>

@@ -72,6 +72,19 @@ describe('forecastPotje', () => {
     expect(forecastPotje(b, early, 1).hasData).toBe(false)
   })
 
+  it('telt een boeking op de laatste dag mee, maar niet de eerste dag van de volgende periode', () => {
+    const b = pot({
+      limit: 500,
+      entries: [
+        { label: 'laatste dag', amount: 40, at: new Date(2026, 0, 31, 23, 30).toISOString() },
+        { label: 'volgende periode', amount: 99, at: new Date(2026, 1, 1, 0, 30).toISOString() },
+      ],
+    })
+    const f = forecastPotje(b, now, 1)
+    expect(f.periodSpent).toBe(40)
+    expect(f.count).toBe(1)
+  })
+
   it('negeert potjes zonder budget in forecastPotjes', () => {
     const list = forecastPotjes([pot({ id: 1, limit: 0 }), pot({ id: 2, limit: 100 })], now, 1)
     expect(list.map((f) => f.id)).toEqual([2])

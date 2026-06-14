@@ -173,7 +173,9 @@ export default function SpendingExplorer({
             type="button"
             onClick={() => (p.key === 'period' ? pickPeriod(curKey) : setMode(p.key))}
             className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
-              mode === p.key ? 'bg-brand text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              mode === p.key
+                ? 'bg-brand text-white'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-white/10 dark:text-slate-200 dark:hover:bg-white/15'
             }`}
           >
             {p.label}

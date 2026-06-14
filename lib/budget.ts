@@ -194,6 +194,14 @@ export function periodRangeOf(date: Date, startDay = 1): { start: Date; end: Dat
   return { start, end }
 }
 
+/** Exclusieve eindgrens van de periode die `date` bevat: de lokale middernacht
+ *  ná de laatste dag. DST-veilig — toets `t < periodEndExclusive(...)` i.p.v.
+ *  `end + 24u`, zodat een 25-uurs (of 23-uurs) dag de grens niet verschuift. */
+export function periodEndExclusive(date: Date, startDay = 1): number {
+  const { end } = periodRangeOf(date, startDay)
+  return new Date(end.getFullYear(), end.getMonth(), end.getDate() + 1).getTime()
+}
+
 /** Verschuift een periode-sleutel (yyyy-mm van de startmaand) met N maanden —
  *  jaarwissel- en tijdzone-veilig (rekent op de maand-sleutel, niet op timestamps). */
 export function shiftPeriodKey(key: string, delta: number): string {

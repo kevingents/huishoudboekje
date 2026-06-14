@@ -42,6 +42,7 @@ import RecurringSuggestions from '@/components/budget/RecurringSuggestions'
 import MerchantAvatar from '@/components/MerchantAvatar'
 import BookToPotje from '@/components/budget/BookToPotje'
 import PotjesForecastCard from '@/components/budget/PotjesForecastCard'
+import PersonalInsightsCard from '@/components/budget/PersonalInsightsCard'
 import type { BudgetCategory } from '@/lib/types'
 
 const colorClasses: Record<string, { bar: string; iconBg: string; iconText: string }> = {
@@ -732,6 +733,9 @@ export default function BudgetPage() {
         {/* Uitgaven: periode-presets + klikbare trend + verdeling + transacties */}
         <SpendingExplorer transactions={transactions} periodStart={periodStart} />
 
+        {/* Persoonlijk inzicht per gezinslid: wat kopen ze en hoe vaak. */}
+        <PersonalInsightsCard className="lg:col-span-2" />
+
         {/* Recent transactions (full width) */}
         <DashboardCard title="Recente uitgaven" className="lg:col-span-2">
           {isLoading && transactions.length === 0 ? (
@@ -759,7 +763,8 @@ export default function BudgetPage() {
                       <BookToPotje
                         budgets={budgets}
                         amount={Number(tx.amount) || 0}
-                        onBook={(b) => logSpend(b, Number(tx.amount) || 0, cleanLabel(tx.label))}
+                        defaultLabel={cleanLabel(tx.label)}
+                        onBook={(b, label) => logSpend(b, Number(tx.amount) || 0, label)}
                       />
                     )}
                     <button

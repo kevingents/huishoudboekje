@@ -8,7 +8,7 @@
  * `spent`-veld, dat over maanden doorloopt), zodat de prognose echt over de
  * lopende periode gaat.
  */
-import { periodRangeOf } from './budget'
+import { periodRangeOf, periodEndExclusive } from './budget'
 import type { FamilyBudget } from './types'
 
 export type PotjeStatus = 'op-koers' | 'krap' | 'over'
@@ -45,13 +45,13 @@ export function periodProgress(now: Date, startDay = 1): { elapsed: number; tota
 
 /** Prognose voor één potje. `minDays` = vanaf hoeveel dagen we durven te projecteren. */
 export function forecastPotje(b: FamilyBudget, now: Date, startDay = 1, minDays = 4): PotjeForecast {
-  const { start, end } = periodRangeOf(now, startDay)
-  const endMs = end.getTime() + DAY - 1 // t/m het einde van de laatste dag
+  const { start } = periodRangeOf(now, startDay)
+  const endExclusive = periodEndExclusive(now, startDay) // DST-veilige bovengrens
   let periodSpent = 0
   let count = 0
   for (const e of b.entries ?? []) {
     const t = new Date(e.at).getTime()
-    if (!Number.isNaN(t) && t >= start.getTime() && t <= endMs) {
+    if (!Number.isNaN(t) && t >= start.getTime() && t < endExclusive) {
       periodSpent += e.amount || 0
       count += 1
     }

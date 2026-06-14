@@ -60,6 +60,7 @@ export default function PotjesForecastCard({ className = '' }: { className?: str
             {withData.map((f) => {
               const s = STATUS[f.status]
               const pct = f.limit ? Math.min(Math.round((f.projected / f.limit) * 100), 100) : 0
+              const surplus = Math.round(f.surplus) // afronden vóór de woordkeuze (geen "€0 tekort")
               return (
                 <li key={f.id}>
                   <div className="mb-1 flex items-center gap-2 text-sm">
@@ -77,10 +78,12 @@ export default function PotjesForecastCard({ className = '' }: { className?: str
                   </div>
                   <p className="mt-1 text-[11px] text-slate-500">
                     €{euro(f.periodSpent)} uitgegeven · prognose €{euro(f.projected)} van €{euro(f.limit)} —{' '}
-                    {f.surplus >= 0 ? (
-                      <span className="font-semibold text-emerald-600 dark:text-emerald-400">€{euro(f.surplus)} over</span>
+                    {Math.abs(surplus) < 1 ? (
+                      <span className="font-semibold text-slate-500">precies op budget</span>
+                    ) : surplus > 0 ? (
+                      <span className="font-semibold text-emerald-600 dark:text-emerald-400">€{euro(surplus)} over</span>
                     ) : (
-                      <span className="font-semibold text-rose-600 dark:text-rose-400">€{euro(f.surplus)} tekort</span>
+                      <span className="font-semibold text-rose-600 dark:text-rose-400">€{euro(surplus)} tekort</span>
                     )}
                   </p>
                 </li>
