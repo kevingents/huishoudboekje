@@ -55,9 +55,10 @@ export default function VoorwaardenPage() {
         <Section title="3. Pakketten en betaling">
           <p>
             Fam heeft een gratis Basis-pakket en betaalde pakketten (Plus en Compleet), maandelijks of per
-            jaar (met 10% korting). De eerste maand van een betaald pakket is gratis. Betalingen lopen via
-            Mollie. Je kunt maandelijks opzeggen of wisselen; reeds betaalde periodes worden niet
-            terugbetaald. Prijzen kunnen wijzigen; we melden dit vooraf.
+            jaar (jaar = 2 maanden gratis). Een eventuele launch-/introkorting geldt voor de eerste betaling;
+            de daaropvolgende incasso is de reguliere prijs. Betalingen lopen via Mollie. Je kunt maandelijks
+            opzeggen of wisselen; reeds betaalde periodes worden niet terugbetaald. Prijzen kunnen wijzigen;
+            we melden dit vooraf.
           </p>
         </Section>
 

@@ -6,7 +6,7 @@ import PageHeader from '@/components/PageHeader'
 import DashboardCard from '@/components/DashboardCard'
 import { useHousehold, useAuth } from '@/lib/hooks'
 import { apiPost } from '@/lib/api'
-import { TIERS, MODULES, TIER_RANK, yearlyPrice, type Tier } from '@/lib/modules'
+import { TIERS, MODULES, TIER_RANK, yearlyPrice, LAUNCH_OFFER, type Tier } from '@/lib/modules'
 
 const CORE_FEATURES = [
   'Agenda & school (iCal)',
@@ -154,7 +154,7 @@ export default function ModulesPage() {
                 yearly ? 'bg-white/25 text-white' : 'bg-emerald-100 text-emerald-600'
               }`}
             >
-              −10%
+              2 mnd gratis
             </span>
           </button>
         </div>
@@ -206,12 +206,14 @@ export default function ModulesPage() {
 
               {t.price > 0 && (
                 <div className="mb-3 flex flex-wrap gap-1.5">
-                  <span className="inline-flex w-fit items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-600">
-                    1e maand gratis
-                  </span>
-                  {yearly && (
+                  {LAUNCH_OFFER.active && (
                     <span className="inline-flex w-fit items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-semibold text-amber-600">
-                      10% jaarkorting
+                      {LAUNCH_OFFER.sub}
+                    </span>
+                  )}
+                  {yearly && (
+                    <span className="inline-flex w-fit items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-600">
+                      2 maanden gratis
                     </span>
                   )}
                 </div>

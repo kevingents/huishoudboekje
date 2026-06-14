@@ -3,7 +3,7 @@ import { SequenceType } from '@mollie/api-client'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
 import { getMollie, baseUrl, isPublic } from '@/lib/mollie'
-import { normalizeTier, tierInfo, yearlyPrice, type Tier } from '@/lib/modules'
+import { normalizeTier, tierInfo, yearlyPrice, LAUNCH_OFFER, type Tier } from '@/lib/modules'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -26,6 +26,11 @@ export async function POST(req: Request) {
   const amount = yearly ? yearlyPrice(price) : price
   const interval = yearly ? '12 months' : '1 month'
   const planName = `${tierInfo(tier).name}${yearly ? ' (jaar)' : ''}`
+  // Launch-aanbieding: korting op de EERSTE betaling; de terugkerende incasso
+  // (in de webhook, op basis van subscription.amount) blijft de volle prijs.
+  const firstAmount = LAUNCH_OFFER.active
+    ? Math.round(amount * (1 - LAUNCH_OFFER.firstPaymentDiscount) * 100) / 100
+    : amount
 
   // Gratis pakket (Basis) of geen Mollie: direct activeren.
   const mollie = getMollie()
@@ -40,8 +45,8 @@ export async function POST(req: Request) {
     const origin = baseUrl(req)
     const payment = await mollie.customerPayments.create({
       customerId: customer.id,
-      amount: { currency: 'EUR', value: amount.toFixed(2) },
-      description: `Fam ${planName}`,
+      amount: { currency: 'EUR', value: firstAmount.toFixed(2) },
+      description: `Fam ${planName}${LAUNCH_OFFER.active ? ' — launchkorting 1e betaling' : ''}`,
       sequenceType: SequenceType.first,
       redirectUrl: `${origin}/modules`,
       metadata: { householdId: String(householdId), tier, billing: yearly ? 'yearly' : 'monthly' },

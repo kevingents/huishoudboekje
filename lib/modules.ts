@@ -56,12 +56,24 @@ export function tierInfo(tier: string | undefined | null): TierInfo {
   return TIERS.find((t) => t.key === normalizeTier(tier)) ?? TIERS[0]
 }
 
-/** Jaarkorting bij een jaarabonnement. */
-export const YEARLY_DISCOUNT = 0.1
+/** Jaarkorting: 2 maanden gratis (betaal 10 i.p.v. 12 maanden ≈ 16,7%). */
+export const YEARLY_DISCOUNT = 1 / 6
 
-/** Jaarprijs (12 maanden − 10% korting), afgerond op centen. */
+/** Jaarprijs (12 maanden − 2 maanden gratis = 10 maanden), afgerond op centen. */
 export function yearlyPrice(monthly: number): number {
   return Math.round(monthly * 12 * (1 - YEARLY_DISCOUNT) * 100) / 100
+}
+
+/**
+ * Launch-aanbieding voor klantenwerving: korting op de EERSTE betaling (de
+ * terugkerende incasso erna blijft de volle prijs). `active` aan/uit zetten;
+ * `firstPaymentDiscount` 0..1 (0,5 = 50% korting op de eerste periode).
+ */
+export const LAUNCH_OFFER = {
+  active: true,
+  label: 'Launch-aanbieding',
+  sub: '50% korting op je eerste betaling',
+  firstPaymentDiscount: 0.5,
 }
 
 /** Wat je krijgt per pakket (voor de marketing- en modules-pagina). */

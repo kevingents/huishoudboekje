@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { Check } from 'lucide-react'
-import { TIERS, TIER_FEATURES, yearlyPrice, type Tier } from '@/lib/modules'
+import { TIERS, TIER_FEATURES, yearlyPrice, LAUNCH_OFFER, type Tier } from '@/lib/modules'
 
 const euro = (n: number) => `€${n.toFixed(2).replace('.', ',')}`
 
@@ -16,9 +16,16 @@ export default function PricingSection() {
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="text-3xl font-extrabold sm:text-4xl">Een pakket dat met jullie meegroeit</h2>
           <p className="mt-3 text-slate-500">
-            Begin gratis, breid uit wanneer je wilt. De 1e maand van elk betaald pakket is gratis —
-            maandelijks opzegbaar.
+            Begin gratis, breid uit wanneer je wilt. Maandelijks opzegbaar, up- of downgraden kan altijd.
           </p>
+          {LAUNCH_OFFER.active && (
+            <div className="mx-auto mt-5 inline-flex items-center gap-2 rounded-full bg-amber-100 px-4 py-1.5 text-sm font-semibold text-amber-700">
+              <span className="rounded-full bg-amber-500 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-white">
+                {LAUNCH_OFFER.label}
+              </span>
+              {LAUNCH_OFFER.sub}
+            </div>
+          )}
 
           {/* Maand / jaar-schakelaar */}
           <div className="mx-auto mt-6 inline-flex items-center gap-1 rounded-full bg-white p-1 shadow-card ring-1 ring-cardborder">
@@ -44,7 +51,7 @@ export default function PricingSection() {
                   yearly ? 'bg-white/25 text-white' : 'bg-emerald-100 text-emerald-600'
                 }`}
               >
-                −10%
+                2 mnd gratis
               </span>
             </button>
           </div>
@@ -86,12 +93,14 @@ export default function PricingSection() {
 
                 {t.price > 0 && (
                   <div className="mt-2 flex flex-wrap gap-1.5">
-                    <span className="inline-flex w-fit items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-600">
-                      1e maand gratis
-                    </span>
-                    {yearly && (
+                    {LAUNCH_OFFER.active && (
                       <span className="inline-flex w-fit items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-semibold text-amber-600">
-                        ≈ {euro(yearPrice / 12)} p/m · bespaar 10%
+                        {LAUNCH_OFFER.sub}
+                      </span>
+                    )}
+                    {yearly && (
+                      <span className="inline-flex w-fit items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-600">
+                        ≈ {euro(yearPrice / 12)} p/m · 2 mnd gratis
                       </span>
                     )}
                   </div>
@@ -124,9 +133,9 @@ export default function PricingSection() {
         </div>
 
         <p className="mx-auto mt-6 max-w-2xl text-center text-xs text-slate-400">
-          De 1e maand is gratis op Plus en Compleet. Kies je voor een jaarabonnement, dan krijg je 10%
-          korting. Je kunt op elk moment up- of downgraden en betaalt nooit voor functies die je niet
-          gebruikt. Betalingen lopen veilig via Mollie.
+          {LAUNCH_OFFER.active ? `Launch-aanbieding: ${LAUNCH_OFFER.sub}. ` : ''}Kies je voor een jaarabonnement, dan
+          krijg je 2 maanden gratis. Je kunt op elk moment up- of downgraden en betaalt nooit voor functies die je
+          niet gebruikt. Betalingen lopen veilig via Mollie.
         </p>
       </div>
     </section>
