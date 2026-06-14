@@ -282,7 +282,14 @@ export function useBudget() {
 /*  Budgetplanner: spaardoelen + vaste lasten                                 */
 /* -------------------------------------------------------------------------- */
 
-type SavingsInput = { name: string; target: number; targetDate?: string | null; theme?: string | null }
+type SavingsInput = {
+  name: string
+  target: number
+  targetDate?: string | null
+  monthly?: number | null
+  forMember?: string | null
+  theme?: string | null
+}
 
 export function useSavings() {
   const c = useCollection<SavingsGoal>('/api/savings')
@@ -295,6 +302,8 @@ export function useSavings() {
         target: payload.target,
         saved: 0,
         targetDate: payload.targetDate ?? null,
+        monthly: payload.monthly ?? null,
+        forMember: payload.forMember ?? null,
         theme: payload.theme ?? null,
       }),
     deposit: (goal: SavingsGoal, amount: number) =>
@@ -400,6 +409,7 @@ export interface Loan {
   excludePattern: string | null
   manualPaid: number
   startDate: string | null
+  endDate: string | null
 }
 
 type NewLoan = {
@@ -411,6 +421,7 @@ type NewLoan = {
   excludePattern?: string | null
   manualPaid?: number
   startDate?: string | null
+  endDate?: string | null
 }
 
 export function useLoans() {
@@ -428,6 +439,7 @@ export function useLoans() {
         excludePattern: payload.excludePattern ?? null,
         manualPaid: payload.manualPaid ?? 0,
         startDate: payload.startDate ?? null,
+        endDate: payload.endDate ?? null,
       }),
     updateLoan: (id: number, payload: Partial<NewLoan>) => c.update(id, payload as Record<string, unknown>),
     removeLoan: (id: number) => c.remove(id),

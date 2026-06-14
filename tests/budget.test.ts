@@ -10,6 +10,7 @@ import {
   goalReservePerMonth,
   savingsReservePerMonth,
   allocateBudget,
+  loanIsActive,
 } from '@/lib/budget'
 
 describe('periodKeyOf', () => {
@@ -163,5 +164,35 @@ describe('allocateBudget', () => {
   it('leeg potje → alles 0', () => {
     const m = allocateBudget(0, cats, new Map([['A', 100]]), 'verhouding')
     expect([m.get(1), m.get(2), m.get(3)]).toEqual([0, 0, 0])
+  })
+})
+
+describe('goalReservePerMonth — vaste maandinleg', () => {
+  const now = new Date(2026, 5, 14)
+  it('gebruikt de ingestelde maandinleg', () => {
+    expect(goalReservePerMonth({ target: 1200, saved: 0, monthly: 150 }, now)).toBe(150)
+  })
+  it('maandinleg gaat vóór de streefdatum', () => {
+    expect(goalReservePerMonth({ target: 1200, saved: 0, monthly: 150, targetDate: '2026-12-14' }, now)).toBe(150)
+  })
+  it('reserveert nooit meer dan nog nodig is', () => {
+    expect(goalReservePerMonth({ target: 1200, saved: 1100, monthly: 150 }, now)).toBe(100)
+  })
+})
+
+describe('loanIsActive', () => {
+  const now = new Date(2026, 5, 14) // juni 2026
+  it('zonder einddatum altijd actief', () => {
+    expect(loanIsActive({ endDate: null }, now)).toBe(true)
+    expect(loanIsActive({}, now)).toBe(true)
+  })
+  it('einddatum in de toekomst → actief', () => {
+    expect(loanIsActive({ endDate: '2026-12-31' }, now)).toBe(true)
+  })
+  it('eindmaand is deze maand → nog actief', () => {
+    expect(loanIsActive({ endDate: '2026-06-30' }, now)).toBe(true)
+  })
+  it('eindmaand voorbij → niet meer actief', () => {
+    expect(loanIsActive({ endDate: '2026-05-31' }, now)).toBe(false)
   })
 })

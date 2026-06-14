@@ -131,6 +131,8 @@ export interface SavingsGoal {
   target: number
   saved: number
   targetDate?: string | null
+  monthly?: number | null
+  forMember?: string | null
   theme?: string | null
 }
 

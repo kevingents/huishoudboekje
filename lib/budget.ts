@@ -282,18 +282,33 @@ export function fixedCostMonthly(cost: {
 /** "Wat overblijft" om vrij te besteden per maand: inkomen − vaste lasten −
  *  abonnementen − aflossingen. Gedeeld zodat het dagbudget en de periode-terugblik
  *  exact hetzelfde bedrag gebruiken. Nooit negatief. */
+/**
+ * Telt een lening nog mee deze maand? Een lening met een einddatum in het
+ * verleden (de eindmaand is al voorbij) telt niet meer mee in het maandbudget.
+ */
+export function loanIsActive(loan: { endDate?: string | null }, now: Date): boolean {
+  if (!loan.endDate) return true
+  const m = /^(\d{4})-(\d{2})/.exec(loan.endDate)
+  if (!m) return true
+  const endIdx = Number(m[1]) * 12 + (Number(m[2]) - 1)
+  return endIdx >= now.getFullYear() * 12 + now.getMonth()
+}
+
 export function spendablePerMonth(opts: {
   incomes: { amount: number; interval: string }[]
   costs: { amount: number; isSubscription?: boolean; subscriptionInterval?: string | null }[]
   subscriptions: { amount: number; interval: string; status?: string }[]
-  loans: { termAmount?: number | null }[]
+  loans: { termAmount?: number | null; endDate?: string | null }[]
+  now?: Date
 }): number {
   const income = opts.incomes.reduce((s, i) => s + monthlyEquivalent(i.amount, i.interval), 0)
   const fixed = opts.costs.reduce((s, c) => s + fixedCostMonthly(c), 0)
   const subs = opts.subscriptions
     .filter((s) => (s.status ?? 'active') === 'active')
     .reduce((s, x) => s + monthlyEquivalent(x.amount, x.interval), 0)
-  const loansMonthly = opts.loans.reduce((s, l) => s + (l.termAmount || 0), 0)
+  const loansMonthly = opts.loans
+    .filter((l) => !opts.now || loanIsActive(l, opts.now))
+    .reduce((s, l) => s + (l.termAmount || 0), 0)
   return Math.max(0, income - fixed - subs - loansMonthly)
 }
 
@@ -304,11 +319,14 @@ export function spendablePerMonth(opts: {
  * maand telt als 1 maand, zodat het hele restbedrag gereserveerd wordt.
  */
 export function goalReservePerMonth(
-  goal: { target: number; saved: number; targetDate?: string | null },
+  goal: { target: number; saved: number; targetDate?: string | null; monthly?: number | null },
   now: Date,
 ): number {
   const remaining = Math.max(0, (goal.target || 0) - (goal.saved || 0))
-  if (remaining <= 0 || !goal.targetDate) return 0
+  if (remaining <= 0) return 0
+  // Vaste maandinleg ingesteld? Die heeft voorrang — maar nooit meer dan nog nodig is.
+  if (goal.monthly && goal.monthly > 0) return Math.min(Math.round(goal.monthly), remaining)
+  if (!goal.targetDate) return 0
   // YYYY-MM-DD lokaal lezen (niet als UTC), zodat de maand-telling tijdzone-onafhankelijk is.
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(goal.targetDate)
   if (!m) return 0

@@ -12,6 +12,8 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   if (body.saved !== undefined) data.saved = Number(body.saved)
   if (body.deposit !== undefined) data.saved = { increment: Number(body.deposit) }
   if (body.targetDate !== undefined) data.targetDate = body.targetDate ? String(body.targetDate) : null
+  if (body.monthly !== undefined) data.monthly = body.monthly ? Number(body.monthly) : null
+  if (body.forMember !== undefined) data.forMember = body.forMember ? String(body.forMember) : null
   if (body.theme !== undefined) data.theme = body.theme ? String(body.theme) : null
   const result = await prisma.savingsGoal.updateMany({ where: { id, householdId: hid }, data })
   if (result.count === 0) return notFound()

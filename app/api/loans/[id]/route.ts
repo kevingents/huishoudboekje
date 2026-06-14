@@ -17,6 +17,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     data.excludePattern = body.excludePattern ? String(body.excludePattern).toLowerCase().trim() : null
   if (body.manualPaid !== undefined) data.manualPaid = Number(body.manualPaid) || 0
   if (body.startDate !== undefined) data.startDate = body.startDate ? String(body.startDate) : null
+  if (body.endDate !== undefined) data.endDate = body.endDate ? String(body.endDate) : null
   const result = await prisma.loan.updateMany({ where: { id, householdId: hid }, data })
   if (result.count === 0) return notFound()
   const loan = await prisma.loan.findUnique({ where: { id } })

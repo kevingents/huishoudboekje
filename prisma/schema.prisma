@@ -211,6 +211,8 @@ model SavingsGoal {
   target      Float
   saved       Float    @default(0)
   targetDate  String? // yyyy-mm-dd, optionele einddatum (voor "maandelijks benodigd")
+  monthly     Float? // vaste maandinleg (optioneel; anders afgeleid van de streefdatum)
+  forMember   String? // optioneel: gezinslid waarvoor gespaard wordt (naam)
   theme       String? // cover-thema: algemeen/vakantie/auto/huis/feest/noodfonds
   createdAt   DateTime @default(now())
 
@@ -290,6 +292,7 @@ model Loan {
   excludePattern String? // trefwoord dat een match juist uitsluit (bv. "premie")
   manualPaid   Float    @default(0) // extra handmatig afgelost (buiten transacties)
   startDate    String? // yyyy-mm-dd
+  endDate      String? // yyyy-mm-dd; na deze maand telt de termijn niet meer mee
   createdAt    DateTime @default(now())
 
   @@index([householdId])

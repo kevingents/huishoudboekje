@@ -24,6 +24,8 @@ export async function POST(req: Request) {
       target: Number(body.target),
       saved: Number(body.saved ?? 0),
       targetDate: body.targetDate ? String(body.targetDate) : null,
+      monthly: body.monthly ? Number(body.monthly) : null,
+      forMember: body.forMember ? String(body.forMember) : null,
       theme: body.theme ? String(body.theme) : null,
     },
   })

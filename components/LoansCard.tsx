@@ -41,7 +41,7 @@ function compute(loan: Loan, transactions: Transaction[]): Computed {
   return { matched, repaid, remaining, pct, monthsLeft }
 }
 
-const emptyForm = { name: '', lender: '', total: '', termAmount: '', matchPattern: '', excludePattern: '', manualPaid: '' }
+const emptyForm = { name: '', lender: '', total: '', termAmount: '', matchPattern: '', excludePattern: '', manualPaid: '', endDate: '' }
 
 export default function LoansCard() {
   const { loans, addLoan, updateLoan, removeLoan } = useLoans()
@@ -66,6 +66,7 @@ export default function LoansCard() {
       matchPattern: loan.matchPattern ?? '',
       excludePattern: loan.excludePattern ?? '',
       manualPaid: loan.manualPaid ? String(loan.manualPaid) : '',
+      endDate: loan.endDate ?? '',
     })
     setOpen(true)
   }
@@ -82,6 +83,7 @@ export default function LoansCard() {
       matchPattern: form.matchPattern.trim() || (form.lender.trim() ? merchantKey(form.lender) : null),
       excludePattern: form.excludePattern.trim() || null,
       manualPaid: form.manualPaid ? num(form.manualPaid) : 0,
+      endDate: form.endDate || null,
     }
     if (editing) await updateLoan(editing.id, payload)
     else await addLoan(payload)
@@ -245,6 +247,18 @@ export default function LoansCard() {
               />
             </label>
           </div>
+          <label className="text-xs font-semibold text-slate-500">
+            Einddatum (optioneel)
+            <input
+              type="date"
+              value={form.endDate}
+              onChange={(e) => setForm({ ...form, endDate: e.target.value })}
+              className={`mt-1 ${inputClass}`}
+            />
+            <span className="mt-1 block text-[11px] font-normal text-slate-400">
+              Na deze maand telt de maandtermijn niet meer mee in &ldquo;wat je per maand overhoudt&rdquo;.
+            </span>
+          </label>
           <label className="text-xs font-semibold text-slate-500">
             Koppel-trefwoord
             <input

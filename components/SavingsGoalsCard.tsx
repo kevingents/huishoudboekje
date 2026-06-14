@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { PiggyBank, Plus, Trash2, Plane, Car, Home, Gift, ShieldCheck, type LucideIcon } from 'lucide-react'
 import DashboardCard from './DashboardCard'
 import Modal from './Modal'
-import { useSavings } from '@/lib/hooks'
+import { useSavings, useFamily } from '@/lib/hooks'
 
 const inputClass =
   'w-full rounded-xl border border-cardborder bg-white px-3.5 py-2.5 text-sm text-slate-700 outline-none transition-colors placeholder:text-slate-400 focus:border-brand/40 focus:ring-2 focus:ring-brand/20'
@@ -29,10 +29,11 @@ function monthsUntil(dateStr?: string | null): number | null {
   return months >= 1 ? months : null
 }
 
-const emptyForm = { name: '', target: '', targetDate: '', theme: 'algemeen' }
+const emptyForm = { name: '', target: '', targetDate: '', monthly: '', forMember: '', theme: 'algemeen' }
 
 export default function SavingsGoalsCard({ className = '' }: { className?: string }) {
   const { goals, addGoal, deposit, removeGoal } = useSavings()
+  const { members } = useFamily()
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState(emptyForm)
   const [drafts, setDrafts] = useState<Record<number, string>>({})
@@ -45,6 +46,8 @@ export default function SavingsGoalsCard({ className = '' }: { className?: strin
       name: form.name.trim(),
       target,
       targetDate: form.targetDate || null,
+      monthly: form.monthly ? Number(form.monthly.replace(',', '.')) || null : null,
+      forMember: form.forMember || null,
       theme: form.theme,
     })
     setForm(emptyForm)
@@ -83,7 +86,8 @@ export default function SavingsGoalsCard({ className = '' }: { className?: strin
             const pct = g.target ? Math.min(Math.round((g.saved / g.target) * 100), 100) : 0
             const remaining = Math.max(0, g.target - g.saved)
             const months = monthsUntil(g.targetDate)
-            const perMonth = months ? Math.ceil(remaining / months) : null
+            const perMonth =
+              g.monthly && g.monthly > 0 ? Math.round(g.monthly) : months ? Math.ceil(remaining / months) : null
             const th = themeOf(g.theme)
             const Icon = th.icon
             return (
@@ -96,8 +100,12 @@ export default function SavingsGoalsCard({ className = '' }: { className?: strin
                     <span className="block truncate text-sm font-semibold text-slate-800 dark:text-slate-100">
                       {g.name}
                     </span>
-                    {g.targetDate && (
-                      <span className="block text-[11px] text-slate-400">streefdatum {g.targetDate}</span>
+                    {(g.forMember || g.targetDate) && (
+                      <span className="block truncate text-[11px] text-slate-400">
+                        {[g.forMember ? `voor ${g.forMember}` : null, g.targetDate ? `streefdatum ${g.targetDate}` : null]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </span>
                     )}
                   </div>
                   <span className="shrink-0 text-sm text-slate-500">
@@ -122,7 +130,7 @@ export default function SavingsGoalsCard({ className = '' }: { className?: strin
                   <span className="font-semibold text-emerald-600 dark:text-emerald-400">{pct}% gehaald</span>
                   <span>
                     nog €{Math.round(remaining)}
-                    {perMonth ? ` · €${perMonth}/mnd nodig` : ''}
+                    {perMonth ? ` · €${perMonth}/mnd${g.monthly ? ' inleg' : ' nodig'}` : ''}
                   </span>
                 </div>
                 <form
@@ -185,6 +193,38 @@ export default function SavingsGoalsCard({ className = '' }: { className?: strin
               />
             </label>
           </div>
+          <div className="flex gap-3">
+            <label className="min-w-0 flex-1 text-xs font-semibold text-slate-500">
+              Maandinleg (optioneel)
+              <input
+                inputMode="decimal"
+                value={form.monthly}
+                onChange={(e) => setForm({ ...form, monthly: e.target.value })}
+                placeholder="bv. 100"
+                className={`mt-1 ${inputClass}`}
+              />
+            </label>
+            <label className="min-w-0 flex-1 text-xs font-semibold text-slate-500">
+              Voor wie (optioneel)
+              <select
+                value={form.forMember}
+                onChange={(e) => setForm({ ...form, forMember: e.target.value })}
+                className={`mt-1 ${inputClass}`}
+              >
+                <option value="">Hele gezin</option>
+                {members.map((m) => (
+                  <option key={m.id} value={m.name}>
+                    {m.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <p className="-mt-1 text-[11px] text-slate-400">
+            Vul een maandinleg in om zelf te bepalen wat er per maand opzij gaat — anders rekent Fam het uit op basis van
+            de streefdatum. Dit bedrag wordt van &ldquo;wat je per maand overhoudt&rdquo; afgehaald.
+          </p>
+
           <div>
             <p className="mb-1 text-xs font-semibold text-slate-500">Thema</p>
             <div className="flex flex-wrap gap-1.5">

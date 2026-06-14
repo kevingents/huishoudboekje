@@ -21,6 +21,7 @@ import {
   cleanLabel,
   fixedCostMonthly,
   isSpendingCategory,
+  loanIsActive,
   merchantKey,
   monthlyEquivalent,
   periodKeyOf,
@@ -296,7 +297,8 @@ export default function BudgetPage() {
   const isAflossing = (cat?: string) => /afloss|lening|hypothe|schuld|krediet/i.test(cat || '')
   const fixedTotal = costs.filter((c) => !isAflossing(c.category)).reduce((sum, c) => sum + fixedCostMonthly(c), 0)
   const fixedAflossing = costs.filter((c) => isAflossing(c.category)).reduce((sum, c) => sum + fixedCostMonthly(c), 0)
-  const loanMonthly = loans.reduce((sum, l) => sum + (l.termAmount || 0), 0)
+  // Leningen met een verstreken einddatum tellen niet meer mee in het maandbudget.
+  const loanMonthly = loans.filter((l) => loanIsActive(l, now)).reduce((sum, l) => sum + (l.termAmount || 0), 0)
   const aflossingenMonthly = loanMonthly + fixedAflossing
 
   // Maandbegroting: inkomsten − vaste lasten − abonnementen − aflossingen − variabel.

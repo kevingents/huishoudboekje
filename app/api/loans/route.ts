@@ -28,6 +28,7 @@ export async function POST(req: Request) {
       excludePattern: body.excludePattern ? String(body.excludePattern).toLowerCase().trim() : null,
       manualPaid: Number(body.manualPaid) || 0,
       startDate: body.startDate ? String(body.startDate) : null,
+      endDate: body.endDate ? String(body.endDate) : null,
     },
   })
   return Response.json(loan, { status: 201 })
