@@ -5,9 +5,9 @@ import Link from 'next/link'
 import { Wallet, Settings, ChevronRight, ArrowDownCircle } from 'lucide-react'
 import DashboardCard from './DashboardCard'
 import Modal from './Modal'
-import { useBudget, useFixedCosts, useSubscriptions, useIncome, useLoans, useSettings, useSavings } from '@/lib/hooks'
+import { useBudget, useFixedCosts, useSubscriptions, useIncome, useLoans, useSettings, useSavings, useFamilyBudgets } from '@/lib/hooks'
 import { fixedCostMonthly, monthlyEquivalent, loanIsActive, savingsReservePerMonth } from '@/lib/budget'
-import { computeDailyBudget } from '@/lib/dailyBudget'
+import { computeDailyBudget, salaryPeriod } from '@/lib/dailyBudget'
 
 const inputClass =
   'w-full rounded-xl border border-cardborder bg-white px-3.5 py-2.5 text-sm text-slate-700 outline-none transition-colors placeholder:text-slate-400 focus:border-brand/40 focus:ring-2 focus:ring-brand/20'
@@ -17,7 +17,16 @@ const round = (n: number) => Math.round(n)
 interface DayBudgetConfig {
   salaryDay?: number
   monthlyAmount?: number | null
+  /** 'all' = hele budget, of een FamilyBudget.id voor een dagbudget per potje. */
+  scope?: 'all' | number
 }
+
+const chipClass = (on: boolean) =>
+  `rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
+    on
+      ? 'bg-brand text-white'
+      : 'bg-white/70 text-slate-600 ring-1 ring-cardborder hover:bg-white dark:bg-white/5 dark:text-slate-200'
+  }`
 
 export default function DayBudgetCard() {
   const { transactions } = useBudget()
@@ -26,6 +35,7 @@ export default function DayBudgetCard() {
   const { incomes } = useIncome()
   const { loans } = useLoans()
   const { goals } = useSavings()
+  const { budgets } = useFamilyBudgets()
   const { settings, setSetting } = useSettings()
 
   // Datum pas na mount bepalen (geen hydratie-mismatch).
@@ -53,6 +63,27 @@ export default function DayBudgetCard() {
   const auto = Math.max(0, incomeMonthly - fixedTotal - subsMonthly - loansMonthly - savingsMonthly)
   const spendablePerMonth = manual ? (cfg.monthlyAmount as number) : auto
 
+  // Keuze: hele budget of één gezinspotje. Bij een potje baseert het dagbudget
+  // zich op dat potje (maandbudget = limit; "deze periode al uit" = de boekingen
+  // op dat potje binnen de salarisperiode).
+  const scope = cfg.scope ?? 'all'
+  const selectedBudget = scope === 'all' ? null : budgets.find((b) => b.id === scope) ?? null
+  const activeScope = selectedBudget ? scope : 'all'
+  const potjeSpent =
+    selectedBudget && now
+      ? (() => {
+          const { periodStart, periodEnd } = salaryPeriod(now, periodDay)
+          const s = periodStart.getTime()
+          const e = periodEnd.getTime()
+          return (selectedBudget.entries ?? []).reduce((sum, en) => {
+            const t = new Date(en.at).getTime()
+            return !Number.isNaN(t) && t >= s && t < e ? sum + (en.amount || 0) : sum
+          }, 0)
+        })()
+      : 0
+  const effectiveMonthly = selectedBudget ? selectedBudget.limit || 0 : spendablePerMonth
+  const setScope = (s: 'all' | number) => setSetting('dailyBudget', { ...cfg, scope: s })
+
   // Instellen-modal
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState({ mode: 'auto' as 'auto' | 'manual', amount: '' })
@@ -63,7 +94,7 @@ export default function DayBudgetCard() {
   const save = async (e: React.FormEvent) => {
     e.preventDefault()
     const amount = form.mode === 'manual' ? Number(form.amount.replace(',', '.')) || 0 : null
-    await setSetting('dailyBudget', { monthlyAmount: amount })
+    await setSetting('dailyBudget', { ...cfg, monthlyAmount: amount })
     setOpen(false)
   }
 
@@ -79,8 +110,13 @@ export default function DayBudgetCard() {
   )
 
   const result =
-    now && spendablePerMonth > 0
-      ? computeDailyBudget({ now, salaryDay: periodDay, spendablePerPeriod: spendablePerMonth, transactions })
+    now && effectiveMonthly > 0
+      ? computeDailyBudget({
+          now,
+          salaryDay: periodDay,
+          spendablePerPeriod: effectiveMonthly,
+          ...(selectedBudget ? { spentOverride: potjeSpent } : { transactions }),
+        })
       : null
 
   return (
@@ -92,22 +128,39 @@ export default function DayBudgetCard() {
       bordered={false}
       headerRight={settingsButton}
     >
+      {/* Kies: hele budget of een specifiek gezinspotje. */}
+      {budgets.length > 0 && (
+        <div className="mb-3 flex flex-wrap gap-1.5">
+          <button type="button" onClick={() => setScope('all')} className={chipClass(activeScope === 'all')}>
+            Hele budget
+          </button>
+          {budgets.map((b) => (
+            <button key={b.id} type="button" onClick={() => setScope(b.id)} className={chipClass(activeScope === b.id)}>
+              {b.name}
+            </button>
+          ))}
+        </div>
+      )}
+
       {!now ? (
         <p className="text-sm text-slate-400">Laden…</p>
-      ) : spendablePerMonth <= 0 ? (
+      ) : effectiveMonthly <= 0 ? (
         <div className="flex flex-col items-start gap-2">
           <p className="text-sm text-slate-600">
-            Vul je inkomsten en vaste lasten in bij Budget (of stel zelf een bedrag in), dan verdeel ik
-            het per dag en week — wat je niet opmaakt, schuift door naar morgen.
+            {selectedBudget
+              ? `Dit potje heeft nog geen maandbudget. Geef "${selectedBudget.name}" een budget bij Budget → Gezinsbudget, of kies hele budget.`
+              : 'Vul je inkomsten en vaste lasten in bij Budget (of stel zelf een bedrag in), dan verdeel ik het per dag en week — wat je niet opmaakt, schuift door naar morgen.'}
           </p>
-          <button
-            type="button"
-            onClick={openSettings}
-            className="pill bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-brand/20 hover:bg-brand-dark"
-          >
-            <Settings className="h-4 w-4" />
-            Instellen
-          </button>
+          {!selectedBudget && (
+            <button
+              type="button"
+              onClick={openSettings}
+              className="pill bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-brand/20 hover:bg-brand-dark"
+            >
+              <Settings className="h-4 w-4" />
+              Instellen
+            </button>
+          )}
         </div>
       ) : result ? (
         <>
@@ -137,7 +190,7 @@ export default function DayBudgetCard() {
             {[
               { label: 'Per dag', value: result.dailyRate },
               { label: 'Per week', value: result.weeklyRate },
-              { label: 'Per maand', value: spendablePerMonth },
+              { label: 'Per maand', value: effectiveMonthly },
             ].map((b) => (
               <div key={b.label} className="rounded-2xl bg-white/70 p-3 text-center dark:bg-white/5">
                 <p className="text-[11px] font-medium text-slate-500">{b.label}</p>
@@ -159,7 +212,8 @@ export default function DayBudgetCard() {
               </span>
             </span>
             <span>
-              deze periode al uit: €{round(result.spentInPeriod)} van €{round(spendablePerMonth)}
+              {selectedBudget ? `${selectedBudget.name}: ` : ''}deze periode al uit: €{round(result.spentInPeriod)} van €
+              {round(effectiveMonthly)}
             </span>
             <button type="button" onClick={openSettings} className="-m-1 inline-flex items-center p-1 font-semibold text-brand hover:underline">
               periode vanaf de {periodDay}e · wijzig

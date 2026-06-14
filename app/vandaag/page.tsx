@@ -20,7 +20,6 @@ import {
 
 import DashboardCard from '@/components/DashboardCard'
 import UpcomingRemindersCard from '@/components/UpcomingRemindersCard'
-import BudgetCard from '@/components/BudgetCard'
 import DayBudgetCard from '@/components/DayBudgetCard'
 import AgendaCard from '@/components/AgendaCard'
 import ShoppingList from '@/components/ShoppingList'
@@ -40,13 +39,12 @@ const ALL_WIDGETS: { key: string; label: string; span: 1 | 2 }[] = [
   { key: 'recept', label: 'Recept van vandaag', span: 1 },
   { key: 'weer', label: 'Weer', span: 1 },
   { key: 'agenda', label: 'Komende afspraken', span: 1 },
-  { key: 'budget', label: 'Budget', span: 1 },
   { key: 'ai', label: 'AI-suggestie', span: 1 },
   { key: 'pasjes', label: 'Pasjes', span: 1 },
   { key: 'aanbiedingen', label: 'Aanbiedingen', span: 1 },
   { key: 'boodschappen', label: 'Boodschappenlijst', span: 2 },
 ]
-const DEFAULT_WIDGETS = ['dagbudget', 'recept', 'weer', 'agenda', 'budget', 'ai', 'boodschappen']
+const DEFAULT_WIDGETS = ['dagbudget', 'recept', 'weer', 'agenda', 'ai', 'boodschappen']
 const labelOf = (key: string) => ALL_WIDGETS.find((w) => w.key === key)?.label ?? key
 
 export default function Vandaag() {
@@ -138,8 +136,6 @@ export default function Vandaag() {
         )
       case 'dagbudget':
         return <DayBudgetCard key={key} />
-      case 'budget':
-        return <BudgetCard key={key} />
       case 'weer':
         return (
           <DashboardCard key={key} bg="bg-weather" bordered={false}>

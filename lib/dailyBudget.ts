@@ -33,13 +33,9 @@ export interface DailyBudget {
 // besteedbare bedrag verrekend, of zijn geen variabele uitgave).
 const NON_VARIABLE = new Set(['Inkomsten', 'Negeren', 'Vaste lasten', 'Aflossingen'])
 
-export function computeDailyBudget(opts: {
-  now: Date
-  salaryDay: number
-  spendablePerPeriod: number
-  transactions: { amount: number; date?: string; category?: string; createdAt?: string }[]
-}): DailyBudget {
-  const { now, salaryDay, spendablePerPeriod, transactions } = opts
+/** Begin/eind (lokale middernacht) en lengte van de salarisperiode die `now` bevat,
+ *  gegeven de startdag. Gedeeld door het dagbudget en de potje-variant. */
+export function salaryPeriod(now: Date, salaryDay: number): { periodStart: Date; periodEnd: Date; totalDays: number } {
   const todayMid = atMidnight(now)
 
   // periodStart = de meest recente salarisdag op of vóór vandaag.
@@ -63,8 +59,23 @@ export function computeDailyBudget(opts: {
     ey += 1
   }
   const periodEnd = atMidnight(new Date(ey, em, clampDay(ey, em, salaryDay)))
-
   const totalDays = Math.max(1, Math.round((periodEnd.getTime() - periodStart.getTime()) / MS_PER_DAY))
+  return { periodStart, periodEnd, totalDays }
+}
+
+export function computeDailyBudget(opts: {
+  now: Date
+  salaryDay: number
+  spendablePerPeriod: number
+  transactions?: { amount: number; date?: string; category?: string; createdAt?: string }[]
+  /** Als gegeven: gebruik dit als "deze periode al uit" i.p.v. de transacties te
+   *  filteren — voor een dagbudget dat op één gezinspotje is gebaseerd. */
+  spentOverride?: number
+}): DailyBudget {
+  const { now, salaryDay, spendablePerPeriod, transactions = [] } = opts
+  const todayMid = atMidnight(now)
+  const { periodStart, periodEnd, totalDays } = salaryPeriod(now, salaryDay)
+
   const dayIndex = Math.min(totalDays, Math.floor((todayMid.getTime() - periodStart.getTime()) / MS_PER_DAY) + 1)
   const daysLeft = Math.max(0, totalDays - dayIndex)
 
@@ -72,27 +83,30 @@ export function computeDailyBudget(opts: {
 
   const startMs = periodStart.getTime()
   const endMs = periodEnd.getTime()
-  const spentInPeriod = transactions
-    .filter((t) => {
-      // Alleen variabele uitgaven (geen inkomsten/vaste lasten/aflossingen).
-      if (t.category && NON_VARIABLE.has(t.category)) return false
-      // Op echte transactiedatum filteren: alleen déze salarisperiode telt mee.
-      const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(t.date || '')
-      if (m) {
-        const ts = Date.parse(`${m[1]}-${m[2]}-${m[3]}T12:00:00`)
-        return ts >= startMs && ts < endMs
-      }
-      // Handmatige post zonder echte datum ("Vandaag"/leeg) = nu; rest (bijv.
-      // "Geïmporteerd" zonder datum) telt niet mee in het dagbudget.
-      const label = (t.date || '').toLowerCase()
-      if (label === '' || label === 'vandaag') {
-        if (!t.createdAt) return true
-        const ts = Date.parse(t.createdAt)
-        return isNaN(ts) ? true : ts >= startMs && ts < endMs
-      }
-      return false
-    })
-    .reduce((sum, t) => sum + (Number(t.amount) || 0), 0)
+  const spentInPeriod =
+    opts.spentOverride != null
+      ? opts.spentOverride
+      : transactions
+          .filter((t) => {
+            // Alleen variabele uitgaven (geen inkomsten/vaste lasten/aflossingen).
+            if (t.category && NON_VARIABLE.has(t.category)) return false
+            // Op echte transactiedatum filteren: alleen déze salarisperiode telt mee.
+            const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(t.date || '')
+            if (m) {
+              const ts = Date.parse(`${m[1]}-${m[2]}-${m[3]}T12:00:00`)
+              return ts >= startMs && ts < endMs
+            }
+            // Handmatige post zonder echte datum ("Vandaag"/leeg) = nu; rest (bijv.
+            // "Geïmporteerd" zonder datum) telt niet mee in het dagbudget.
+            const label = (t.date || '').toLowerCase()
+            if (label === '' || label === 'vandaag') {
+              if (!t.createdAt) return true
+              const ts = Date.parse(t.createdAt)
+              return isNaN(ts) ? true : ts >= startMs && ts < endMs
+            }
+            return false
+          })
+          .reduce((sum, t) => sum + (Number(t.amount) || 0), 0)
 
   const unlockedThroughToday = dailyRate * dayIndex
   const availableToday = unlockedThroughToday - spentInPeriod
