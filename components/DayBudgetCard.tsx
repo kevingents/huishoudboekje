@@ -5,8 +5,8 @@ import Link from 'next/link'
 import { Wallet, Settings, ChevronRight, ArrowDownCircle } from 'lucide-react'
 import DashboardCard from './DashboardCard'
 import Modal from './Modal'
-import { useBudget, useFixedCosts, useSubscriptions, useIncome, useLoans, useSettings } from '@/lib/hooks'
-import { fixedCostMonthly, monthlyEquivalent } from '@/lib/budget'
+import { useBudget, useFixedCosts, useSubscriptions, useIncome, useLoans, useSettings, useSavings } from '@/lib/hooks'
+import { fixedCostMonthly, monthlyEquivalent, loanIsActive, savingsReservePerMonth } from '@/lib/budget'
 import { computeDailyBudget } from '@/lib/dailyBudget'
 
 const inputClass =
@@ -25,6 +25,7 @@ export default function DayBudgetCard() {
   const { subscriptions } = useSubscriptions()
   const { incomes } = useIncome()
   const { loans } = useLoans()
+  const { goals } = useSavings()
   const { settings, setSetting } = useSettings()
 
   // Datum pas na mount bepalen (geen hydratie-mismatch).
@@ -44,11 +45,12 @@ export default function DayBudgetCard() {
     .filter((s) => s.status === 'active')
     .reduce((s, x) => s + monthlyEquivalent(x.amount, x.interval), 0)
   const incomeMonthly = incomes.reduce((s, i) => s + monthlyEquivalent(i.amount, i.interval), 0)
-  const loansMonthly = loans.reduce((s, l) => s + (l.termAmount || 0), 0)
+  const loansMonthly = loans.filter((l) => !now || loanIsActive(l, now)).reduce((s, l) => s + (l.termAmount || 0), 0)
+  const savingsMonthly = now ? savingsReservePerMonth(goals, now) : 0
 
   const manual = typeof cfg.monthlyAmount === 'number' && cfg.monthlyAmount > 0
-  // "Wat overblijft": inkomen − vaste lasten − abonnementen − aflossingen.
-  const auto = Math.max(0, incomeMonthly - fixedTotal - subsMonthly - loansMonthly)
+  // "Wat overblijft": inkomen − vaste lasten − abonnementen − aflossingen − sparen.
+  const auto = Math.max(0, incomeMonthly - fixedTotal - subsMonthly - loansMonthly - savingsMonthly)
   const spendablePerMonth = manual ? (cfg.monthlyAmount as number) : auto
 
   // Instellen-modal
@@ -150,6 +152,12 @@ export default function DayBudgetCard() {
                 ? 'laatste dag van deze periode'
                 : `nog ${result.daysLeft} ${result.daysLeft === 1 ? 'dag' : 'dagen'} in deze periode`}
             </span>
+            <span className="font-semibold text-brand">
+              {result.daysLeft === 0 ? 'nieuwe periode begint morgen' : `nieuwe periode over ${result.daysLeft + 1} dagen`}{' '}
+              <span className="font-normal text-slate-400">
+                (op {result.periodEnd.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })})
+              </span>
+            </span>
             <span>
               deze periode al uit: €{round(result.spentInPeriod)} van €{round(spendablePerMonth)}
             </span>
@@ -201,7 +209,7 @@ export default function DayBudgetCard() {
             </div>
             {form.mode === 'auto' ? (
               <p className="mt-1.5 text-[11px] text-slate-400">
-                = inkomsten − vaste lasten − abonnementen − aflossingen (€{round(auto)} p/m). Vul je
+                = inkomsten − vaste lasten − abonnementen − aflossingen − spaardoelen (€{round(auto)} p/m). Vul je
                 inkomsten en lasten in bij Budget.
               </p>
             ) : (

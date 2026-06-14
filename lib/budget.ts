@@ -322,11 +322,16 @@ export function goalReservePerMonth(
   goal: { target: number; saved: number; targetDate?: string | null; monthly?: number | null },
   now: Date,
 ): number {
-  const remaining = Math.max(0, (goal.target || 0) - (goal.saved || 0))
-  if (remaining <= 0) return 0
-  // Vaste maandinleg ingesteld? Die heeft voorrang — maar nooit meer dan nog nodig is.
-  if (goal.monthly && goal.monthly > 0) return Math.min(Math.round(goal.monthly), remaining)
-  if (!goal.targetDate) return 0
+  const target = goal.target || 0
+  const saved = goal.saved || 0
+  // Vaste maandinleg ingesteld? Die heeft voorrang.
+  if (goal.monthly && goal.monthly > 0) {
+    if (target <= 0) return Math.round(goal.monthly) // doorlopend potje zonder einddoel
+    const rem = Math.max(0, target - saved)
+    return rem <= 0 ? 0 : Math.min(Math.round(goal.monthly), rem)
+  }
+  const remaining = Math.max(0, target - saved)
+  if (remaining <= 0 || !goal.targetDate) return 0
   // YYYY-MM-DD lokaal lezen (niet als UTC), zodat de maand-telling tijdzone-onafhankelijk is.
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(goal.targetDate)
   if (!m) return 0
@@ -341,10 +346,33 @@ export function goalReservePerMonth(
 
 /** Totale maandelijkse reservering voor alle spaardoelen samen. */
 export function savingsReservePerMonth(
-  goals: { target: number; saved: number; targetDate?: string | null }[],
+  goals: { target: number; saved: number; targetDate?: string | null; monthly?: number | null }[],
   now: Date,
 ): number {
   return goals.reduce((s, g) => s + goalReservePerMonth(g, now), 0)
+}
+
+/**
+ * Het maandelijkse overschot: inkomsten − vaste lasten − abonnementen − (actieve)
+ * aflossingen − spaardoelen. `pot` is wat er dan nog te verdelen overblijft.
+ */
+export function monthlyPot(opts: {
+  incomes: { amount: number; interval: string }[]
+  costs: { amount: number; isSubscription?: boolean; subscriptionInterval?: string | null }[]
+  subscriptions: { amount: number; interval: string; status?: string }[]
+  loans: { termAmount?: number | null; endDate?: string | null }[]
+  goals: { target: number; saved: number; targetDate?: string | null; monthly?: number | null }[]
+  now: Date
+}): { spendable: number; savings: number; pot: number } {
+  const spendable = spendablePerMonth({
+    incomes: opts.incomes,
+    costs: opts.costs,
+    subscriptions: opts.subscriptions,
+    loans: opts.loans,
+    now: opts.now,
+  })
+  const savings = savingsReservePerMonth(opts.goals, opts.now)
+  return { spendable, savings, pot: Math.max(0, spendable - savings) }
 }
 
 /**

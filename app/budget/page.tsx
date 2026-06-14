@@ -24,6 +24,7 @@ import {
   loanIsActive,
   merchantKey,
   monthlyEquivalent,
+  savingsReservePerMonth,
   periodKeyOf,
   txPeriodKey,
   periodRangeOf,
@@ -293,6 +294,11 @@ export default function BudgetPage() {
   // Geen categorie-limieten ingesteld? Val terug op de maandtarget als referentie.
   const hasLimits = totalLimit > 0
   const budgetRef = hasLimits ? totalLimit : target
+  const savingsMonthly = savingsReservePerMonth(goals, now)
+  // Heb je Gezinspotjes met een budget, dan zijn die je referentie (anders de
+  // categorie-limieten, anders je maandtarget).
+  const potjeTotal = budgets.reduce((s, b) => s + (b.limit || 0), 0)
+  const effectiveBudget = potjeTotal > 0 ? potjeTotal : budgetRef
 
   // Aflossingen/schulden apart van vaste lasten houden (hypotheek + leningen).
   const isAflossing = (cat?: string) => /afloss|lening|hypothe|schuld|krediet/i.test(cat || '')
@@ -449,7 +455,7 @@ export default function BudgetPage() {
         {tab === 'overzicht' && (
         <>
         {/* Budgetvoortgang — gauge van deze periode */}
-        <BudgetProgressCard spent={currentSpent} budget={budgetRef} projected={projected} periodWord={periodWord} />
+        <BudgetProgressCard spent={currentSpent} budget={effectiveBudget} projected={projected} periodWord={periodWord} />
 
         {/* Terugblik op de vorige periode + sparen-suggestie (toont zich vanzelf
             zodra er een afgesloten periode met uitgaven is). */}
@@ -552,7 +558,7 @@ export default function BudgetPage() {
         <InsightsCard
           transactions={transactions}
           periodStart={periodStart}
-          budget={budgetRef}
+          budget={effectiveBudget}
           projected={projected}
           avgByCat={avgByCat}
         />
@@ -573,11 +579,15 @@ export default function BudgetPage() {
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-6">
             {[
               { label: 'Inkomsten', value: incomeMonthly, tone: 'pos' as const },
-              { label: 'Vaste lasten', value: -fixedTotal, tone: 'default' as const },
-              { label: 'Abonnementen', value: -subsMonthly, tone: 'default' as const },
+              { label: 'Vaste lasten', value: -(fixedTotal + subsMonthly), tone: 'default' as const },
               { label: 'Aflossingen', value: -aflossingenMonthly, tone: 'default' as const },
+              { label: 'Sparen', value: -savingsMonthly, tone: 'default' as const },
               { label: 'Variabele uitgaven', value: -variableAvg, tone: 'default' as const },
-              { label: 'Over per maand', value: nextMonthNet, tone: nextMonthNet >= 0 ? ('pos' as const) : ('neg' as const) },
+              {
+                label: 'Over per maand',
+                value: nextMonthNet - savingsMonthly,
+                tone: nextMonthNet - savingsMonthly >= 0 ? ('pos' as const) : ('neg' as const),
+              },
             ].map((item) => {
               const box =
                 item.tone === 'pos' ? 'bg-emerald-500/10' : item.tone === 'neg' ? 'bg-rose-500/10' : 'bg-slate-100'
@@ -599,8 +609,8 @@ export default function BudgetPage() {
             })}
           </div>
           <p className="mt-3 text-xs text-slate-400">
-            Over per maand = inkomsten − vaste lasten − abonnementen − aflossingen − je gemiddelde variabele
-            uitgaven
+            Over per maand = inkomsten − vaste lasten (incl. abonnementen) − aflossingen − sparen − je gemiddelde
+            variabele uitgaven
             {spendMonths.size > 0 ? ` (over ${spendMonths.size} ${spendMonths.size === 1 ? periodWord : periodPlural})` : ''}
             . Eenmalige posten tellen niet mee.
             {totalLimit > 0 ? ` Je budget voor variabele uitgaven is €${totalLimit}.` : ''}

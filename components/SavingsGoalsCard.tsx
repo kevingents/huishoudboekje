@@ -40,13 +40,15 @@ export default function SavingsGoalsCard({ className = '' }: { className?: strin
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const target = Number(form.target.replace(',', '.'))
-    if (!form.name.trim() || !target) return
+    const target = Number(form.target.replace(',', '.')) || 0
+    const monthly = form.monthly ? Number(form.monthly.replace(',', '.')) || 0 : 0
+    // Een doel mag óf een doelbedrag óf alleen een maandinleg hebben (doorlopend potje).
+    if (!form.name.trim() || (!target && !monthly)) return
     await addGoal({
       name: form.name.trim(),
       target,
       targetDate: form.targetDate || null,
-      monthly: form.monthly ? Number(form.monthly.replace(',', '.')) || null : null,
+      monthly: monthly || null,
       forMember: form.forMember || null,
       theme: form.theme,
     })
@@ -109,7 +111,8 @@ export default function SavingsGoalsCard({ className = '' }: { className?: strin
                     )}
                   </div>
                   <span className="shrink-0 text-sm text-slate-500">
-                    €{Math.round(g.saved)} <span className="text-slate-400">/ €{Math.round(g.target)}</span>
+                    €{Math.round(g.saved)}{' '}
+                    <span className="text-slate-400">{g.target > 0 ? `/ €${Math.round(g.target)}` : 'gespaard'}</span>
                   </span>
                   <button
                     type="button"
@@ -120,19 +123,28 @@ export default function SavingsGoalsCard({ className = '' }: { className?: strin
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 </div>
-                <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
-                  <div
-                    className="h-full rounded-full bg-emerald-500 transition-all duration-500"
-                    style={{ width: `${pct}%` }}
-                  />
-                </div>
-                <div className="mt-1 flex justify-between text-[11px] text-slate-400">
-                  <span className="font-semibold text-emerald-600 dark:text-emerald-400">{pct}% gehaald</span>
-                  <span>
-                    nog €{Math.round(remaining)}
-                    {perMonth ? ` · €${perMonth}/mnd${g.monthly ? ' inleg' : ' nodig'}` : ''}
-                  </span>
-                </div>
+                {g.target > 0 ? (
+                  <>
+                    <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
+                      <div
+                        className="h-full rounded-full bg-emerald-500 transition-all duration-500"
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                    <div className="mt-1 flex justify-between text-[11px] text-slate-400">
+                      <span className="font-semibold text-emerald-600 dark:text-emerald-400">{pct}% gehaald</span>
+                      <span>
+                        nog €{Math.round(remaining)}
+                        {perMonth ? ` · €${perMonth}/mnd${g.monthly ? ' inleg' : ' nodig'}` : ''}
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="mt-1 flex justify-between text-[11px] text-slate-400">
+                    <span className="font-semibold text-emerald-600 dark:text-emerald-400">doorlopend potje</span>
+                    {perMonth ? <span>€{perMonth}/mnd inleg</span> : null}
+                  </div>
+                )}
                 <form
                   onSubmit={(e) => {
                     e.preventDefault()

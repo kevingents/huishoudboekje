@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Users, Plus, Trash2 } from 'lucide-react'
 import DashboardCard from '../DashboardCard'
 import Modal from '../Modal'
-import { useFamilyBudgets, useFamily } from '@/lib/hooks'
+import { useFamilyBudgets, useFamily, useIncome, useFixedCosts, useSubscriptions, useLoans, useSavings } from '@/lib/hooks'
+import { monthlyPot } from '@/lib/budget'
 import type { FamilyBudget } from '@/lib/types'
 
 const inputClass =
@@ -29,6 +30,18 @@ const emptyForm = { name: '', limit: '', member: '', color: 'emerald' }
 export default function GezinsbudgetCard({ className = '' }: { className?: string }) {
   const { budgets, addBudget, logSpend, removeBudget } = useFamilyBudgets()
   const { members } = useFamily()
+  const { incomes } = useIncome()
+  const { costs } = useFixedCosts()
+  const { subscriptions } = useSubscriptions()
+  const { loans } = useLoans()
+  const { goals } = useSavings()
+  const [now, setNow] = useState<Date | null>(null)
+  useEffect(() => setNow(new Date()), [])
+  // Hoeveel er nog te verdelen is: het maandoverschot − wat al in potjes zit.
+  const pot = now ? monthlyPot({ incomes, costs, subscriptions, loans, goals, now }).pot : 0
+  const allocated = budgets.reduce((s, b) => s + (b.limit || 0), 0)
+  const remaining = Math.max(0, Math.round(pot - allocated))
+
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState(emptyForm)
   const [drafts, setDrafts] = useState<Record<number, string>>({})
@@ -144,6 +157,12 @@ export default function GezinsbudgetCard({ className = '' }: { className?: strin
 
       <Modal open={open} onClose={() => setOpen(false)} title="Nieuw gezinspotje">
         <form onSubmit={submit} className="flex flex-col gap-3">
+          {now && pot > 0 && (
+            <p className="rounded-xl bg-slate-50 px-3 py-2 text-[11px] text-slate-500 dark:bg-white/5">
+              Nog <span className="font-bold text-brand">€{remaining.toLocaleString('nl-NL')}</span> te verdelen van je
+              maandoverschot (inkomsten − vaste lasten − sparen). Dat is samen het maximum voor je potjes.
+            </p>
+          )}
           <label className="text-xs font-semibold text-slate-500">
             Naam
             <input

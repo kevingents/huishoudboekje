@@ -178,6 +178,9 @@ describe('goalReservePerMonth — vaste maandinleg', () => {
   it('reserveert nooit meer dan nog nodig is', () => {
     expect(goalReservePerMonth({ target: 1200, saved: 1100, monthly: 150 }, now)).toBe(100)
   })
+  it('doorlopend potje zonder doelbedrag → de hele maandinleg', () => {
+    expect(goalReservePerMonth({ target: 0, saved: 0, monthly: 100 }, now)).toBe(100)
+  })
 })
 
 describe('loanIsActive', () => {
