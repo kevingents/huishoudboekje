@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Settings, Bell, BellRing, Wallet, Users, LogOut, UserCircle, Sparkles, Smartphone, Download, Share, Check, Accessibility, Trash2, ShieldCheck, CalendarClock } from 'lucide-react'
+import { Settings, Bell, BellRing, Users, LogOut, UserCircle, Sparkles, Smartphone, Download, Share, Check, Accessibility, Trash2, ShieldCheck, CalendarClock } from 'lucide-react'
 import Link from 'next/link'
 import PageHeader from '@/components/PageHeader'
 import DashboardCard from '@/components/DashboardCard'
@@ -45,7 +45,6 @@ export default function InstellingenPage() {
   ]
 
   const prefs = mergePrefs(settings.notifications)
-  const savedTarget = typeof settings.budgetTarget === 'number' ? settings.budgetTarget : 500
   const savedPeriodStart = typeof settings.budgetPeriodStart === 'number' ? settings.budgetPeriodStart : 1
 
   // AI-instellingen (standaard aan; alle data toegestaan tenzij uitgezet).
@@ -58,8 +57,6 @@ export default function InstellingenPage() {
     setSetting('aiData', next)
   }
 
-  const [target, setTarget] = useState(savedTarget)
-  useEffect(() => setTarget(savedTarget), [savedTarget])
   const [periodStart, setPeriodStart] = useState(savedPeriodStart)
   useEffect(() => setPeriodStart(savedPeriodStart), [savedPeriodStart])
 
@@ -324,32 +321,6 @@ export default function InstellingenPage() {
               </p>
             </>
           )}
-        </DashboardCard>
-
-        {/* Budget target */}
-        <DashboardCard title="Maandbudget boodschappen" icon={Wallet} iconClassName="text-brand">
-          <p className="text-sm text-slate-500">
-            Stel je maandelijkse target in. Je krijgt een seintje bij 90%.
-          </p>
-          <div className="mt-4 flex items-center gap-4">
-            <span className="w-20 text-2xl font-extrabold text-slate-800">€{target}</span>
-            <input
-              type="range"
-              min={200}
-              max={1000}
-              step={25}
-              value={target}
-              onChange={(e) => setTarget(Number(e.target.value))}
-              onPointerUp={() => setSetting('budgetTarget', target)}
-              onKeyUp={() => setSetting('budgetTarget', target)}
-              className="h-2 flex-1 cursor-pointer appearance-none rounded-full bg-slate-100 accent-brand"
-              aria-label="Maandbudget"
-            />
-          </div>
-          <div className="mt-1 flex justify-between text-xs text-slate-400">
-            <span>€200</span>
-            <span>€1000</span>
-          </div>
         </DashboardCard>
 
         {/* Budgetperiode (salarisdag) */}
