@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { BarChart3, Plus, Trash2, Pencil, LineChart, ScanLine, Sparkles, FolderPlus, ArrowRightLeft, UploadCloud, Repeat, Target, Download } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
 import DashboardCard from '@/components/DashboardCard'
@@ -155,6 +155,13 @@ export default function BudgetPage() {
     setScanError(null)
     setOpen(true)
   }
+
+  // Vanuit het centrale "+"-snelmenu geopend met ?nieuw=1 → meteen de
+  // "Uitgave toevoegen"-modal tonen.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('nieuw')) openAdd()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const onScan = async (file: File | undefined) => {
     if (!file) return

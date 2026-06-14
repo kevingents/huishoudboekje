@@ -2,9 +2,16 @@
 
 import { useEffect } from 'react'
 import Link from 'next/link'
-import { Calendar, ShoppingCart, ListTodo, X, ChevronRight } from 'lucide-react'
+import { Calendar, ShoppingCart, ListTodo, Receipt, X, ChevronRight } from 'lucide-react'
 
 const actions = [
+  {
+    label: 'Uitgave toevoegen',
+    desc: 'Boek een uitgave in je budget',
+    href: '/budget?nieuw=1',
+    icon: Receipt,
+    accent: 'bg-amber-100 text-amber-600',
+  },
   {
     label: 'Taak toevoegen',
     desc: 'Wijs een klusje toe en verdien punten',
