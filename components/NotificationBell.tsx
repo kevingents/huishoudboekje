@@ -66,7 +66,7 @@ export default function NotificationBell() {
             )}
           </div>
 
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto scrollbar-thin">
             {items.length === 0 ? (
               <div className="flex flex-col items-center gap-2 px-4 py-10 text-center">
                 <BellOff className="h-6 w-6 text-slate-300" />

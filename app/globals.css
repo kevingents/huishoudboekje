@@ -344,48 +344,35 @@ html.dark .leaflet-tile-pane {
   filter: invert(1) hue-rotate(180deg) brightness(0.95) contrast(0.9);
 }
 
-/* Zelf-afspelende app-demo (components/AppDemo.tsx): vier schermen die elk een
-   kwart van de 16s-cyclus zichtbaar zijn, gestapeld en versprongen via
-   animation-delay. De bijschriften lichten in hetzelfde ritme mee. */
-@keyframes appDemoFade {
-  0% { opacity: 0; transform: translateY(12px); }
-  4% { opacity: 1; transform: translateY(0); }
-  21% { opacity: 1; transform: translateY(0); }
-  25% { opacity: 0; transform: translateY(-12px); }
-  100% { opacity: 0; transform: translateY(-12px); }
+/* Geanimeerde, gescripte app-demo (components/AppDemo.tsx). De timing wordt in
+   JS aangestuurd; deze keyframes verzorgen alleen de micro-animaties: een nieuw
+   item dat opkomt, een formulier dat omhoogschuift, de tik-rimpel en de
+   knipperende cursor. */
+@keyframes demoPop {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
-@keyframes appDemoLabel {
-  0% { opacity: 0.4; }
-  4% { opacity: 1; }
-  21% { opacity: 1; }
-  25% { opacity: 0.4; }
-  100% { opacity: 0.4; }
+.demo-pop {
+  animation: demoPop 0.45s ease-out both;
 }
-.app-demo-screen {
-  opacity: 0;
-  animation: appDemoFade 16s ease-in-out infinite;
+@keyframes demoSheet {
+  from { opacity: 0; transform: translateY(100%); }
+  to { opacity: 1; transform: translateY(0); }
 }
-.app-demo-label {
-  opacity: 0.4;
-  animation: appDemoLabel 16s ease-in-out infinite;
+.demo-sheet {
+  animation: demoSheet 0.4s ease-out both;
 }
-/* Minder beweging (OS-voorkeur én in-app-toggle): bevries op het eerste scherm
-   en toon de bijschriften gewoon. */
-@media (prefers-reduced-motion: reduce) {
-  .app-demo-screen { animation: none; opacity: 0; }
-  .app-demo-screen[data-first] { opacity: 1; }
-  .app-demo-label { animation: none; opacity: 1; }
+@keyframes demoPing {
+  0% { transform: scale(0.5); opacity: 0.6; }
+  100% { transform: scale(1.9); opacity: 0; }
 }
-html.reduce-motion .app-demo-screen,
-html.reduce-motion .app-demo-label {
-  animation: none !important;
+.demo-ping {
+  animation: demoPing 0.7s ease-out infinite;
 }
-html.reduce-motion .app-demo-screen {
-  opacity: 0;
+@keyframes demoBlink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
 }
-html.reduce-motion .app-demo-screen[data-first] {
-  opacity: 1;
-}
-html.reduce-motion .app-demo-label {
-  opacity: 1;
+.demo-caret {
+  animation: demoBlink 0.9s steps(1) infinite;
 }

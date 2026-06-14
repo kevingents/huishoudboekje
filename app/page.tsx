@@ -158,32 +158,8 @@ export default function Landing() {
             Kijk mee hoe een dag in Fam eruitziet — van de ochtendagenda tot wat je vandaag nog kunt uitgeven.
           </p>
         </div>
-        <div className="mt-10 grid items-center gap-10 lg:grid-cols-2">
-          <ul className="order-2 mx-auto flex max-w-md flex-col gap-3 lg:order-1">
-            {[
-              { t: 'Je dag in één oogopslag', d: 'Afspraken, het weer en wat er speelt — zodra je opent.' },
-              { t: 'Boodschappen die iedereen ziet', d: 'Thuis toevoegen, in de winkel afvinken. Altijd actueel.' },
-              { t: 'Zie wat je vandaag kunt uitgeven', d: 'Je budget per dag, met advies wat je opzij kunt zetten.' },
-              { t: 'Ontdek uitjes in de buurt', d: 'Gratis uitjes en speeltuinen — met één tik in de agenda.' },
-            ].map((s, i) => (
-              <li
-                key={s.t}
-                className="app-demo-label flex items-start gap-3"
-                style={{ animationDelay: ['0s', '4s', '8s', '12s'][i] }}
-              >
-                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand-light text-sm font-extrabold text-brand">
-                  {i + 1}
-                </span>
-                <div>
-                  <p className="text-base font-bold text-slate-800">{s.t}</p>
-                  <p className="text-sm leading-relaxed text-slate-500">{s.d}</p>
-                </div>
-              </li>
-            ))}
-          </ul>
-          <div className="order-1 lg:order-2">
-            <AppDemo />
-          </div>
+        <div className="mt-10">
+          <AppDemo />
         </div>
       </section>
 

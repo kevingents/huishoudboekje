@@ -226,7 +226,7 @@ export default function Vandaag() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3 sm:gap-4">
+        <div className="ml-auto flex items-center gap-3 sm:gap-4">
           {crest && (
             <Link href="/gezin" aria-label="Familiewapen">
               <Crest svg={crest} className="h-11 w-9 object-contain drop-shadow-sm" />
