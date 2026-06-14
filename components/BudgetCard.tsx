@@ -4,11 +4,12 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Wallet, ChevronRight } from 'lucide-react'
 import DashboardCard from './DashboardCard'
-import { useBudget, useSettings } from '@/lib/hooks'
+import { useBudget, useSettings, useFamilyBudgets } from '@/lib/hooks'
 import { isSpendingCategory, periodKeyOf, txPeriodKey } from '@/lib/budget'
 
 export default function BudgetCard() {
   const { categories, transactions } = useBudget()
+  const { budgets } = useFamilyBudgets()
   const { settings } = useSettings()
 
   const periodStart =
@@ -25,10 +26,13 @@ export default function BudgetCard() {
     setCurrentKey(periodKeyOf(nowStr, periodStart) ?? '')
   }, [periodStart])
 
-  // Budget = som van de categorie-limieten. Uitgegeven = de echte transacties van
-  // deze periode (niet het 'spent'-veld, dat 0 blijft bij import).
-  const total = Math.round(categories.filter((c) => isSpendingCategory(c.name)).reduce((s, c) => s + c.limit, 0))
-  const spent =
+  // Heb je Gezinspotjes met een budget, dan toont de kaart die (totaal + geboekt).
+  // Anders: de categorie-limieten en de echte transacties van deze periode.
+  const potjeTotal = Math.round(budgets.reduce((s, b) => s + (b.limit || 0), 0))
+  const potjeSpent = Math.round(budgets.reduce((s, b) => s + (b.spent || 0), 0))
+  const usePotjes = potjeTotal > 0
+  const catTotal = Math.round(categories.filter((c) => isSpendingCategory(c.name)).reduce((s, c) => s + c.limit, 0))
+  const txSpent =
     currentKey == null
       ? 0
       : Math.round(
@@ -36,6 +40,8 @@ export default function BudgetCard() {
             .filter((t) => isSpendingCategory(t.category) && (Number(t.amount) || 0) > 0 && txPeriodKey(t, periodStart) === currentKey)
             .reduce((s, t) => s + (Number(t.amount) || 0), 0),
         )
+  const total = usePotjes ? potjeTotal : catTotal
+  const spent = usePotjes ? potjeSpent : txSpent
   const remaining = total - spent
   const over = remaining < 0
 

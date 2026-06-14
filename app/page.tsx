@@ -212,59 +212,86 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Highlight: slim budget */}
-      <section className="bg-canvas py-16 sm:py-20">
-        <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 sm:px-6 lg:grid-cols-2">
-          <div>
-            <span className="pill inline-flex bg-sky-100 px-3 py-1 text-xs font-semibold text-sky-600">Slim budget</span>
-            <h2 className="mt-4 text-3xl font-extrabold sm:text-4xl">Grip op het huishoudgeld, zonder spreadsheets</h2>
-            <p className="mt-4 text-lg leading-relaxed text-slate-500">
-              Sleep je bankafschrift erin en Fam doet de rest: uitgaven automatisch ingedeeld, vaste
-              lasten apart, en in één oogopslag wat je vandaag nog kunt uitgeven. Aan het eind van de
-              maand zie je precies wat je opzij kunt zetten.
-            </p>
-            <ul className="mt-6 flex flex-col gap-2.5">
-              {['Bankafschrift importeren (CSV, MT940, CAMT, Excel)', 'Automatisch indelen in categorieën', 'Dag-potjes die doorrollen als je ze niet opmaakt', 'Spaardoelen en maandelijks spaaradvies'].map((b) => (
-                <li key={b} className="flex items-center gap-2 text-sm text-slate-600">
-                  <Check className="h-4 w-4 shrink-0 text-emerald-500" strokeWidth={2.4} />
-                  {b}
-                </li>
-              ))}
-            </ul>
-          </div>
-          {/* Zelfgemaakte preview (geen externe afbeelding) */}
-          <div className="rounded-card border border-cardborder bg-white p-5 shadow-soft">
+      {/* Highlight: budgettracker met potjes + prognose */}
+      <section id="budget" className="bg-canvas py-16 sm:py-20">
+        <div className="mx-auto max-w-2xl text-center">
+          <span className="pill inline-flex bg-sky-100 px-3 py-1 text-xs font-semibold text-sky-600">Budgettracker</span>
+          <h2 className="mt-4 text-3xl font-extrabold sm:text-4xl">Een budget dat met je meedenkt</h2>
+          <p className="mt-3 text-slate-500">
+            Verdeel wat je per maand overhoudt over <span className="font-semibold text-slate-700">potjes</span> — per
+            onderwerp én per gezinslid. Boek uitgaven met een omschrijving en zie per potje een prognose, zodat je op
+            tijd kunt schuiven.
+          </p>
+        </div>
+        <div className="mx-auto mt-10 grid max-w-6xl items-center gap-10 px-4 sm:px-6 lg:grid-cols-2">
+          <ul className="order-2 flex max-w-md flex-col gap-3 lg:order-1">
+            {[
+              { t: 'Potjes per onderwerp én per kind', d: 'Boodschappen, vervoer, of een eigen potje voor Marielle en Pepijn.' },
+              { t: 'Boek met een omschrijving', d: '“Gezichtscreme €15” op het potje van Marielle — met geschiedenis.' },
+              { t: 'Prognose per potje', d: 'Fam ziet je tempo en seint als een potje bijna op is — schuif op tijd bij.' },
+              { t: 'Sparen gaat er automatisch af', d: 'Spaardoelen worden eerst gereserveerd; de rest verdeel je over je potjes.' },
+            ].map((b, i) => (
+              <li key={b.t} className="flex items-start gap-3">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand-light text-sm font-extrabold text-brand">
+                  {i + 1}
+                </span>
+                <div>
+                  <p className="text-base font-bold text-slate-800">{b.t}</p>
+                  <p className="text-sm leading-relaxed text-slate-500">{b.d}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+
+          {/* Zelfgemaakte preview met fictieve cijfers (geen echte data) */}
+          <div className="order-1 rounded-card border border-cardborder bg-white p-5 shadow-soft lg:order-2">
             <div className="flex items-center gap-2">
               <span className="grid h-9 w-9 place-items-center rounded-xl bg-brand-light text-brand">
                 <Wallet className="h-5 w-5" />
               </span>
               <div>
-                <p className="text-sm font-bold text-slate-800">Vandaag te besteden</p>
-                <p className="text-xs text-slate-500">periode 15 mei – 15 jun</p>
+                <p className="text-sm font-bold text-slate-800">Budget deze maand</p>
+                <p className="text-xs text-slate-500">€780 van €1.900 gebruikt</p>
               </div>
-              <span className="ml-auto text-2xl font-extrabold text-brand">€23</span>
+              <span className="ml-auto text-2xl font-extrabold text-brand">€1.120</span>
             </div>
-            <div className="mt-4 h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
-              <div className="h-full w-[64%] rounded-full bg-brand" />
-            </div>
-            <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+            <div className="mt-4 flex flex-col gap-3">
               {[
-                { l: 'Boodschappen', v: '€12' },
-                { l: 'Vervoer', v: '€6' },
-                { l: 'Vrij', v: '€5' },
-              ].map((p) => (
-                <div key={p.l} className="rounded-2xl bg-slate-50 p-3">
-                  <p className="text-xs text-slate-500">{p.l}</p>
-                  <p className="text-base font-extrabold text-slate-800">{p.v}</p>
-                </div>
-              ))}
+                { name: 'Boodschappen', member: null, spent: 420, limit: 600, color: 'bg-brand', note: 'op dit tempo: €40 over' },
+                { name: 'Marielle', member: 'Marielle', spent: 95, limit: 150, color: 'bg-violet-500', note: null },
+                { name: 'Pepijn', member: 'Pepijn', spent: 40, limit: 120, color: 'bg-sky-500', note: null },
+                { name: 'Vervoer', member: null, spent: 225, limit: 280, color: 'bg-amber-500', note: 'bijna op — €25 schuiven?' },
+              ].map((p) => {
+                const pct = Math.min(Math.round((p.spent / p.limit) * 100), 100)
+                return (
+                  <div key={p.name}>
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="min-w-0 flex-1 truncate font-semibold text-slate-700 dark:text-slate-200">
+                        {p.name}
+                        {p.member && (
+                          <span className="ml-1.5 rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-500 dark:bg-white/10">
+                            {p.member}
+                          </span>
+                        )}
+                      </span>
+                      <span className="shrink-0 text-slate-500">
+                        €{p.spent} <span className="text-slate-400">/ €{p.limit}</span>
+                      </span>
+                    </div>
+                    <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                      <div className={`h-full rounded-full ${p.color}`} style={{ width: `${pct}%` }} />
+                    </div>
+                    {p.note && <p className="mt-0.5 text-[11px] text-slate-400">{p.note}</p>}
+                  </div>
+                )
+              })}
             </div>
             <div className="mt-4 flex items-center gap-3 rounded-2xl bg-emerald-100 p-3">
               <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-emerald-500/15 text-emerald-600">
                 <PiggyBank className="h-5 w-5" />
               </span>
               <div>
-                <p className="text-sm font-bold text-emerald-700 dark:text-emerald-300">€340 over deze maand</p>
+                <p className="text-sm font-bold text-emerald-700 dark:text-emerald-300">Prognose: €180 over deze maand</p>
                 <p className="text-xs text-emerald-700/80 dark:text-emerald-300/80">mooi om naar je spaarrekening te zetten</p>
               </div>
             </div>
