@@ -134,7 +134,7 @@ export default function BudgetPage() {
   const periodPlural = periodStart > 1 ? 'periodes' : 'maanden'
 
   const [open, setOpen] = useState(false)
-  const [form, setForm] = useState({ label: '', category: '', amount: '', note: '', paymentMethod: '' })
+  const [form, setForm] = useState({ label: '', category: '', amount: '', note: '', paymentMethod: '', potje: '' })
   const [showAllCats, setShowAllCats] = useState(false)
   const [tab, setTab] = useState<'overzicht' | 'uitgaven' | 'plannen' | 'importeren'>('overzicht')
   const currentMonthLabel = (() => {
@@ -150,7 +150,7 @@ export default function BudgetPage() {
   const [scanResult, setScanResult] = useState<{ items: ScanItem[]; advice: string } | null>(null)
 
   const openAdd = () => {
-    setForm({ label: '', category: '', amount: '', note: '', paymentMethod: '' })
+    setForm({ label: '', category: '', amount: '', note: '', paymentMethod: '', potje: '' })
     setScanResult(null)
     setScanError(null)
     setOpen(true)
@@ -422,9 +422,21 @@ export default function BudgetPage() {
       note: form.note.trim() || null,
       paymentMethod: form.paymentMethod || null,
     })
-    setForm({ label: '', category: '', amount: '', note: '', paymentMethod: '' })
+    // Optioneel ook op een gezinspotje boeken (bijv. Marielle): dan telt de uitgave
+    // mee in dat potje én in het persoonlijk inzicht, met de omschrijving als label.
+    const potje = form.potje ? budgets.find((b) => b.id === Number(form.potje)) : null
+    if (potje) logSpend(potje, amount, form.label.trim() || category)
+    setForm({ label: '', category: '', amount: '', note: '', paymentMethod: '', potje: '' })
     setOpen(false)
   }
+
+  // Chip-stijl voor de keuze van categorie / potje in de uitgave-modal.
+  const pickChip = (on: boolean) =>
+    `rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
+      on
+        ? 'bg-brand text-white'
+        : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-white/10 dark:text-slate-200 dark:hover:bg-white/15'
+    }`
 
   return (
     <>
@@ -855,33 +867,18 @@ export default function BudgetPage() {
             </div>
           )}
 
-          <label className="text-xs font-semibold text-slate-500">
-            Omschrijving
-            <input
-              autoFocus
-              value={form.label}
-              onChange={(e) => setForm({ ...form, label: e.target.value })}
-              placeholder="Bijv. Albert Heijn"
-              className={`mt-1 ${inputClass}`}
-            />
-          </label>
           <div className="flex gap-3">
             <label className="min-w-0 flex-1 text-xs font-semibold text-slate-500">
-              Categorie
+              Omschrijving
               <input
-                list="budget-categories"
-                value={form.category}
-                onChange={(e) => setForm({ ...form, category: e.target.value })}
-                placeholder={categories.length ? 'Kies of typ een categorie' : 'Bijv. Wonen'}
+                autoFocus
+                value={form.label}
+                onChange={(e) => setForm({ ...form, label: e.target.value })}
+                placeholder="Bijv. Albert Heijn of Gezichtscreme"
                 className={`mt-1 ${inputClass}`}
               />
-              <datalist id="budget-categories">
-                {categories.map((cat) => (
-                  <option key={cat.id} value={cat.name} />
-                ))}
-              </datalist>
             </label>
-            <label className="w-32 shrink-0 text-xs font-semibold text-slate-500">
+            <label className="w-28 shrink-0 text-xs font-semibold text-slate-500">
               Bedrag (€)
               <input
                 inputMode="decimal"
@@ -892,8 +889,70 @@ export default function BudgetPage() {
               />
             </label>
           </div>
+
+          {/* Categorie: typen kan, maar tik bij voorkeur een chip (werkt overal). */}
+          <div>
+            <p className="text-xs font-semibold text-slate-500">Categorie</p>
+            <input
+              list="budget-categories"
+              value={form.category}
+              onChange={(e) => setForm({ ...form, category: e.target.value })}
+              placeholder={spendingCats.length ? 'Kies hieronder of typ een eigen categorie' : 'Bijv. Verzorging'}
+              className={`mt-1 ${inputClass}`}
+            />
+            <datalist id="budget-categories">
+              {spendingCats.map((cat) => (
+                <option key={cat.id} value={cat.name} />
+              ))}
+            </datalist>
+            {spendingCats.length > 0 && (
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {spendingCats.slice(0, 10).map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => setForm({ ...form, category: c.name })}
+                    className={pickChip(form.category.toLowerCase() === c.name.toLowerCase())}
+                  >
+                    {c.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Optioneel op een gezinspotje boeken (bijv. Marielle). */}
+          {budgets.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold text-slate-500">
+                Op een potje? <span className="font-normal text-slate-400">(optioneel)</span>
+              </p>
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                <button type="button" onClick={() => setForm({ ...form, potje: '' })} className={pickChip(form.potje === '')}>
+                  Nee
+                </button>
+                {budgets.map((b) => (
+                  <button
+                    key={b.id}
+                    type="button"
+                    onClick={() => setForm({ ...form, potje: String(b.id) })}
+                    className={pickChip(form.potje === String(b.id))}
+                  >
+                    {b.name}
+                    {b.member ? ` · ${b.member}` : ''}
+                  </button>
+                ))}
+              </div>
+              {form.potje && (
+                <p className="mt-1 text-[11px] text-slate-400">
+                  De uitgave wordt ook op dit potje geboekt — met de omschrijving als regel, voor het persoonlijk inzicht.
+                </p>
+              )}
+            </div>
+          )}
+
           <div className="flex gap-3">
-            <label className="w-40 shrink-0 min-w-0 text-xs font-semibold text-slate-500">
+            <label className="min-w-0 flex-1 text-xs font-semibold text-slate-500">
               Betaalmethode
               <select
                 value={form.paymentMethod}
