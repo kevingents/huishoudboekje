@@ -30,7 +30,7 @@ import Modal from '@/components/Modal'
 import { useFamily, useRecipes, useWeather, useAuth, useSettings, useGeolocation } from '@/lib/hooks'
 import { resolveWeatherIcon } from '@/lib/icons'
 import { rankRecipes } from '@/lib/recommend'
-import { readCoParenting, coParentNow } from '@/lib/coparent'
+import { readCoParenting, coParentToday } from '@/lib/coparent'
 
 import { aiSuggestion } from '@/lib/mockData'
 
@@ -60,7 +60,7 @@ export default function Vandaag() {
   const { settings, setSetting } = useSettings()
 
   const crest = typeof settings.familyCrest === 'string' ? settings.familyCrest : null
-  const coParent = coParentNow(readCoParenting(settings.coParenting), new Date())
+  const coParent = coParentToday(readCoParenting(settings.coParenting), new Date())
   const WeatherIcon = resolveWeatherIcon(weather?.icon ?? 'Cloud')
   const recipe = rankRecipes(recipes)[0]
   const greetingName = user?.name?.split(' ')[0] ?? ''
@@ -259,7 +259,7 @@ export default function Vandaag() {
             <CalendarRange className="h-5 w-5" strokeWidth={2.1} />
           </span>
           <p className="text-sm text-slate-700">
-            Deze week zijn de kinderen bij <span className="font-bold">{coParent.parent}</span>.
+            Vandaag zijn de kinderen bij <span className="font-bold">{coParent.parent}</span>.
           </p>
         </div>
       )}

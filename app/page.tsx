@@ -363,13 +363,13 @@ export default function Landing() {
           <span className="pill inline-flex bg-violet-100 px-3 py-1 text-xs font-semibold text-violet-600">Co-ouderschap</span>
           <h2 className="mt-4 text-3xl font-extrabold sm:text-4xl">Ook voor gescheiden ouders en samengestelde gezinnen</h2>
           <p className="mt-4 text-lg leading-relaxed text-slate-500">
-            Twee huizen, één overzicht voor de kinderen. Houd met een om-en-om weekschema bij wie ze deze week zijn,
-            en koppel je Fam aan die van de andere ouder — gedeelde afspraken staan dan in beide agenda&apos;s, zonder
-            dat je elkaars privégegevens deelt.
+            Twee huizen, één overzicht voor de kinderen. Stel het zorgschema in zoals het bij jullie werkt —
+            week-om-week, alleen de weekenden of per dag — en koppel je Fam aan die van de andere ouder, zodat
+            gedeelde afspraken in beide agenda&apos;s staan, zonder dat je elkaars privégegevens deelt.
           </p>
           <ul className="mt-6 flex flex-col gap-2.5">
             {[
-              'Om-en-om weekschema — in één oogopslag bij wie de kinderen zijn',
+              'Aanpasbaar zorgschema — week-om-week, alleen de weekenden of per dag',
               'Koppel twee huishoudens: gedeelde afspraken in beide agenda’s',
               'Alleen wat je deelt is zichtbaar; de rest blijft privé',
               'Ieder gezin een eigen, veilige omgeving',
@@ -395,10 +395,27 @@ export default function Landing() {
             </div>
             <span className="ml-auto inline-flex shrink-0 items-center gap-1 rounded-full bg-violet-50 px-2.5 py-1 text-xs font-semibold text-violet-700">
               <Calendar className="h-3.5 w-3.5" />
-              Deze week bij Mama
+              Vandaag bij Mama
             </span>
           </div>
-          <div className="mt-4 flex flex-col gap-2">
+          {/* Aanpasbaar weekschema: bijv. doordeweeks bij Mama, weekend bij Papa */}
+          <div className="mt-4 grid grid-cols-7 gap-1">
+            {[
+              { d: 'Ma', p: 'Mama', a: true },
+              { d: 'Di', p: 'Mama', a: true },
+              { d: 'Wo', p: 'Mama', a: true },
+              { d: 'Do', p: 'Mama', a: true },
+              { d: 'Vr', p: 'Mama', a: true },
+              { d: 'Za', p: 'Papa', a: false },
+              { d: 'Zo', p: 'Papa', a: false },
+            ].map((x) => (
+              <div key={x.d} className={`flex flex-col items-center rounded-lg px-1 py-1.5 ${x.a ? 'bg-violet-50 text-violet-700' : 'bg-sky-50 text-sky-700'}`}>
+                <span className="text-[10px] font-semibold">{x.d}</span>
+                <span className="text-[9px]">{x.p}</span>
+              </div>
+            ))}
+          </div>
+          <div className="mt-3 flex flex-col gap-2">
             {[
               { t: 'Zwemles Tom', d: 'wo 16:00', shared: true },
               { t: 'Tandarts Sara', d: 'vr 09:30', shared: true },
