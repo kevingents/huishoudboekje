@@ -9,6 +9,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   const data: Record<string, unknown> = {}
   if (body.name !== undefined) data.name = String(body.name)
   if (body.limit !== undefined) data.limit = Number(body.limit)
+  if (body.savings !== undefined) data.savings = Number(body.savings)
   if (body.spent !== undefined) data.spent = Number(body.spent)
   if (body.spend !== undefined) data.spent = { increment: Number(body.spend) }
   if (body.member !== undefined) data.member = body.member ? String(body.member) : null

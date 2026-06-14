@@ -22,6 +22,7 @@ export async function POST(req: Request) {
       householdId: hid,
       name: String(body.name),
       limit: Number(body.limit ?? 0),
+      savings: Number(body.savings ?? 0),
       spent: Number(body.spent ?? 0),
       member: body.member ? String(body.member) : null,
       color: String(body.color ?? 'emerald'),

@@ -81,7 +81,10 @@ export default function DayBudgetCard() {
           }, 0)
         })()
       : 0
-  const effectiveMonthly = selectedBudget ? selectedBudget.limit || 0 : spendablePerMonth
+  // Bij een potje: het besteedbare = maandbudget − wat je maandelijks opzij zet (sparen).
+  const effectiveMonthly = selectedBudget
+    ? Math.max(0, (selectedBudget.limit || 0) - (selectedBudget.savings || 0))
+    : spendablePerMonth
   const setScope = (s: 'all' | number) => setSetting('dailyBudget', { ...cfg, scope: s })
 
   // Instellen-modal

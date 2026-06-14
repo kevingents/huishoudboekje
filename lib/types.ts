@@ -148,6 +148,7 @@ export interface FamilyBudget {
   name: string
   limit: number
   spent: number
+  savings?: number | null
   member?: string | null
   color: string
   entries?: BudgetEntry[] | null

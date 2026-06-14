@@ -38,6 +38,7 @@ import { computeDailyBudget } from '@/lib/dailyBudget'
 import UpcomingPaymentsCard from '@/components/budget/UpcomingPaymentsCard'
 import QuickActions, { type QuickAction } from '@/components/budget/QuickActions'
 import GezinsbudgetCard from '@/components/budget/GezinsbudgetCard'
+import BudgetTutorial from '@/components/budget/BudgetTutorial'
 import BudgetAllocator from '@/components/budget/BudgetAllocator'
 import RecurringSuggestions from '@/components/budget/RecurringSuggestions'
 import MerchantAvatar from '@/components/MerchantAvatar'
@@ -515,14 +516,17 @@ export default function BudgetPage() {
         icon={BarChart3}
         iconClassName="bg-brand-light text-brand"
         actions={
-          <button
-            type="button"
-            onClick={openAdd}
-            className="pill w-full bg-brand px-4 py-3 text-white shadow-sm shadow-brand/20 hover:bg-brand-dark sm:w-auto sm:py-2.5"
-          >
-            <Plus className="h-4 w-4" />
-            Uitgave toevoegen
-          </button>
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+            <BudgetTutorial />
+            <button
+              type="button"
+              onClick={openAdd}
+              className="pill w-full bg-brand px-4 py-3 text-white shadow-sm shadow-brand/20 hover:bg-brand-dark sm:w-auto sm:py-2.5"
+            >
+              <Plus className="h-4 w-4" />
+              Uitgave toevoegen
+            </button>
+          </div>
         }
       />
 
