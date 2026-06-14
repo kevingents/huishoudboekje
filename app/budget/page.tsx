@@ -39,6 +39,9 @@ import QuickActions, { type QuickAction } from '@/components/budget/QuickActions
 import GezinsbudgetCard from '@/components/budget/GezinsbudgetCard'
 import BudgetAllocator from '@/components/budget/BudgetAllocator'
 import RecurringSuggestions from '@/components/budget/RecurringSuggestions'
+import MerchantAvatar from '@/components/MerchantAvatar'
+import BookToPotje from '@/components/budget/BookToPotje'
+import PotjesForecastCard from '@/components/budget/PotjesForecastCard'
 import type { BudgetCategory } from '@/lib/types'
 
 const colorClasses: Record<string, { bar: string; iconBg: string; iconText: string }> = {
@@ -118,7 +121,7 @@ export default function BudgetPage() {
   const { incomes } = useIncome()
   const { loans } = useLoans()
   const { goals } = useSavings()
-  const { budgets, updateBudget } = useFamilyBudgets()
+  const { budgets, updateBudget, logSpend } = useFamilyBudgets()
   const { can } = useHousehold()
   const target = typeof settings.budgetTarget === 'number' ? settings.budgetTarget : 500
   // Startdag van de budgetperiode (1 = kalendermaand). Bijv. 25 = van de 25e t/m de 24e.
@@ -716,6 +719,7 @@ export default function BudgetPage() {
         <LoansCard />
         <SavingsGoalsCard />
         <GezinsbudgetCard />
+        <PotjesForecastCard />
         <UpcomingPaymentsCard costs={costs} />
         </div>
         </ModuleGate>
@@ -739,11 +743,9 @@ export default function BudgetPage() {
               {recent.map((tx, index) => (
                 <li key={tx.id}>
                   <div className="group flex items-center gap-3 py-3">
-                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-slate-100 text-sm font-bold text-slate-500">
-                      {cleanLabel(tx.label).charAt(0)}
-                    </span>
+                    <MerchantAvatar label={tx.label} />
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold text-slate-800" title={tx.label}>
+                      <p className="text-sm font-semibold text-slate-800 dark:text-slate-100" title={tx.label}>
                         {cleanLabel(tx.label)}
                       </p>
                       <p className="truncate text-xs text-slate-500">
@@ -752,7 +754,14 @@ export default function BudgetPage() {
                         {tx.note ? ` · ${tx.note}` : ''}
                       </p>
                     </div>
-                    <p className="text-sm font-bold text-slate-800">€{euro(tx.amount)}</p>
+                    <p className="text-sm font-bold text-slate-800 dark:text-slate-100">€{euro(tx.amount)}</p>
+                    {isSpendingCategory(tx.category) && (Number(tx.amount) || 0) > 0 && (
+                      <BookToPotje
+                        budgets={budgets}
+                        amount={Number(tx.amount) || 0}
+                        onBook={(b) => logSpend(b, Number(tx.amount) || 0, cleanLabel(tx.label))}
+                      />
+                    )}
                     <button
                       type="button"
                       onClick={() => removeTransaction(tx.id)}

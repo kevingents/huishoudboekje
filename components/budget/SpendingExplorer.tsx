@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import { CalendarRange, ChevronDown } from 'lucide-react'
 import DashboardCard from '../DashboardCard'
+import MerchantAvatar from '../MerchantAvatar'
 import { cleanLabel, isSpendingCategory, periodKeyOf, shiftPeriodKey } from '@/lib/budget'
 import type { Transaction } from '@/lib/types'
 
@@ -272,8 +273,9 @@ export default function SpendingExplorer({
           {showTx && (
             <ul className="mt-2 max-h-72 overflow-y-auto pr-1">
               {txList.map((t) => (
-                <li key={t.id} className="flex items-center gap-3 py-1.5 text-sm">
-                  <span className="w-20 shrink-0 text-xs text-slate-400">{t.date}</span>
+                <li key={t.id} className="flex items-center gap-2.5 py-1.5 text-sm">
+                  <MerchantAvatar label={t.label} size="sm" />
+                  <span className="w-16 shrink-0 text-xs text-slate-400">{t.date}</span>
                   <span className="min-w-0 flex-1 truncate text-slate-700 dark:text-slate-200" title={t.label}>
                     {cleanLabel(t.label)}
                   </span>
