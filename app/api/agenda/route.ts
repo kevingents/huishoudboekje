@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db'
 import { describeDate } from '@/lib/date'
 import { requireHousehold } from '@/lib/guard'
+import { getCurrentUser } from '@/lib/auth'
 import { notify } from '@/lib/notify'
 import { parseNames, serializeNames, displayNames } from '@/lib/assignees'
 
@@ -63,6 +64,8 @@ export async function POST(req: Request) {
 
   // Iedereen in het huishouden een melding geven (in-app, en e-mail als dat
   // aanstaat in de notificatie-voorkeuren). Bij meerdere personen: ieder apart.
+  // De maker krijgt geen push van z'n eigen actie.
+  const actor = await getCurrentUser()
   const targets = names.length ? names : [null]
   await Promise.all(
     targets.map((t) =>
@@ -72,6 +75,7 @@ export async function POST(req: Request) {
         title: 'Nieuwe afspraak',
         body: `${event.title} op ${event.weekday} ${event.day} ${event.month}${event.time ? ` om ${event.time}` : ''} — voor ${event.who}.`,
         targetMember: t,
+        excludeUserId: actor?.id ?? null,
       }).catch(() => {}),
     ),
   )

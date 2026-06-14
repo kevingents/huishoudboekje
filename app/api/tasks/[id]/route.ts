@@ -116,7 +116,8 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
           points: task.points,
           dueDate: nextDue(task.dueDate, task.recurrence),
           recurrence: task.recurrence,
-          status: 'todo',
+          // Zelfde flow als bij aanmaken: toegewezen → wacht op acceptatie.
+          status: assignees.length ? 'open' : 'todo',
         },
       })
       .catch(() => {})
@@ -124,15 +125,22 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 
   if (updated && data.status && STATUS_LABEL[String(data.status)]) {
     const label = STATUS_LABEL[String(data.status)]
-    // "Klaar gemeld" hoort bij de ouders (om goed te keuren); de rest bij de uitvoerder.
-    await notify({
-      householdId: hid,
-      type: 'system',
-      title: `Taak ${label}`,
-      body: `${task.title}${task.assignedTo ? ` (${task.assignedTo})` : ''} is ${label}.`,
-      targetMember: data.status === 'ingeleverd' ? null : task.assignedTo,
-      excludeUserId: actor.id,
-    }).catch(() => {})
+    const forWhom = assignees.length ? ` (${assignees.join(', ')})` : ''
+    // "Klaar gemeld" gaat naar de ouders (om goed te keuren); de rest naar elke
+    // toegewezen persoon afzonderlijk.
+    const targets = data.status === 'ingeleverd' ? [null] : assignees.length ? assignees : [null]
+    await Promise.all(
+      targets.map((t) =>
+        notify({
+          householdId: hid,
+          type: 'system',
+          title: `Taak ${label}`,
+          body: `${task.title}${forWhom} is ${label}.`,
+          targetMember: t,
+          excludeUserId: actor.id,
+        }).catch(() => {}),
+      ),
+    )
   }
 
   return Response.json(updated)

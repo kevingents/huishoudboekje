@@ -60,7 +60,7 @@ export default function AgendaPage() {
   const { members } = useFamily()
   const { user } = useAuth()
   const { linked: coLinked } = useCoParent()
-  const myName = members.find((m) => m.id === user?.memberId)?.name ?? user?.name ?? null
+  const myName = members.find((m) => m.id === user?.memberId)?.name ?? null
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState<{
     date: string
@@ -175,8 +175,8 @@ export default function AgendaPage() {
     e.preventDefault()
     if (!form.title.trim() || !form.date) return
     const names = [...form.whoNames]
-    const custom = customWho.trim()
-    if (custom) names.push(custom)
+    // customWho mag meerdere namen bevatten (komma-gescheiden), bv. "Oma, Opa".
+    for (const c of customWho.split(',').map((s) => s.trim()).filter(Boolean)) names.push(c)
     const who = displayNames(names)
     const whoList = serializeNames(names)
     const { remind, remindLead, whoNames, ...rest } = form
@@ -310,7 +310,7 @@ export default function AgendaPage() {
                           {event.time || 'Hele dag'}
                         </p>
                       </div>
-                      <span className={`pill shrink-0 px-2.5 py-1 text-xs font-semibold ${accent.badge}`}>
+                      <span title={event.who} className={`pill min-w-0 max-w-[45%] truncate px-2.5 py-1 text-xs font-semibold ${accent.badge}`}>
                         {event.who}
                       </span>
                       {!readOnly && (
@@ -319,7 +319,7 @@ export default function AgendaPage() {
                             type="button"
                             onClick={() => openEdit(event)}
                             aria-label={`${event.title} bewerken`}
-                            className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-slate-300 opacity-0 transition-all hover:bg-slate-100 hover:text-brand group-hover:opacity-100"
+                            className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-slate-300 opacity-100 transition-all hover:bg-slate-100 hover:text-brand sm:opacity-0 sm:group-hover:opacity-100"
                           >
                             <Pencil className="h-4 w-4" />
                           </button>
@@ -327,7 +327,7 @@ export default function AgendaPage() {
                             type="button"
                             onClick={() => removeEvent(event.id)}
                             aria-label={`${event.title} verwijderen`}
-                            className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-slate-300 opacity-0 transition-all hover:bg-rose-50 hover:text-rose-500 group-hover:opacity-100"
+                            className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-slate-300 opacity-100 transition-all hover:bg-rose-50 hover:text-rose-500 sm:opacity-0 sm:group-hover:opacity-100"
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>
@@ -396,7 +396,7 @@ export default function AgendaPage() {
                             )}
                           </p>
                         </div>
-                        <span className={`pill shrink-0 px-2.5 py-1 text-xs font-semibold ${accent.badge}`}>
+                        <span title={event.who} className={`pill min-w-0 max-w-[45%] truncate px-2.5 py-1 text-xs font-semibold ${accent.badge}`}>
                           {event.who}
                         </span>
                         {event.source !== 'coparent' && (
@@ -405,7 +405,7 @@ export default function AgendaPage() {
                               type="button"
                               onClick={() => openEdit(event)}
                               aria-label={`${event.title} bewerken`}
-                              className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-slate-300 opacity-0 transition-all hover:bg-slate-100 hover:text-brand group-hover:opacity-100"
+                              className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-slate-300 opacity-100 transition-all hover:bg-slate-100 hover:text-brand sm:opacity-0 sm:group-hover:opacity-100"
                             >
                               <Pencil className="h-4 w-4" />
                             </button>
@@ -413,7 +413,7 @@ export default function AgendaPage() {
                               type="button"
                               onClick={() => removeEvent(event.id)}
                               aria-label={`${event.title} verwijderen`}
-                              className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-slate-300 opacity-0 transition-all hover:bg-rose-50 hover:text-rose-500 group-hover:opacity-100"
+                              className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-slate-300 opacity-100 transition-all hover:bg-rose-50 hover:text-rose-500 sm:opacity-0 sm:group-hover:opacity-100"
                             >
                               <Trash2 className="h-4 w-4" />
                             </button>

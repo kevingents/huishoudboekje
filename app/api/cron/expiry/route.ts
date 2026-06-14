@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db'
 import { notify } from '@/lib/notify'
+import { eventWho } from '@/lib/assignees'
 import { syncHouseholdIcal } from '@/lib/icalSync'
 import { daysUntil, reminderThresholds, expiryPhrase, expiryAction, isIdDocument } from '@/lib/documents'
 import {
@@ -85,13 +86,21 @@ export async function GET(req: Request) {
     const sent = await once(ev.householdId, `agenda:${ev.id}:${ev.dateKey}:b${ev.remindDays}`, async () => {
       const when = d === 0 ? 'vandaag' : d === 1 ? 'morgen' : `over ${d} dagen`
       const at = ev.time ? ` om ${ev.time}` : ''
-      await notify({
-        householdId: ev.householdId,
-        type: 'agenda',
-        title: `Herinnering: ${ev.title}`,
-        body: `${ev.title} is ${when}${at} (${ev.weekday} ${ev.day} ${ev.month})${ev.who && ev.who !== 'Gezin' ? ` — voor ${ev.who}` : ''}.`,
-        targetMember: ev.who && ev.who !== 'Gezin' ? ev.who : null,
-      })
+      // Bij meerdere toegewezen personen: ieder apart herinneren (niet de join-naam,
+      // die matcht geen gezinslid). Leeg = hele gezin.
+      const names = eventWho(ev)
+      const targets = names.length ? names : [null]
+      await Promise.all(
+        targets.map((t) =>
+          notify({
+            householdId: ev.householdId,
+            type: 'agenda',
+            title: `Herinnering: ${ev.title}`,
+            body: `${ev.title} is ${when}${at} (${ev.weekday} ${ev.day} ${ev.month})${ev.who && ev.who !== 'Gezin' ? ` — voor ${ev.who}` : ''}.`,
+            targetMember: t,
+          }),
+        ),
+      )
     })
     if (sent) agendaNotified++
   }

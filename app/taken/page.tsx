@@ -26,7 +26,7 @@ export default function TakenPage() {
 
   // Wie ben ik (gezinslid-naam) en ben ik een ouder (geen kind)? Bepaalt welke
   // knoppen je ziet — de server dwingt dezelfde regels af.
-  const myName = members.find((m) => m.id === user?.memberId)?.name ?? user?.name ?? null
+  const myName = members.find((m) => m.id === user?.memberId)?.name ?? null
   const isParent = !!user && user.isChild !== true
 
   const [open, setOpen] = useState(false)
@@ -341,7 +341,7 @@ export default function TakenPage() {
                 ))}
             </div>
             <p className="mt-1 text-[11px] text-slate-400">
-              {form.assignees.length === 0 ? 'Niemand gekozen = de hele gezin.' : `Voor ${displayNames(form.assignees)}.`}
+              {form.assignees.length === 0 ? 'Niemand gekozen = het hele gezin.' : `Voor ${displayNames(form.assignees)}.`}
             </p>
           </div>
 
