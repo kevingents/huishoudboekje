@@ -71,7 +71,8 @@ model AgendaEvent {
   weekday     String
   title       String
   time        String
-  who         String
+  who         String // weergave: één naam, een join van namen, of "Gezin"
+  whoList     String? // JSON-lijst van namen bij toewijzing aan meerdere personen
   accent      String   @default("sky")
   // "manual" (in de app gemaakt) of "ical" (gesynct uit een agenda/Parro-feed)
   source      String   @default("manual")
@@ -332,9 +333,13 @@ model Task {
   householdId Int
   title       String
   description String?
-  assignedTo  String? // gezinslid-naam (null = hele gezin)
+  assignedTo  String? // gezinslid-naam — eerste/legacy toewijzing (null = hele gezin)
+  assignees   String? // JSON-lijst van gezinslid-namen bij toewijzing aan meerdere personen
   points      Int      @default(0)
-  status      String   @default("todo") // open (wacht op accept) | todo | klaar | geweigerd
+  // open (wacht op accept) | todo | ingeleverd (klaar gemeld, wacht op goedkeuring) | klaar | geweigerd
+  status      String   @default("todo")
+  approvedBy  String? // gezinslid-naam van de ouder die goedkeurde
+  approvedAt  DateTime?
   dueDate     String? // yyyy-mm-dd
   // geen | dagelijks | wekelijks | maandelijks — bij afronden wordt een nieuwe gemaakt
   recurrence  String   @default("geen")

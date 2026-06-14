@@ -23,6 +23,7 @@ export interface AgendaEvent {
   title: string
   time: string
   who: string
+  whoList?: string | null
   accent: string
   source: string
   externalId?: string | null

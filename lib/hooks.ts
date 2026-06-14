@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import useSWR, { mutate as globalMutate } from 'swr'
 import { fetcher, apiPost, apiPatch, apiPut, apiDelete } from './api'
 import { hasModule, normalizeTier, type Tier } from './modules'
+import { serializeNames, taskAssignees } from './assignees'
 import type {
   ShoppingItem,
   AgendaEvent,
@@ -107,7 +108,8 @@ interface NewEvent {
   date: string
   title: string
   time: string
-  who: string
+  who: string // weergavetekst (één naam, een join, of "Gezin")
+  whoList?: string | null // JSON-lijst van namen (multi-toewijzing)
   accent: string
   coShared?: boolean
   remindDays?: number | null
@@ -121,7 +123,7 @@ export function useAgenda() {
     addEvent: (e: NewEvent) =>
       c.create(
         { ...e },
-        { dateKey: e.date, day: e.date.split('-')[2] ?? '', month: '', weekday: '', title: e.title, time: e.time, who: e.who, accent: e.accent, source: 'manual', externalId: null, remindDays: e.remindDays ?? null },
+        { dateKey: e.date, day: e.date.split('-')[2] ?? '', month: '', weekday: '', title: e.title, time: e.time, who: e.who, whoList: e.whoList ?? null, accent: e.accent, source: 'manual', externalId: null, remindDays: e.remindDays ?? null },
       ),
     updateEvent: (id: number, payload: Partial<NewEvent>) => c.update(id, payload),
     removeEvent: (id: number) => c.remove(id),
@@ -1053,8 +1055,11 @@ export interface Task {
   title: string
   description: string | null
   assignedTo: string | null
+  assignees?: string | null
   points: number
   status: string
+  approvedBy?: string | null
+  approvedAt?: string | null
   dueDate: string | null
   recurrence?: string
 }
@@ -1067,21 +1072,28 @@ export function useTasks() {
     addTask: (payload: {
       title: string
       description?: string | null
-      assignedTo?: string | null
+      assignees?: string[]
       points?: number
       dueDate?: string | null
       recurrence?: string
-    }) =>
-      c.create(payload as Record<string, unknown>, {
+    }) => {
+      const names = serializeNames(payload.assignees ?? [])
+      const list = names ? (JSON.parse(names) as string[]) : []
+      return c.create({ ...payload, assignees: payload.assignees ?? [] } as Record<string, unknown>, {
         title: payload.title,
         description: payload.description ?? null,
-        assignedTo: payload.assignedTo ?? null,
+        assignedTo: list[0] ?? null,
+        assignees: names,
         points: payload.points ?? 0,
-        status: payload.assignedTo ? 'open' : 'todo',
+        status: list.length ? 'open' : 'todo',
+        approvedBy: null,
+        approvedAt: null,
         dueDate: payload.dueDate ?? null,
         recurrence: payload.recurrence ?? 'geen',
-      }),
+      })
+    },
     setStatus: (id: number, status: string) => c.update(id, { status }),
+    setAssignees: (id: number, assignees: string[]) => c.update(id, { assignees }),
     removeTask: (id: number) => c.remove(id),
   }
 }
@@ -1155,11 +1167,13 @@ export function useMail() {
   }
 }
 
-/** Puntensaldo per gezinslid: verdiend (afgeronde taken) − ingewisseld. */
+/** Puntensaldo per gezinslid: verdiend (goedgekeurde taken) − ingewisseld. Bij een
+ *  taak voor meerdere personen krijgt elke toegewezen persoon de punten. */
 export function pointsByMember(tasks: Task[], redemptions: Redemption[]): Record<string, number> {
   const bal: Record<string, number> = {}
   for (const t of tasks) {
-    if (t.status === 'klaar' && t.assignedTo) bal[t.assignedTo] = (bal[t.assignedTo] ?? 0) + t.points
+    if (t.status !== 'klaar') continue
+    for (const name of taskAssignees(t)) bal[name] = (bal[name] ?? 0) + t.points
   }
   for (const r of redemptions) bal[r.member] = (bal[r.member] ?? 0) - r.cost
   return bal

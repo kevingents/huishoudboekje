@@ -1,6 +1,8 @@
 import { prisma } from '@/lib/db'
-import { requireHousehold, notFound } from '@/lib/guard'
+import { requireHousehold, notFound, unauthorized } from '@/lib/guard'
+import { getCurrentUser } from '@/lib/auth'
 import { notify } from '@/lib/notify'
+import { taskAssignees, serializeNames } from '@/lib/assignees'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -8,7 +10,8 @@ export const runtime = 'nodejs'
 const STATUS_LABEL: Record<string, string> = {
   todo: 'geaccepteerd',
   geweigerd: 'geweigerd',
-  klaar: 'afgerond',
+  ingeleverd: 'klaar gemeld',
+  klaar: 'goedgekeurd',
 }
 
 /** Volgende deadline voor een herhalende taak (op basis van de vorige of vandaag). */
@@ -26,23 +29,82 @@ function nextDue(current: string | null, recurrence: string): string | null {
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
   const hid = await requireHousehold()
   if (hid instanceof Response) return hid
+  const actor = await getCurrentUser()
+  if (!actor) return unauthorized()
   const id = Number(params.id)
   const body = await req.json()
+
+  // De taak eerst laden, zodat we de toewijzing kennen vóór we iets wijzigen.
+  const task = await prisma.task.findFirst({ where: { id, householdId: hid } })
+  if (!task) return notFound()
+
+  // Wie is de actor (gezinslid-naam) en is het een ouder (geen kind-rol)?
+  let actorName = actor.name
+  if (actor.memberId) {
+    const m = await prisma.familyMember.findFirst({
+      where: { id: actor.memberId, householdId: hid },
+      select: { name: true },
+    })
+    if (m?.name) actorName = m.name
+  }
+  const isParent = actor.role !== 'child'
+  const assignees = taskAssignees(task)
+  const isAssignee = !!actorName && assignees.includes(actorName)
+  const canAct = isParent || isAssignee || assignees.length === 0 // gezins-taak = iedereen
+
   const data: Record<string, unknown> = {}
-  if (body.status !== undefined) data.status = String(body.status)
-  if (body.title !== undefined) data.title = String(body.title)
-  if (body.description !== undefined) data.description = body.description ? String(body.description) : null
-  if (body.assignedTo !== undefined) data.assignedTo = body.assignedTo ? String(body.assignedTo) : null
-  if (body.points !== undefined) data.points = Number(body.points) || 0
-  if (body.dueDate !== undefined) data.dueDate = body.dueDate ? String(body.dueDate) : null
-  if (body.recurrence !== undefined) data.recurrence = String(body.recurrence)
 
-  const result = await prisma.task.updateMany({ where: { id, householdId: hid }, data })
-  if (result.count === 0) return notFound()
-  const task = await prisma.task.findUnique({ where: { id } })
+  if (body.status !== undefined) {
+    const target = String(body.status)
+    if (target === 'klaar') {
+      // Goedkeuren (= punten toekennen) mag alleen een ouder.
+      if (!isParent) {
+        return Response.json({ error: 'Alleen een ouder mag taken goedkeuren.' }, { status: 403 })
+      }
+      data.status = 'klaar'
+      data.approvedBy = actorName
+      data.approvedAt = new Date()
+    } else if (target === 'ingeleverd' || target === 'todo' || target === 'geweigerd' || target === 'open') {
+      if (!canAct) {
+        return Response.json({ error: 'Je kunt deze taak niet wijzigen.' }, { status: 403 })
+      }
+      data.status = target
+      // Afkeuren (terug naar te doen) wist de eerdere goedkeuring.
+      if (target === 'todo') {
+        data.approvedBy = null
+        data.approvedAt = null
+      }
+    }
+  }
 
-  // Herhalende taak afgerond → meteen de volgende inplannen.
-  if (task && String(body.status) === 'klaar' && task.recurrence && task.recurrence !== 'geen') {
+  // Inhoudelijke bewerkingen (titel, toewijzing, punten…) alleen door een ouder.
+  if (isParent) {
+    if (body.title !== undefined) data.title = String(body.title)
+    if (body.description !== undefined) data.description = body.description ? String(body.description) : null
+    if (body.assignees !== undefined || body.assignedTo !== undefined) {
+      const names = Array.isArray(body.assignees)
+        ? body.assignees.map((n: unknown) => String(n))
+        : body.assignedTo
+          ? [String(body.assignedTo)]
+          : []
+      const ser = serializeNames(names)
+      data.assignees = ser
+      data.assignedTo = ser ? (JSON.parse(ser) as string[])[0] : null
+    }
+    if (body.points !== undefined) data.points = Number(body.points) || 0
+    if (body.dueDate !== undefined) data.dueDate = body.dueDate ? String(body.dueDate) : null
+    if (body.recurrence !== undefined) data.recurrence = String(body.recurrence)
+  }
+
+  if (Object.keys(data).length === 0) {
+    return Response.json({ error: 'Geen wijziging toegestaan.' }, { status: 403 })
+  }
+
+  await prisma.task.update({ where: { id }, data })
+  const updated = await prisma.task.findUnique({ where: { id } })
+
+  // Herhalende taak goedgekeurd → meteen de volgende inplannen (zelfde toewijzing).
+  if (updated && data.status === 'klaar' && task.recurrence && task.recurrence !== 'geen') {
     await prisma.task
       .create({
         data: {
@@ -50,6 +112,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
           title: task.title,
           description: task.description,
           assignedTo: task.assignedTo,
+          assignees: task.assignees,
           points: task.points,
           dueDate: nextDue(task.dueDate, task.recurrence),
           recurrence: task.recurrence,
@@ -59,23 +122,31 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       .catch(() => {})
   }
 
-  if (task && body.status && STATUS_LABEL[String(body.status)]) {
-    const label = STATUS_LABEL[String(body.status)]
+  if (updated && data.status && STATUS_LABEL[String(data.status)]) {
+    const label = STATUS_LABEL[String(data.status)]
+    // "Klaar gemeld" hoort bij de ouders (om goed te keuren); de rest bij de uitvoerder.
     await notify({
       householdId: hid,
       type: 'system',
       title: `Taak ${label}`,
       body: `${task.title}${task.assignedTo ? ` (${task.assignedTo})` : ''} is ${label}.`,
-      targetMember: task.assignedTo,
+      targetMember: data.status === 'ingeleverd' ? null : task.assignedTo,
+      excludeUserId: actor.id,
     }).catch(() => {})
   }
 
-  return Response.json(task)
+  return Response.json(updated)
 }
 
 export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
   const hid = await requireHousehold()
   if (hid instanceof Response) return hid
+  const actor = await getCurrentUser()
+  if (!actor) return unauthorized()
+  // Taken verwijderen mag alleen een ouder (geen kind).
+  if (actor.role === 'child') {
+    return Response.json({ error: 'Alleen een ouder mag taken verwijderen.' }, { status: 403 })
+  }
   await prisma.task.deleteMany({ where: { id: Number(params.id), householdId: hid } })
   return new Response(null, { status: 204 })
 }

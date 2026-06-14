@@ -5,7 +5,8 @@ import { Calendar, Plus, Clock, Trash2, Link2, ChevronLeft, ChevronRight, BellRi
 import PageHeader from '@/components/PageHeader'
 import DashboardCard from '@/components/DashboardCard'
 import Modal from '@/components/Modal'
-import { useAgenda, useFamily, useCoParent } from '@/lib/hooks'
+import { useAgenda, useFamily, useCoParent, useAuth } from '@/lib/hooks'
+import { eventWho, displayNames, serializeNames } from '@/lib/assignees'
 import type { AgendaEvent } from '@/lib/types'
 
 const accentClasses: Record<string, { badge: string; dot: string; bar: string }> = {
@@ -37,6 +38,13 @@ function describeKey(key: string, todayKey: string, tomorrowKey: string) {
 const inputClass =
   'w-full rounded-xl border border-cardborder bg-white px-3.5 py-2.5 text-sm text-slate-700 outline-none transition-colors placeholder:text-slate-400 focus:border-brand/40 focus:ring-2 focus:ring-brand/20'
 
+const chipCls = (on: boolean) =>
+  `rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
+    on
+      ? 'bg-brand text-white'
+      : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-white/10 dark:text-slate-200 dark:hover:bg-white/15'
+  }`
+
 function groupByDate(events: AgendaEvent[]) {
   const groups = new Map<string, AgendaEvent[]>()
   for (const event of events) {
@@ -50,9 +58,20 @@ function groupByDate(events: AgendaEvent[]) {
 export default function AgendaPage() {
   const { events, isLoading, addEvent, updateEvent, removeEvent } = useAgenda()
   const { members } = useFamily()
+  const { user } = useAuth()
   const { linked: coLinked } = useCoParent()
+  const myName = members.find((m) => m.id === user?.memberId)?.name ?? user?.name ?? null
   const [open, setOpen] = useState(false)
-  const [form, setForm] = useState({ date: '', title: '', time: '', who: 'Gezin', accent: 'sky', coShared: false, remind: false, remindLead: '1' })
+  const [form, setForm] = useState<{
+    date: string
+    title: string
+    time: string
+    whoNames: string[]
+    accent: string
+    coShared: boolean
+    remind: boolean
+    remindLead: string
+  }>({ date: '', title: '', time: '', whoNames: [], accent: 'sky', coShared: false, remind: false, remindLead: '1' })
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editingDetach, setEditingDetach] = useState(false)
   const [customWho, setCustomWho] = useState('')
@@ -112,11 +131,17 @@ export default function AgendaPage() {
   }, [])
 
   const resetForm = () => {
-    setForm({ date: '', title: '', time: '', who: 'Gezin', accent: 'sky', coShared: false, remind: false, remindLead: '1' })
+    setForm({ date: '', title: '', time: '', whoNames: [], accent: 'sky', coShared: false, remind: false, remindLead: '1' })
     setCustomWho('')
     setEditingId(null)
     setEditingDetach(false)
   }
+
+  const toggleWho = (name: string) =>
+    setForm((f) => ({
+      ...f,
+      whoNames: f.whoNames.includes(name) ? f.whoNames.filter((n) => n !== name) : [...f.whoNames, name],
+    }))
 
   const openAdd = () => {
     resetForm()
@@ -126,18 +151,21 @@ export default function AgendaPage() {
   /** Bewerk een bestaande afspraak (ook een gesynct iCal-item; dat wordt dan
    *  losgekoppeld als je eigen afspraak). Co-ouder-afspraken zijn read-only. */
   const openEdit = (event: (typeof events)[number]) => {
-    const isPreset = event.who === 'Gezin' || members.some((m) => m.name === event.who)
+    const names = eventWho(event)
+    const memberNames = members.map((m) => m.name)
+    const picked = names.filter((n) => memberNames.includes(n))
+    const custom = names.filter((n) => !memberNames.includes(n))
     setForm({
       date: event.dateKey,
       title: event.title,
       time: event.time ?? '',
-      who: isPreset ? event.who : '__anders',
+      whoNames: picked,
       accent: event.accent ?? 'sky',
       coShared: Boolean((event as { coShared?: boolean }).coShared),
       remind: event.remindDays != null,
       remindLead: event.remindDays != null ? String(event.remindDays) : '1',
     })
-    setCustomWho(isPreset ? '' : event.who)
+    setCustomWho(custom.join(', '))
     setEditingId(event.id)
     setEditingDetach(event.source === 'ical')
     setOpen(true)
@@ -146,9 +174,13 @@ export default function AgendaPage() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.title.trim() || !form.date) return
-    const who = form.who === '__anders' ? customWho.trim() || 'Gezin' : form.who
-    const { remind, remindLead, ...rest } = form
-    const payload = { ...rest, who, remindDays: remind ? Number(remindLead) : null }
+    const names = [...form.whoNames]
+    const custom = customWho.trim()
+    if (custom) names.push(custom)
+    const who = displayNames(names)
+    const whoList = serializeNames(names)
+    const { remind, remindLead, whoNames, ...rest } = form
+    const payload = { ...rest, who, whoList, remindDays: remind ? Number(remindLead) : null }
     if (editingId !== null) await updateEvent(editingId, payload)
     else await addEvent(payload)
     resetForm()
@@ -442,30 +474,34 @@ export default function AgendaPage() {
               />
             </label>
           </div>
-          <label className="text-xs font-semibold text-slate-500">
+          <div className="text-xs font-semibold text-slate-500">
             Voor wie
-            <select
-              value={form.who}
-              onChange={(e) => setForm({ ...form, who: e.target.value })}
-              className={`mt-1 ${inputClass}`}
-            >
-              <option value="Gezin">Het hele gezin</option>
-              {members.map((m) => (
-                <option key={m.id} value={m.name}>
-                  {m.name}
-                </option>
-              ))}
-              <option value="__anders">Iemand anders (bijv. oma)…</option>
-            </select>
-            {form.who === '__anders' && (
-              <input
-                value={customWho}
-                onChange={(e) => setCustomWho(e.target.value)}
-                placeholder="Naam, bijv. Oma"
-                className={`mt-2 ${inputClass}`}
-              />
-            )}
-          </label>
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {myName && (
+                <button type="button" onClick={() => toggleWho(myName)} className={chipCls(form.whoNames.includes(myName))}>
+                  Mijzelf
+                </button>
+              )}
+              {members
+                .filter((m) => m.name !== myName)
+                .map((m) => (
+                  <button key={m.id} type="button" onClick={() => toggleWho(m.name)} className={chipCls(form.whoNames.includes(m.name))}>
+                    {m.name}
+                  </button>
+                ))}
+            </div>
+            <input
+              value={customWho}
+              onChange={(e) => setCustomWho(e.target.value)}
+              placeholder="Iemand anders (bijv. Oma)"
+              className={`mt-2 ${inputClass}`}
+            />
+            <p className="mt-1 font-normal text-[11px] text-slate-400">
+              {form.whoNames.length === 0 && !customWho.trim()
+                ? 'Niemand gekozen = het hele gezin.'
+                : `Voor ${displayNames([...form.whoNames, ...(customWho.trim() ? [customWho.trim()] : [])])}.`}
+            </p>
+          </div>
           <div className="text-xs font-semibold text-slate-500">
             Kleur
             <div className="mt-1.5 flex gap-2">
@@ -521,7 +557,11 @@ export default function AgendaPage() {
                   <option value="7">1 week van tevoren</option>
                 </select>
                 <span className="mt-1 block text-[11px] font-normal text-slate-400">
-                  De melding komt &apos;s ochtends rond 8 uur — naar {form.who === 'Gezin' ? 'het hele gezin' : form.who === '__anders' ? (customWho.trim() || 'het gezin') : form.who}.
+                  De melding komt &apos;s ochtends rond 8 uur — naar{' '}
+                  {form.whoNames.length === 0 && !customWho.trim()
+                    ? 'het hele gezin'
+                    : displayNames([...form.whoNames, ...(customWho.trim() ? [customWho.trim()] : [])])}
+                  .
                 </span>
               </label>
             )}

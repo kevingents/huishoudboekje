@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db'
 import { describeDate } from '@/lib/date'
 import { requireHousehold } from '@/lib/guard'
 import { notify } from '@/lib/notify'
+import { parseNames, serializeNames, displayNames } from '@/lib/assignees'
 
 export const dynamic = 'force-dynamic'
 
@@ -38,13 +39,18 @@ export async function POST(req: Request) {
     return Response.json({ error: 'title en date zijn verplicht' }, { status: 400 })
   }
   const parts = describeDate(body.date)
+  // "Voor wie" kan een lijst van personen zijn (whoList) of de losse weergave (who).
+  const names = parseNames(body.whoList)
+  const whoList = serializeNames(names)
+  const who = whoList ? displayNames(names) : String(body.who ?? 'Gezin')
   const event = await prisma.agendaEvent.create({
     data: {
       householdId: hid,
       ...parts,
       title: String(body.title),
       time: String(body.time ?? ''),
-      who: String(body.who ?? 'Gezin'),
+      who,
+      whoList,
       accent: String(body.accent ?? 'sky'),
       source: 'manual',
       coShared: Boolean(body.coShared),
@@ -56,14 +62,19 @@ export async function POST(req: Request) {
   })
 
   // Iedereen in het huishouden een melding geven (in-app, en e-mail als dat
-  // aanstaat in de notificatie-voorkeuren).
-  await notify({
-    householdId: hid,
-    type: 'agenda',
-    title: 'Nieuwe afspraak',
-    body: `${event.title} op ${event.weekday} ${event.day} ${event.month}${event.time ? ` om ${event.time}` : ''} — voor ${event.who}.`,
-    targetMember: event.who && event.who !== 'Gezin' ? event.who : null,
-  }).catch(() => {})
+  // aanstaat in de notificatie-voorkeuren). Bij meerdere personen: ieder apart.
+  const targets = names.length ? names : [null]
+  await Promise.all(
+    targets.map((t) =>
+      notify({
+        householdId: hid,
+        type: 'agenda',
+        title: 'Nieuwe afspraak',
+        body: `${event.title} op ${event.weekday} ${event.day} ${event.month}${event.time ? ` om ${event.time}` : ''} — voor ${event.who}.`,
+        targetMember: t,
+      }).catch(() => {}),
+    ),
+  )
 
   return Response.json(event, { status: 201 })
 }
