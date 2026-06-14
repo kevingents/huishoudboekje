@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { fastModel } from '@/lib/aiModels'
+import { consumeAiCredit, aiLimitResponse } from '@/lib/aiUsage'
 import { prisma } from '@/lib/db'
 import { requireModule } from '@/lib/guard'
 
@@ -65,6 +66,9 @@ export async function POST(req: Request) {
     await prisma.budgetCategory.findMany({ where: { householdId: hid }, select: { name: true } })
   ).map((c) => c.name)
   const catText = categories.length ? categories.join(', ') : 'Boodschappen, Vaste lasten, Vrije tijd, Overig'
+
+  const credit = await consumeAiCredit(hid)
+  if (!credit.ok) return aiLimitResponse()
 
   const contentBlock =
     file.kind === 'image'

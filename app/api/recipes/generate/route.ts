@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { chatModel } from '@/lib/aiModels'
+import { consumeAiCredit, aiLimitResponse } from '@/lib/aiUsage'
 import { prisma } from '@/lib/db'
 import { serializeRecipe, tagsToString } from '@/lib/serialize'
 import { requireModule } from '@/lib/guard'
@@ -63,6 +64,9 @@ export async function POST(req: Request) {
   ]
     .filter(Boolean)
     .join(' ')
+
+  const credit = await consumeAiCredit(hid)
+  if (!credit.ok) return aiLimitResponse()
 
   try {
     const client = new Anthropic()

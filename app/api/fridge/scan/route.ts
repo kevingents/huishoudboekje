@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { fastModel } from '@/lib/aiModels'
+import { consumeAiCredit, aiLimitResponse } from '@/lib/aiUsage'
 import { requireModule } from '@/lib/guard'
 
 export const dynamic = 'force-dynamic'
@@ -68,6 +69,9 @@ export async function POST(req: Request) {
   const haveText = have.length
     ? `Deze producten staan al op de boodschappenlijst, stel die NIET opnieuw voor: ${have.join(', ')}.`
     : 'De boodschappenlijst is leeg.'
+
+  const credit = await consumeAiCredit(hid)
+  if (!credit.ok) return aiLimitResponse()
 
   try {
     const client = new Anthropic()

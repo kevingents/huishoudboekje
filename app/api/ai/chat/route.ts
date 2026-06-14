@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { chatModel } from '@/lib/aiModels'
+import { consumeAiCredit } from '@/lib/aiUsage'
 import { prisma } from '@/lib/db'
 import { requireHousehold, requireModule } from '@/lib/guard'
 import { getCurrentUser } from '@/lib/auth'
@@ -147,6 +148,11 @@ export async function POST(req: Request) {
 
 async function generateReply(householdId: number, system: string): Promise<string> {
   if (!process.env.ANTHROPIC_API_KEY) return FALLBACK_REPLY
+
+  const credit = await consumeAiCredit(householdId)
+  if (!credit.ok) {
+    return 'Je hebt het AI-maandmaximum van je pakket bereikt. Volgende maand weer beschikbaar, of upgrade je pakket voor meer.'
+  }
 
   try {
     const client = new Anthropic()

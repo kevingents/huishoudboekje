@@ -348,6 +348,18 @@ model Task {
   @@index([householdId])
 }
 
+// AI-gebruik per huishouden per maand — zachte limiet om de kosten te beschermen.
+model AiUsage {
+  id          Int      @id @default(autoincrement())
+  householdId Int
+  period      String // yyyy-mm (UTC)
+  count       Int      @default(0)
+  updatedAt   DateTime @updatedAt
+
+  @@unique([householdId, period])
+  @@index([householdId])
+}
+
 // Ingewisselde beloningen (punten eraf) per gezinslid.
 model Redemption {
   id          Int      @id @default(autoincrement())

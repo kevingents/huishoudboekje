@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { fastModel } from '@/lib/aiModels'
+import { consumeAiCredit, aiLimitResponse } from '@/lib/aiUsage'
 import { prisma } from '@/lib/db'
 import { requireHousehold } from '@/lib/guard'
 import { RULE_KINDS } from '@/lib/budget'
@@ -53,6 +54,9 @@ export async function POST(req: Request) {
   const catText = categories.length
     ? categories.join(', ')
     : 'Boodschappen, Horeca, Vervoer, Gas/Elektra/Water, Verzekeringen, Internet/TV/Telefoon, Winkels, Apotheek/Medisch, Aflossingen, Belastingen, Sport, Leuke dingen/Uitjes, Overig'
+
+  const credit = await consumeAiCredit(hid)
+  if (!credit.ok) return aiLimitResponse()
 
   try {
     const client = new Anthropic()
