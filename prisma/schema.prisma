@@ -229,6 +229,7 @@ model FamilyBudget {
   limit       Float    @default(0)
   spent       Float    @default(0)
   savings     Float    @default(0) // maandelijks opzij van dit potje (verlaagt het besteedbare)
+  savedTotal  Float    @default(0) // lopend spaarsaldo (cron telt 'savings' er maandelijks bij); privé voor het lid
   member      String? // naam van het gezinslid (optioneel)
   color       String   @default("emerald")
   entries     Json? // geschiedenis van geboekte uitgaven: [{ label, amount, at }]

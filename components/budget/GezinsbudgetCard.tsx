@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Users, Plus, Trash2, Pencil, PiggyBank } from 'lucide-react'
+import { Users, Plus, Trash2, Pencil, PiggyBank, Coins, Lock } from 'lucide-react'
 import DashboardCard from '../DashboardCard'
 import Modal from '../Modal'
 import { useFamilyBudgets, useFamily, useIncome, useFixedCosts, useSubscriptions, useLoans, useSavings } from '@/lib/hooks'
@@ -23,7 +23,7 @@ function euro(v: number) {
   return Math.round(v).toLocaleString('nl-NL')
 }
 
-const emptyForm = { name: '', limit: '', savings: '', member: '', color: 'emerald' }
+const emptyForm = { name: '', limit: '', savings: '', savedTotal: '', member: '', color: 'emerald' }
 
 /** Gezinsbudget = gedeelde "potjes" (envelopes): een maandbudget per onderwerp,
  *  optioneel aan een gezinslid gekoppeld, met optioneel een maandelijks spaardeel. */
@@ -44,11 +44,16 @@ export default function GezinsbudgetCard({ className = '' }: { className?: strin
 
   const [open, setOpen] = useState(false)
   const [editId, setEditId] = useState<number | null>(null)
+  // Mag de huidige gebruiker het spaarsaldo van dít potje zien/bijwerken? De server
+  // geeft savedTotal alleen mee aan de eigenaar (of bij een gedeeld potje), dus de
+  // aanwezigheid ervan is meteen het toegangshek — geen aparte 'wie ben ik'-check nodig.
+  const [savedAllowed, setSavedAllowed] = useState(false)
   const [form, setForm] = useState(emptyForm)
 
   const openCreate = () => {
     setForm(emptyForm)
     setEditId(null)
+    setSavedAllowed(false)
     setOpen(true)
   }
   const openEdit = (b: FamilyBudget) => {
@@ -56,9 +61,11 @@ export default function GezinsbudgetCard({ className = '' }: { className?: strin
       name: b.name,
       limit: String(Math.round(b.limit)),
       savings: b.savings ? String(Math.round(b.savings)) : '',
+      savedTotal: b.savedTotal != null ? String(Math.round(b.savedTotal)) : '',
       member: b.member ?? '',
       color: b.color,
     })
+    setSavedAllowed(b.savedTotal != null)
     setEditId(b.id)
     setOpen(true)
   }
@@ -72,11 +79,16 @@ export default function GezinsbudgetCard({ className = '' }: { className?: strin
       savings: Number(form.savings.replace(',', '.')) || 0,
       member: form.member || null,
       color: form.color,
+      // Spaarsaldo alleen meesturen als we mogen (eigenaar/gedeeld) én we bewerken.
+      ...(editId != null && savedAllowed
+        ? { savedTotal: Math.max(0, Number(form.savedTotal.replace(',', '.')) || 0) }
+        : {}),
     }
     if (editId != null) await updateBudget(editId, payload)
     else await addBudget(payload)
     setForm(emptyForm)
     setEditId(null)
+    setSavedAllowed(false)
     setOpen(false)
   }
 
@@ -155,6 +167,19 @@ export default function GezinsbudgetCard({ className = '' }: { className?: strin
                     </span>
                   )}
                 </p>
+                {/* Lopend spaarsaldo — de server stuurt savedTotal alleen naar de
+                    eigenaar, dus 'niet null' betekent: dit mag ik zien. */}
+                {b.savedTotal != null && (b.savedTotal > 0 || sav > 0) && (
+                  <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                    <Coins className="h-3 w-3 shrink-0" />
+                    Al €{euro(b.savedTotal)} gespaard
+                    {b.member && (
+                      <span className="inline-flex items-center gap-0.5 font-medium text-slate-400">
+                        <Lock className="h-2.5 w-2.5" /> alleen voor jou
+                      </span>
+                    )}
+                  </p>
+                )}
                 {(b.entries?.length ?? 0) > 0 && (
                   <ul className="mt-1.5 flex flex-col gap-0.5">
                     {b.entries!.slice(0, 3).map((e, i) => (
@@ -240,6 +265,22 @@ export default function GezinsbudgetCard({ className = '' }: { className?: strin
               dagbudget als je dit potje kiest.
             </span>
           </label>
+          {editId != null && savedAllowed && (
+            <label className="text-xs font-semibold text-slate-500">
+              Spaarsaldo nu (€)
+              <input
+                inputMode="decimal"
+                value={form.savedTotal}
+                onChange={(e) => setForm({ ...form, savedTotal: e.target.value })}
+                placeholder="0"
+                className={`mt-1 ${inputClass}`}
+              />
+              <span className="mt-1 block font-normal text-[11px] text-slate-400">
+                Wat er tot nu toe is gespaard. Elke periode komt het maandbedrag er vanzelf bij; hier kun je het
+                bijstellen (bijv. als je geld hebt opgenomen). Alleen voor jou zichtbaar.
+              </span>
+            </label>
+          )}
           <div>
             <p className="mb-1 text-xs font-semibold text-slate-500">Kleur</p>
             <div className="flex gap-2">

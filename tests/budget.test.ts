@@ -13,7 +13,25 @@ import {
   loanIsActive,
   labelMatchesPattern,
   suggestLineCategory,
+  maySeePotjeSavings,
 } from '@/lib/budget'
+
+describe('maySeePotjeSavings (privé spaarsaldo)', () => {
+  it('toont een gedeeld potje (geen lid) aan iedereen', () => {
+    expect(maySeePotjeSavings(null, 'Marielle')).toBe(true)
+    expect(maySeePotjeSavings(undefined, null)).toBe(true)
+    expect(maySeePotjeSavings('', 'Kevin')).toBe(true)
+  })
+  it('toont een persoonlijk potje alleen aan de eigenaar', () => {
+    expect(maySeePotjeSavings('Marielle', 'Marielle')).toBe(true)
+    expect(maySeePotjeSavings('Marielle', 'Kevin')).toBe(false)
+    expect(maySeePotjeSavings('Marielle', null)).toBe(false)
+    expect(maySeePotjeSavings('Marielle', undefined)).toBe(false)
+  })
+  it('is hoofdletter- en exact-gevoelig (echte naam-match, geen fuzzy)', () => {
+    expect(maySeePotjeSavings('Marielle', 'marielle')).toBe(false)
+  })
+})
 
 describe('suggestLineCategory (bonpost → categorie-suggestie)', () => {
   it('herkent gangbare posten zoals de gebruiker ze indeelt', () => {

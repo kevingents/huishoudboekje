@@ -149,6 +149,9 @@ export interface FamilyBudget {
   limit: number
   spent: number
   savings?: number | null
+  /** Lopend spaarsaldo. Privé: de server laat dit weg (null) voor wie niet de
+   *  eigenaar is, dus `null` = verborgen, `0` = eigenaar zonder saldo. */
+  savedTotal?: number | null
   member?: string | null
   color: string
   entries?: BudgetEntry[] | null

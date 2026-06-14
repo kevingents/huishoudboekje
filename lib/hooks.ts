@@ -315,7 +315,14 @@ export function useSavings() {
   }
 }
 
-type FamilyBudgetInput = { name: string; limit?: number; savings?: number; member?: string | null; color?: string }
+type FamilyBudgetInput = {
+  name: string
+  limit?: number
+  savings?: number
+  savedTotal?: number
+  member?: string | null
+  color?: string
+}
 
 export function useFamilyBudgets() {
   const c = useCollection<FamilyBudget>('/api/family-budgets')
@@ -327,6 +334,7 @@ export function useFamilyBudgets() {
         name: payload.name,
         limit: payload.limit ?? 0,
         savings: payload.savings ?? 0,
+        savedTotal: 0,
         spent: 0,
         member: payload.member ?? null,
         color: payload.color ?? 'emerald',

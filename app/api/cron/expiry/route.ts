@@ -166,12 +166,13 @@ export async function GET(req: Request) {
     startDayByHh.set(s.householdId, v)
   }
   let periodNotified = 0
+  let potjesSaved = 0
   // Alleen de huishoudens waarvoor vandaag (NL) de startdag is; default = de 1e.
   const startToday = households.map((h) => h.id).filter((id) => (startDayByHh.get(id) ?? 1) === nlDayOfMonth)
   if (startToday.length > 0) {
     // Eén query per tabel voor álle relevante huishoudens (geen N+1 op de 1e).
     const inIds = { householdId: { in: startToday } }
-    const [incomesAll, costsAll, subsAll, loansAll, txnsAll, catsAll] = await Promise.all([
+    const [incomesAll, costsAll, subsAll, loansAll, txnsAll, catsAll, potjesAll] = await Promise.all([
       prisma.income.findMany({ where: inIds, select: { householdId: true, amount: true, interval: true } }),
       prisma.fixedCost.findMany({
         where: inIds,
@@ -181,6 +182,7 @@ export async function GET(req: Request) {
       prisma.loan.findMany({ where: inIds, select: { householdId: true, termAmount: true } }),
       prisma.transaction.findMany({ where: inIds, select: { householdId: true, category: true, amount: true, date: true, createdAt: true } }),
       prisma.budgetCategory.findMany({ where: inIds, select: { householdId: true, name: true, limit: true } }),
+      prisma.familyBudget.findMany({ where: inIds, select: { id: true, householdId: true, savings: true } }),
     ])
     const group = <T extends { householdId: number }>(rows: T[]) => {
       const m = new Map<number, T[]>()
@@ -197,16 +199,41 @@ export async function GET(req: Request) {
     const loanByHh = group(loansAll)
     const txByHh = group(txnsAll)
     const catByHh = group(catsAll)
+    const potByHh = group(potjesAll)
 
     for (const id of startToday) {
       const startDay = startDayByHh.get(id) ?? 1
+      const prevKey = shiftPeriodKey(periodKeyOf(nlDateStr, startDay) ?? '', -1)
+
+      // Spaarpotjes: incasseer het maandbedrag (savings) één keer per periode in
+      // het lopende spaarsaldo. Claim + bijschrijven gebeuren in één transactie:
+      // de unieke reminderLog-sleutel maakt het exact één keer per periode (geen
+      // dubbeltelling bij een herhaalde cron-run), en faalt het bijschrijven, dan
+      // rolt de claim mee terug zodat de volgende periode het opnieuw probeert
+      // (in tegenstelling tot once(), waar een fout ná de claim een maand zou
+      // kunnen kosten). Staat los van de terugblik hieronder, dus ook potjes
+      // zonder uitgaven blijven netjes doorsparen.
+      if (prevKey) {
+        const potjes = (potByHh.get(id) ?? []).filter((p) => (p.savings || 0) > 0)
+        for (const p of potjes) {
+          try {
+            await prisma.$transaction([
+              prisma.reminderLog.create({ data: { householdId: id, key: `potjesaving:${prevKey}:${p.id}` } }),
+              prisma.familyBudget.update({ where: { id: p.id }, data: { savedTotal: { increment: p.savings } } }),
+            ])
+            potjesSaved++
+          } catch {
+            // al bijgeschreven (unieke sleutel) of tijdelijke fout → volgende periode opnieuw
+          }
+        }
+      }
+
       const spendable = spendablePerMonth({
         incomes: incByHh.get(id) ?? [],
         costs: costByHh.get(id) ?? [],
         subscriptions: subByHh.get(id) ?? [],
         loans: loanByHh.get(id) ?? [],
       })
-      const prevKey = shiftPeriodKey(periodKeyOf(nlDateStr, startDay) ?? '', -1)
       const review = reviewPeriod({
         transactions: txByHh.get(id) ?? [],
         spendingCategories: (catByHh.get(id) ?? []).filter((c) => isSpendingCategory(c.name)),
@@ -289,6 +316,7 @@ export async function GET(req: Request) {
     occasionNotified,
     birthdayNotified,
     periodNotified,
+    potjesSaved,
     outingsGenerated,
     icalSynced: synced,
     cleaned: { chats: chatDeleted.count, notifications: notifDeleted.count },

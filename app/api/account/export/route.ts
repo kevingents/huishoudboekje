@@ -1,5 +1,7 @@
 import { prisma } from '@/lib/db'
 import { requireHousehold } from '@/lib/guard'
+import { getCurrentMemberName } from '@/lib/auth'
+import { maySeePotjeSavings } from '@/lib/budget'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -11,6 +13,7 @@ export const runtime = 'nodejs'
 export async function GET() {
   const hid = await requireHousehold()
   if (hid instanceof Response) return hid
+  const me = await getCurrentMemberName()
   const where = { householdId: hid }
 
   const [
@@ -115,7 +118,9 @@ export async function GET() {
     familyRewards,
     documents,
     gezinsmail: mail,
-    familyBudgets,
+    // Privé spaarsaldo van een potje van een ánder gezinslid blijft ook uit de
+    // AVG-export (anders lekt het alsnog via de JSON-download).
+    familyBudgets: familyBudgets.map((b) => (maySeePotjeSavings(b.member, me) ? b : { ...b, savedTotal: null })),
     outings,
   }
 

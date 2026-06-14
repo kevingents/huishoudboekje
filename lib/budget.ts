@@ -59,6 +59,20 @@ export function suggestLineCategory(label: string): string {
   return ''
 }
 
+/**
+ * Het lopende spaarsaldo van een potje is privé: alleen het gezinslid aan wie
+ * het potje hangt mag het zien/bijwerken. Een potje zonder lid (gedeeld) is voor
+ * iedereen in het huishouden. Dit is de enige bron van waarheid voor zichtbaarheid
+ * én schrijfrecht — server-side afgedwongen, niet alleen in de UI verborgen.
+ */
+export function maySeePotjeSavings(
+  potjeMember: string | null | undefined,
+  viewerMember: string | null | undefined,
+): boolean {
+  if (!potjeMember) return true // gedeeld potje → iedereen
+  return !!viewerMember && potjeMember === viewerMember
+}
+
 /* -------------------------------------------------------------------------- */
 /*  Categorisatie met geheugen (geleerde regels) + uitgesloten categorieën     */
 /* -------------------------------------------------------------------------- */

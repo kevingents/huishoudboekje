@@ -35,3 +35,15 @@ export async function getHouseholdId(): Promise<number | null> {
   const user = await getCurrentUser()
   return user?.householdId ?? null
 }
+
+/**
+ * De naam van het gezinslid dat aan de ingelogde gebruiker hangt (via memberId),
+ * of null. Gebruikt om persoonlijke gegevens (zoals een privé-spaarsaldo) alleen
+ * aan de eigenaar te tonen. De koppeling is een echte foreign key, geen naam-match.
+ */
+export async function getCurrentMemberName(): Promise<string | null> {
+  const user = await getCurrentUser()
+  if (!user?.memberId) return null
+  const m = await prisma.familyMember.findUnique({ where: { id: user.memberId }, select: { name: true } })
+  return m?.name ?? null
+}

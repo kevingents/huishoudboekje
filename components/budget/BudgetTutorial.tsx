@@ -35,7 +35,7 @@ const STEPS: { icon: typeof Wallet; title: string; body: string }[] = [
   {
     icon: Users,
     title: 'Potjes (Gezinsbudget)',
-    body: 'Verdeel je maandgeld over potjes: per onderwerp (Boodschappen) of per gezinslid. Een potje heeft een maandbudget, kan aan een lid hangen, en kan maandelijks sparen — dat sparen verlaagt wat er te besteden is.',
+    body: 'Verdeel je maandgeld over potjes: per onderwerp (Boodschappen) of per gezinslid. Een potje heeft een maandbudget, kan aan een lid hangen, en kan maandelijks sparen — dat sparen verlaagt wat er te besteden is. Het gespaarde saldo loopt vanzelf op en is alleen zichtbaar voor het lid zelf.',
   },
   {
     icon: Receipt,
