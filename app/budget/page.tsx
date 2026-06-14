@@ -375,9 +375,21 @@ export default function BudgetPage() {
     e.preventDefault()
     const amount = Number(form.amount.replace(',', '.'))
     if (!form.label.trim() || !amount) return
+    // Categorie: gekozen uit de lijst of zelf getypt. Een nieuwe naam maken we
+    // aan als budgetcategorie, zodat hij meteen in het budget meetelt.
+    const typed = form.category.trim()
+    const existing = categories.find((c) => c.name.toLowerCase() === typed.toLowerCase())
+    const category = existing?.name || typed || categories[0]?.name || 'Overig'
+    if (typed && !existing) {
+      try {
+        await addCategory({ name: category })
+      } catch {
+        // Lukt het aanmaken niet, dan slaan we de transactie alsnog op met deze categorie.
+      }
+    }
     await addTransaction({
       label: form.label,
-      category: form.category || categories[0]?.name || 'Overig',
+      category,
       amount,
       note: form.note.trim() || null,
       paymentMethod: form.paymentMethod || null,
@@ -760,17 +772,18 @@ export default function BudgetPage() {
           <div className="flex gap-3">
             <label className="min-w-0 flex-1 text-xs font-semibold text-slate-500">
               Categorie
-              <select
+              <input
+                list="budget-categories"
                 value={form.category}
                 onChange={(e) => setForm({ ...form, category: e.target.value })}
+                placeholder={categories.length ? 'Kies of typ een categorie' : 'Bijv. Wonen'}
                 className={`mt-1 ${inputClass}`}
-              >
+              />
+              <datalist id="budget-categories">
                 {categories.map((cat) => (
-                  <option key={cat.id} value={cat.name}>
-                    {cat.name}
-                  </option>
+                  <option key={cat.id} value={cat.name} />
                 ))}
-              </select>
+              </datalist>
             </label>
             <label className="w-32 shrink-0 text-xs font-semibold text-slate-500">
               Bedrag (€)
