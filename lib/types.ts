@@ -27,7 +27,7 @@ export interface AgendaEvent {
   accent: string
   source: string
   externalId?: string | null
-  remindDays?: number | null
+  remindMinutes?: number | null
 }
 
 export interface ShoppingItem {

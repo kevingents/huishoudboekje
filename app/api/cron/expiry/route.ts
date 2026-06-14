@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db'
 import { notify } from '@/lib/notify'
-import { eventWho } from '@/lib/assignees'
+import { once } from '@/lib/reminderOnce'
+import { runDueAgendaReminders } from '@/lib/agendaReminders'
 import { syncHouseholdIcal } from '@/lib/icalSync'
 import { daysUntil, reminderThresholds, expiryPhrase, expiryAction, isIdDocument } from '@/lib/documents'
 import {
@@ -25,26 +26,6 @@ export async function GET(req: Request) {
     return new Response('unauthorized', { status: 401 })
   }
   const now = new Date()
-
-  // Idempotentie: stuur een reminder (huishouden + key) maar één keer. We claimen
-  // eerst de slot via een unieke insert; lukt dat niet, dan is 'ie al verstuurd.
-  // Zo verliest een gemiste cron-dag de reminder niet en ontstaat er geen spam.
-  const once = async (householdId: number, key: string, send: () => Promise<void>): Promise<boolean> => {
-    try {
-      await prisma.reminderLog.create({ data: { householdId, key } }) // claim de slot
-    } catch {
-      return false // al verstuurd (unieke index)
-    }
-    try {
-      await send()
-    } catch {
-      // Verzenden faalde: claim weer vrijgeven zodat de volgende cron-run het
-      // opnieuw probeert (anders zou de reminder die dag definitief verloren zijn).
-      await prisma.reminderLog.deleteMany({ where: { householdId, key } }).catch(() => {})
-      return false
-    }
-    return true
-  }
 
   const docs = await prisma.document.findMany({ where: { expiresAt: { not: null } } })
   let notified = 0
@@ -74,37 +55,11 @@ export async function GET(req: Request) {
     if (sent) notified++
   }
 
-  // Agenda-herinneringen: afspraken waar de gebruiker "herinner mij" heeft
-  // aangevinkt. Seint op de gekozen aanlooptijd (remindDays vóór de afspraak),
-  // gericht aan de betrokkene ('Gezin' → hele huishouden).
-  const agendaEvents = await prisma.agendaEvent.findMany({ where: { remindDays: { not: null } } })
-  let agendaNotified = 0
-  for (const ev of agendaEvents) {
-    if (ev.remindDays === null) continue
-    const d = daysUntil(ev.dateKey)
-    if (d === null || d < 0) continue // afspraak is geweest
-    if (bandFor([ev.remindDays], d) === null) continue // nog te vroeg (d > remindDays)
-    const sent = await once(ev.householdId, `agenda:${ev.id}:${ev.dateKey}:b${ev.remindDays}`, async () => {
-      const when = d === 0 ? 'vandaag' : d === 1 ? 'morgen' : `over ${d} dagen`
-      const at = ev.time ? ` om ${ev.time}` : ''
-      // Bij meerdere toegewezen personen: ieder apart herinneren (niet de join-naam,
-      // die matcht geen gezinslid). Leeg = hele gezin.
-      const names = eventWho(ev)
-      const targets = names.length ? names : [null]
-      await Promise.all(
-        targets.map((t) =>
-          notify({
-            householdId: ev.householdId,
-            type: 'agenda',
-            title: `Herinnering: ${ev.title}`,
-            body: `${ev.title} is ${when}${at} (${ev.weekday} ${ev.day} ${ev.month})${ev.who && ev.who !== 'Gezin' ? ` — voor ${ev.who}` : ''}.`,
-            targetMember: t,
-          }),
-        ),
-      )
-    })
-    if (sent) agendaNotified++
-  }
+  // Agenda-herinneringen op de gekozen aanlooptijd (minuten vóór de starttijd).
+  // De aparte /api/cron/reminders-endpoint (externe pinger, elke paar minuten)
+  // doet dit fijnmazig; deze dagelijkse run is het vangnet. Dubbel kan niet dankzij
+  // once() binnen runDueAgendaReminders.
+  const agendaNotified = await runDueAgendaReminders(now.getTime())
 
   // Feestdagen & gelegenheden (Vaderdag, Moederdag, Sinterklaas, …): gelden voor
   // elk huishouden, met ruime aanlooptijd voor cadeaudagen.

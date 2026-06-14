@@ -34,7 +34,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
         })
       } else {
         const ev = await prisma.agendaEvent.create({
-          data: { householdId: hid, ...parts, title, time: '', who: 'Gezin', accent: 'amber', source: 'manual', remindDays: 1 },
+          data: { householdId: hid, ...parts, title, time: '', who: 'Gezin', accent: 'amber', source: 'manual', remindMinutes: 1440 },
         })
         data.agendaEventId = ev.id
       }

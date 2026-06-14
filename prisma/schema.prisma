@@ -78,7 +78,7 @@ model AgendaEvent {
   source      String   @default("manual")
   externalId  String?
   coShared    Boolean  @default(false) // gedeeld met het co-ouder-huishouden
-  remindDays  Int? // null = geen reminder; 0 = op de dag, 1 = dag ervoor, etc.
+  remindMinutes Int? // null = geen reminder; minuten vóór de starttijd (0 = op het moment, 1440 = 1 dag ervoor)
   createdAt   DateTime @default(now())
 
   @@unique([householdId, externalId])

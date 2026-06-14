@@ -112,7 +112,7 @@ interface NewEvent {
   whoList?: string | null // JSON-lijst van namen (multi-toewijzing)
   accent: string
   coShared?: boolean
-  remindDays?: number | null
+  remindMinutes?: number | null
 }
 
 export function useAgenda() {
@@ -123,7 +123,7 @@ export function useAgenda() {
     addEvent: (e: NewEvent) =>
       c.create(
         { ...e },
-        { dateKey: e.date, day: e.date.split('-')[2] ?? '', month: '', weekday: '', title: e.title, time: e.time, who: e.who, whoList: e.whoList ?? null, accent: e.accent, source: 'manual', externalId: null, remindDays: e.remindDays ?? null },
+        { dateKey: e.date, day: e.date.split('-')[2] ?? '', month: '', weekday: '', title: e.title, time: e.time, who: e.who, whoList: e.whoList ?? null, accent: e.accent, source: 'manual', externalId: null, remindMinutes: e.remindMinutes ?? null },
       ),
     updateEvent: (id: number, payload: Partial<NewEvent>) => c.update(id, payload),
     removeEvent: (id: number) => c.remove(id),

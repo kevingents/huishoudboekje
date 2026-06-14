@@ -72,7 +72,7 @@ export default function AgendaPage() {
     coShared: boolean
     remind: boolean
     remindLead: string
-  }>({ date: '', title: '', time: '', whoNames: [], accent: 'sky', coShared: false, remind: false, remindLead: '1' })
+  }>({ date: '', title: '', time: '', whoNames: [], accent: 'sky', coShared: false, remind: false, remindLead: '60' })
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editingDetach, setEditingDetach] = useState(false)
   const [customWho, setCustomWho] = useState('')
@@ -132,7 +132,7 @@ export default function AgendaPage() {
   }, [])
 
   const resetForm = () => {
-    setForm({ date: '', title: '', time: '', whoNames: [], accent: 'sky', coShared: false, remind: false, remindLead: '1' })
+    setForm({ date: '', title: '', time: '', whoNames: [], accent: 'sky', coShared: false, remind: false, remindLead: '60' })
     setCustomWho('')
     setEditingId(null)
     setEditingDetach(false)
@@ -163,8 +163,8 @@ export default function AgendaPage() {
       whoNames: picked,
       accent: event.accent ?? 'sky',
       coShared: Boolean((event as { coShared?: boolean }).coShared),
-      remind: event.remindDays != null,
-      remindLead: event.remindDays != null ? String(event.remindDays) : '1',
+      remind: event.remindMinutes != null,
+      remindLead: event.remindMinutes != null ? String(event.remindMinutes) : '60',
     })
     setCustomWho(custom.join(', '))
     setEditingId(event.id)
@@ -181,7 +181,7 @@ export default function AgendaPage() {
     const who = displayNames(names)
     const whoList = serializeNames(names)
     const { remind, remindLead, whoNames, ...rest } = form
-    const payload = { ...rest, who, whoList, remindDays: remind ? Number(remindLead) : null }
+    const payload = { ...rest, who, whoList, remindMinutes: remind ? Number(remindLead) : null }
     if (editingId !== null) await updateEvent(editingId, payload)
     else await addEvent(payload)
     resetForm()
@@ -547,13 +547,20 @@ export default function AgendaPage() {
                   onChange={(e) => setForm({ ...form, remindLead: e.target.value })}
                   className={`mt-1 ${inputClass}`}
                 >
-                  <option value="0">Op de ochtend zelf</option>
-                  <option value="1">1 dag van tevoren</option>
-                  <option value="2">2 dagen van tevoren</option>
-                  <option value="7">1 week van tevoren</option>
+                  <option value="0">Op het moment zelf</option>
+                  <option value="10">10 minuten van tevoren</option>
+                  <option value="30">30 minuten van tevoren</option>
+                  <option value="60">1 uur van tevoren</option>
+                  <option value="120">2 uur van tevoren</option>
+                  <option value="1440">1 dag van tevoren</option>
+                  <option value="2880">2 dagen van tevoren</option>
+                  <option value="10080">1 week van tevoren</option>
                 </select>
                 <span className="mt-1 block text-[11px] font-normal text-slate-400">
-                  De melding komt &apos;s ochtends rond 8 uur — naar{' '}
+                  {form.time
+                    ? `De melding komt ${form.remindLead === '0' ? 'op het tijdstip van de afspraak' : 'die tijd vóór de afspraak'}`
+                    : 'Zonder tijd komt de melding ’s ochtends'}{' '}
+                  — naar{' '}
                   {form.whoNames.length === 0 && !customWho.trim()
                     ? 'het hele gezin'
                     : displayNames([...form.whoNames, ...(customWho.trim() ? [customWho.trim()] : [])])}

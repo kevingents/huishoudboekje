@@ -55,10 +55,10 @@ export async function POST(req: Request) {
       accent: String(body.accent ?? 'sky'),
       source: 'manual',
       coShared: Boolean(body.coShared),
-      remindDays:
-        body.remindDays === null || body.remindDays === undefined
+      remindMinutes:
+        body.remindMinutes === null || body.remindMinutes === undefined
           ? null
-          : Math.max(0, Math.min(30, Math.floor(Number(body.remindDays)) || 0)),
+          : Math.max(0, Math.min(43200, Math.floor(Number(body.remindMinutes)) || 0)), // max 30 dagen
     },
   })
 

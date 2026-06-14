@@ -57,9 +57,11 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     data.whoList = null
   }
   if (body.coShared !== undefined) data.coShared = Boolean(body.coShared)
-  if (body.remindDays !== undefined) {
-    data.remindDays =
-      body.remindDays === null ? null : Math.max(0, Math.min(30, Math.floor(Number(body.remindDays)) || 0))
+  if (body.remindMinutes !== undefined) {
+    data.remindMinutes =
+      body.remindMinutes === null
+        ? null
+        : Math.max(0, Math.min(43200, Math.floor(Number(body.remindMinutes)) || 0)) // max 30 dagen
   }
   // Bewerk je een gesynct (iCal) item, dan koppelen we het los: het wordt jouw
   // eigen afspraak (source 'manual') zodat de volgende sync je wijziging niet
