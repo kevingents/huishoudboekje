@@ -38,6 +38,7 @@ const FOOD_IMG =
 
 const FEATURES = [
   { icon: Calendar, color: 'bg-violet-100 text-violet-600', title: 'Gedeelde agenda', text: 'Alle afspraken op één plek — automatisch gevuld vanuit je Google-, Outlook- of Parro-agenda, met een herinnering precies wanneer je die nodig hebt.' },
+  { icon: Users, color: 'bg-violet-100 text-violet-600', title: 'Co-ouderschap', text: 'Voor gescheiden ouders en samengestelde gezinnen: een om-en-om weekschema (bij wie zijn de kinderen deze week) en gedeelde afspraken tussen twee huishoudens — zonder elkaars privégegevens te delen.' },
   { icon: ShoppingCart, color: 'bg-emerald-100 text-emerald-600', title: 'Boodschappenlijst', text: 'Wat de één toevoegt, ziet de ander direct in de winkel. Nooit meer dubbel of vergeten.' },
   { icon: BarChart3, color: 'bg-sky-100 text-sky-600', title: 'Slim budget', text: 'Importeer je bankafschrift, laat het automatisch indelen en zie per dag wat je nog kunt uitgeven — vaste lasten, abonnementen en leningen netjes apart.' },
   { icon: PiggyBank, color: 'bg-emerald-100 text-emerald-600', title: 'Sparen & potjes', text: 'Per categorie een dag-potje dat doorrolt, spaardoelen met streefdatum en aan het eind van de maand advies wat je opzij kunt zetten.' },
@@ -62,6 +63,7 @@ const FAQ = [
   { q: 'Hoe werkt het importeren van mijn bankafschrift?', a: 'Je downloadt het afschrift bij je bank (CSV, MT940, CAMT of Excel) en sleept het in Fam. Het wordt op je eigen apparaat ingelezen en automatisch ingedeeld. Je kiest zelf of je alleen uitgaven, alleen inkomsten of beide importeert.' },
   { q: 'Moet ik iets downloaden uit een appstore?', a: 'Nee. Je installeert Fam rechtstreeks vanuit je browser op je telefoon of tablet. Eén tik vanaf je startscherm en je bent startklaar.' },
   { q: 'Kan het hele gezin meedoen?', a: 'Zeker. Nodig gezinsleden uit via e-mail; ieder krijgt een eigen veilige login binnen jullie gezin. Meldingen kun je per persoon richten.' },
+  { q: 'Werkt Fam ook bij co-ouderschap of een samengesteld gezin?', a: 'Ja. Zet het om-en-om weekschema aan om bij te houden bij wie de kinderen zijn, en koppel je Fam aan die van de andere ouder. Gedeelde afspraken zie je dan in beide agenda’s — de rest blijft per huishouden privé.' },
   { q: 'Werkt het ook ’s avonds en op kleine schermen?', a: 'Ja. Fam heeft een rustige donkere modus, instelbare lettergrootte en hoog contrast, en is volledig gemaakt voor de telefoon.' },
   { q: 'Wat doet de AI met onze gegevens?', a: 'Je bepaalt zelf of de AI aan staat en welke gegevens hij mag gebruiken. Alles is per categorie in te stellen en helemaal uit te zetten. Je kunt je gegevens exporteren of je account met één klik verwijderen.' },
 ]
@@ -351,6 +353,70 @@ export default function Landing() {
                 </div>
               )
             })}
+          </div>
+        </div>
+      </section>
+
+      {/* Highlight: co-ouderschap / samengestelde gezinnen */}
+      <section className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-16 sm:px-6 lg:grid-cols-2">
+        <div>
+          <span className="pill inline-flex bg-violet-100 px-3 py-1 text-xs font-semibold text-violet-600">Co-ouderschap</span>
+          <h2 className="mt-4 text-3xl font-extrabold sm:text-4xl">Ook voor gescheiden ouders en samengestelde gezinnen</h2>
+          <p className="mt-4 text-lg leading-relaxed text-slate-500">
+            Twee huizen, één overzicht voor de kinderen. Houd met een om-en-om weekschema bij wie ze deze week zijn,
+            en koppel je Fam aan die van de andere ouder — gedeelde afspraken staan dan in beide agenda&apos;s, zonder
+            dat je elkaars privégegevens deelt.
+          </p>
+          <ul className="mt-6 flex flex-col gap-2.5">
+            {[
+              'Om-en-om weekschema — in één oogopslag bij wie de kinderen zijn',
+              'Koppel twee huishoudens: gedeelde afspraken in beide agenda’s',
+              'Alleen wat je deelt is zichtbaar; de rest blijft privé',
+              'Ieder gezin een eigen, veilige omgeving',
+            ].map((b) => (
+              <li key={b} className="flex items-center gap-2 text-sm text-slate-600">
+                <Check className="h-4 w-4 shrink-0 text-emerald-500" strokeWidth={2.4} />
+                {b}
+              </li>
+            ))}
+          </ul>
+        </div>
+        {/* Zelfgemaakte preview (geen externe afbeelding) */}
+        <div className="rounded-card border border-cardborder bg-white p-5 shadow-soft">
+          <div className="flex items-center gap-2">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-violet-100 text-violet-600">
+              <Users className="h-5 w-5" />
+            </span>
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-slate-800">Co-ouderschap</p>
+              <p className="inline-flex items-center gap-1 text-xs text-slate-500">
+                <Link2 className="h-3 w-3" /> Gekoppeld met Papa
+              </p>
+            </div>
+            <span className="ml-auto inline-flex shrink-0 items-center gap-1 rounded-full bg-violet-50 px-2.5 py-1 text-xs font-semibold text-violet-700">
+              <Calendar className="h-3.5 w-3.5" />
+              Deze week bij Mama
+            </span>
+          </div>
+          <div className="mt-4 flex flex-col gap-2">
+            {[
+              { t: 'Zwemles Tom', d: 'wo 16:00', shared: true },
+              { t: 'Tandarts Sara', d: 'vr 09:30', shared: true },
+              { t: 'Voetbal', d: 'za 10:00', shared: false },
+            ].map((a) => (
+              <div key={a.t} className="flex items-center gap-3 rounded-2xl bg-slate-50 p-3">
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white text-violet-500 ring-1 ring-cardborder">
+                  <Calendar className="h-4 w-4" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-semibold text-slate-800">{a.t}</span>
+                  <span className="block text-xs text-slate-500">{a.d}</span>
+                </span>
+                {a.shared && (
+                  <span className="shrink-0 rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-bold text-violet-600">gedeeld</span>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       </section>
