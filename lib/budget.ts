@@ -296,3 +296,68 @@ export function spendablePerMonth(opts: {
   const loansMonthly = opts.loans.reduce((s, l) => s + (l.termAmount || 0), 0)
   return Math.max(0, income - fixed - subs - loansMonthly)
 }
+
+/**
+ * Maandelijkse reservering voor één spaardoel: het resterende bedrag verdeeld
+ * over het aantal hele maanden tot de streefdatum. Zonder streefdatum (of al
+ * gehaald) is er geen verplichte maandinleg → 0. Een datum in (bijna) dit
+ * maand telt als 1 maand, zodat het hele restbedrag gereserveerd wordt.
+ */
+export function goalReservePerMonth(
+  goal: { target: number; saved: number; targetDate?: string | null },
+  now: Date,
+): number {
+  const remaining = Math.max(0, (goal.target || 0) - (goal.saved || 0))
+  if (remaining <= 0 || !goal.targetDate) return 0
+  // YYYY-MM-DD lokaal lezen (niet als UTC), zodat de maand-telling tijdzone-onafhankelijk is.
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(goal.targetDate)
+  if (!m) return 0
+  const ty = Number(m[1])
+  const tm = Number(m[2]) - 1
+  const td = Number(m[3])
+  let months = (ty - now.getFullYear()) * 12 + (tm - now.getMonth())
+  if (td < now.getDate()) months -= 1
+  months = Math.max(1, months)
+  return Math.ceil(remaining / months)
+}
+
+/** Totale maandelijkse reservering voor alle spaardoelen samen. */
+export function savingsReservePerMonth(
+  goals: { target: number; saved: number; targetDate?: string | null }[],
+  now: Date,
+): number {
+  return goals.reduce((s, g) => s + goalReservePerMonth(g, now), 0)
+}
+
+/**
+ * Verdeel een potje (euro's) over categorieën — naar verhouding van het gemiddelde
+ * dat per categorie wordt uitgegeven, of gelijk over alle categorieën. Geeft hele
+ * euro's die precies optellen tot Math.round(pot).
+ */
+export function allocateBudget(
+  pot: number,
+  cats: { id: number; name: string }[],
+  averages: Map<string, number>,
+  basis: 'verhouding' | 'gelijk' = 'verhouding',
+): Map<number, number> {
+  const result = new Map<number, number>()
+  const total = Math.max(0, Math.round(pot))
+  if (cats.length === 0 || total <= 0) {
+    cats.forEach((c) => result.set(c.id, 0))
+    return result
+  }
+  const avgs = cats.map((c) => Math.max(0, averages.get(c.name) ?? 0))
+  const totalAvg = avgs.reduce((a, b) => a + b, 0)
+  const weights =
+    basis === 'verhouding' && totalAvg > 0 ? avgs.map((a) => a / totalAvg) : cats.map(() => 1 / cats.length)
+  const raw = weights.map((w) => w * total)
+  const floored = raw.map((v) => Math.floor(v))
+  let remainder = total - floored.reduce((a, b) => a + b, 0)
+  const byFrac = raw.map((v, i) => ({ i, f: v - Math.floor(v) })).sort((a, b) => b.f - a.f)
+  for (let k = 0; k < byFrac.length && remainder > 0; k++) {
+    floored[byFrac[k].i] += 1
+    remainder -= 1
+  }
+  cats.forEach((c, i) => result.set(c.id, floored[i]))
+  return result
+}

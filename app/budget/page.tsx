@@ -14,7 +14,7 @@ import SubscriptionsCard from '@/components/SubscriptionsCard'
 import SpendingExplorer from '@/components/budget/SpendingExplorer'
 import BudgetImport from '@/components/BudgetImport'
 import OverigCleanup from '@/components/OverigCleanup'
-import { useBudget, useSettings, useFixedCosts, useSubscriptions, useHousehold, useIncome, useLoans } from '@/lib/hooks'
+import { useBudget, useSettings, useFixedCosts, useSubscriptions, useHousehold, useIncome, useLoans, useSavings } from '@/lib/hooks'
 import { apiPost } from '@/lib/api'
 import { resolveIcon } from '@/lib/icons'
 import {
@@ -35,6 +35,7 @@ import { computeDailyBudget } from '@/lib/dailyBudget'
 import UpcomingPaymentsCard from '@/components/budget/UpcomingPaymentsCard'
 import QuickActions, { type QuickAction } from '@/components/budget/QuickActions'
 import GezinsbudgetCard from '@/components/budget/GezinsbudgetCard'
+import BudgetAllocator from '@/components/budget/BudgetAllocator'
 import RecurringSuggestions from '@/components/budget/RecurringSuggestions'
 import type { BudgetCategory } from '@/lib/types'
 
@@ -114,6 +115,7 @@ export default function BudgetPage() {
   const { subscriptions } = useSubscriptions()
   const { incomes } = useIncome()
   const { loans } = useLoans()
+  const { goals } = useSavings()
   const { can } = useHousehold()
   const target = typeof settings.budgetTarget === 'number' ? settings.budgetTarget : 500
   // Startdag van de budgetperiode (1 = kalendermaand). Bijv. 25 = van de 25e t/m de 24e.
@@ -633,6 +635,18 @@ export default function BudgetPage() {
             </div>
           )}
         </DashboardCard>
+
+        {/* Verdeel het maandelijkse overschot (met spaardoelen eraf) over de categorieën. */}
+        <BudgetAllocator
+          incomeMonthly={incomeMonthly}
+          fixedMonthly={fixedTotal + subsMonthly + aflossingenMonthly}
+          categories={spendingCats}
+          averages={variableForecast}
+          goals={goals}
+          onApply={async (limits) => {
+            await Promise.all(limits.map((l) => updateCategory(l.id, { limit: l.limit })))
+          }}
+        />
 
         {/* Inkomsten, vaste lasten, abonnementen, leningen, spaardoelen */}
         <IncomeCard />

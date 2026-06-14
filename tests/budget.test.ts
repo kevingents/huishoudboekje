@@ -7,6 +7,9 @@ import {
   merchantKey,
   isSpendingCategory,
   monthlyEquivalent,
+  goalReservePerMonth,
+  savingsReservePerMonth,
+  allocateBudget,
 } from '@/lib/budget'
 
 describe('periodKeyOf', () => {
@@ -97,5 +100,68 @@ describe('monthlyEquivalent', () => {
   it('rekent jaarbedragen om naar maand', () => {
     expect(monthlyEquivalent(120, '12 months')).toBeCloseTo(10)
     expect(monthlyEquivalent(50, '1 month')).toBeCloseTo(50)
+  })
+})
+
+describe('goalReservePerMonth', () => {
+  const now = new Date(2026, 5, 14) // 14 juni 2026
+
+  it('verdeelt het restbedrag over de maanden tot de streefdatum', () => {
+    expect(goalReservePerMonth({ target: 1200, saved: 0, targetDate: '2026-12-14' }, now)).toBe(200) // 6 mnd
+  })
+  it('houdt rekening met wat al gespaard is', () => {
+    expect(goalReservePerMonth({ target: 1200, saved: 600, targetDate: '2026-12-14' }, now)).toBe(100)
+  })
+  it('geen streefdatum → geen verplichte maandinleg', () => {
+    expect(goalReservePerMonth({ target: 1000, saved: 0, targetDate: null }, now)).toBe(0)
+  })
+  it('al gehaald → 0', () => {
+    expect(goalReservePerMonth({ target: 500, saved: 500, targetDate: '2026-12-14' }, now)).toBe(0)
+  })
+  it('streefdatum binnen deze maand → hele restbedrag', () => {
+    expect(goalReservePerMonth({ target: 300, saved: 0, targetDate: '2026-06-20' }, now)).toBe(300)
+  })
+})
+
+describe('savingsReservePerMonth', () => {
+  it('telt alle doelen op', () => {
+    const now = new Date(2026, 5, 14)
+    const total = savingsReservePerMonth(
+      [
+        { target: 1200, saved: 0, targetDate: '2026-12-14' }, // 200
+        { target: 600, saved: 0, targetDate: '2026-12-14' }, // 100
+        { target: 999, saved: 0, targetDate: null }, // 0
+      ],
+      now,
+    )
+    expect(total).toBe(300)
+  })
+})
+
+describe('allocateBudget', () => {
+  const cats = [
+    { id: 1, name: 'A' },
+    { id: 2, name: 'B' },
+    { id: 3, name: 'C' },
+  ]
+  it('verdeelt naar verhouding van de gemiddelden', () => {
+    const m = allocateBudget(300, cats, new Map([['A', 100], ['B', 50], ['C', 50]]), 'verhouding')
+    expect([m.get(1), m.get(2), m.get(3)]).toEqual([150, 75, 75])
+  })
+  it('verdeelt gelijk als gevraagd', () => {
+    const m = allocateBudget(300, cats, new Map(), 'gelijk')
+    expect([m.get(1), m.get(2), m.get(3)]).toEqual([100, 100, 100])
+  })
+  it('valt terug op gelijk verdelen zonder historie', () => {
+    const m = allocateBudget(300, cats, new Map(), 'verhouding')
+    expect([m.get(1), m.get(2), m.get(3)]).toEqual([100, 100, 100])
+  })
+  it('telt altijd precies op tot het potje (afronding netjes verdeeld)', () => {
+    const m = allocateBudget(100, cats, new Map(), 'gelijk')
+    expect([...m.values()].reduce((a, b) => a + b, 0)).toBe(100)
+  })
+  it('leeg potje → alles 0', () => {
+    const m = allocateBudget(0, cats, new Map([['A', 100]]), 'verhouding')
+    expect([m.get(1), m.get(2), m.get(3)]).toEqual([0, 0, 0])
   })
 })
