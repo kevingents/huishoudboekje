@@ -6,7 +6,6 @@ import DashboardCard from '../DashboardCard'
 import Modal from '../Modal'
 import { useFamilyBudgets, useFamily, useIncome, useFixedCosts, useSubscriptions, useLoans, useSavings } from '@/lib/hooks'
 import { monthlyPot } from '@/lib/budget'
-import type { FamilyBudget } from '@/lib/types'
 
 const inputClass =
   'w-full rounded-xl border border-cardborder bg-white px-3.5 py-2.5 text-sm text-slate-700 outline-none transition-colors placeholder:text-slate-400 focus:border-brand/40 focus:ring-2 focus:ring-brand/20'
@@ -28,7 +27,7 @@ const emptyForm = { name: '', limit: '', member: '', color: 'emerald' }
 /** Gezinsbudget = gedeelde "potjes" (envelopes): een maandbudget per onderwerp,
  *  optioneel aan een gezinslid gekoppeld. Uitgaven log je handmatig per potje. */
 export default function GezinsbudgetCard({ className = '' }: { className?: string }) {
-  const { budgets, addBudget, logSpend, removeEntry, removeBudget } = useFamilyBudgets()
+  const { budgets, addBudget, removeEntry, removeBudget } = useFamilyBudgets()
   const { members } = useFamily()
   const { incomes } = useIncome()
   const { costs } = useFixedCosts()
@@ -44,8 +43,6 @@ export default function GezinsbudgetCard({ className = '' }: { className?: strin
 
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState(emptyForm)
-  const [drafts, setDrafts] = useState<Record<number, string>>({})
-  const [notes, setNotes] = useState<Record<number, string>>({})
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -58,14 +55,6 @@ export default function GezinsbudgetCard({ className = '' }: { className?: strin
     })
     setForm(emptyForm)
     setOpen(false)
-  }
-
-  const doSpend = (b: FamilyBudget) => {
-    const v = Number((drafts[b.id] ?? '').replace(',', '.'))
-    if (!v) return
-    logSpend(b, v, notes[b.id])
-    setDrafts((d) => ({ ...d, [b.id]: '' }))
-    setNotes((n) => ({ ...n, [b.id]: '' }))
   }
 
   return (
@@ -87,8 +76,8 @@ export default function GezinsbudgetCard({ className = '' }: { className?: strin
     >
       {budgets.length === 0 ? (
         <p className="text-sm text-slate-500">
-          Nog geen gezinspotjes. Maak een potje (bijv. Boodschappen, Zakgeld, Schoolkosten) met een maandbudget
-          en houd de uitgaven per potje bij.
+          Nog geen gezinspotjes. Maak een potje (bijv. Boodschappen, Zakgeld, Schoolkosten) met een maandbudget;
+          uitgaven boek je erop via “Uitgave toevoegen” (splitsen over meerdere personen kan ook).
         </p>
       ) : (
         <ul className="flex flex-col gap-4">
@@ -128,33 +117,6 @@ export default function GezinsbudgetCard({ className = '' }: { className?: strin
                 <p className={`mt-1 truncate text-[11px] font-semibold ${over ? 'text-rose-600 dark:text-rose-400' : 'text-slate-400'}`}>
                   {over ? `€${euro(-left)} over budget` : `nog €${euro(left)} te besteden`}
                 </p>
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault()
-                    doSpend(b)
-                  }}
-                  className="mt-1.5 flex gap-1.5"
-                >
-                  <input
-                    value={notes[b.id] ?? ''}
-                    onChange={(e) => setNotes((n) => ({ ...n, [b.id]: e.target.value }))}
-                    placeholder="Bijv. gezichtscreme"
-                    className="min-w-0 flex-1 rounded-full border border-cardborder bg-white px-3 py-1.5 text-xs text-slate-700 outline-none placeholder:text-slate-400 focus:border-brand/40 focus:ring-2 focus:ring-brand/20"
-                  />
-                  <input
-                    inputMode="decimal"
-                    value={drafts[b.id] ?? ''}
-                    onChange={(e) => setDrafts((d) => ({ ...d, [b.id]: e.target.value }))}
-                    placeholder="€"
-                    className="w-16 shrink-0 rounded-full border border-cardborder bg-white px-2.5 py-1.5 text-right text-xs text-slate-700 outline-none placeholder:text-slate-400 focus:border-brand/40 focus:ring-2 focus:ring-brand/20"
-                  />
-                  <button
-                    type="submit"
-                    className="pill shrink-0 bg-white px-3 py-1.5 text-xs text-slate-700 ring-1 ring-cardborder hover:bg-slate-50"
-                  >
-                    Boek
-                  </button>
-                </form>
                 {(b.entries?.length ?? 0) > 0 && (
                   <ul className="mt-1.5 flex flex-col gap-0.5">
                     {b.entries!.slice(0, 3).map((e, i) => (

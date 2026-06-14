@@ -135,7 +135,7 @@ export default function BudgetPage() {
   const periodPlural = periodStart > 1 ? 'periodes' : 'maanden'
 
   const [open, setOpen] = useState(false)
-  const [form, setForm] = useState({ label: '', category: '', amount: '', note: '', paymentMethod: '', potje: '' })
+  const [form, setForm] = useState({ label: '', category: '', amount: '', note: '', paymentMethod: '', potjes: [] as string[] })
   const [showAllCats, setShowAllCats] = useState(false)
   const [tab, setTab] = useState<'overzicht' | 'uitgaven' | 'plannen' | 'importeren'>('overzicht')
   const currentMonthLabel = (() => {
@@ -151,7 +151,7 @@ export default function BudgetPage() {
   const [scanResult, setScanResult] = useState<{ items: ScanItem[]; advice: string } | null>(null)
 
   const openAdd = () => {
-    setForm({ label: '', category: '', amount: '', note: '', paymentMethod: '', potje: '' })
+    setForm({ label: '', category: '', amount: '', note: '', paymentMethod: '', potjes: [] })
     setScanResult(null)
     setScanError(null)
     setOpen(true)
@@ -423,11 +423,15 @@ export default function BudgetPage() {
       note: form.note.trim() || null,
       paymentMethod: form.paymentMethod || null,
     })
-    // Optioneel ook op een gezinspotje boeken (bijv. Marielle): dan telt de uitgave
-    // mee in dat potje én in het persoonlijk inzicht, met de omschrijving als label.
-    const potje = form.potje ? budgets.find((b) => b.id === Number(form.potje)) : null
-    if (potje) logSpend(potje, amount, form.label.trim() || category)
-    setForm({ label: '', category: '', amount: '', note: '', paymentMethod: '', potje: '' })
+    // Optioneel op één of meer gezinspotjes boeken (bijv. Marielle + Kevin). Bij
+    // meerdere potjes splitsen we het bedrag gelijk — zo telt ieders deel mee in het
+    // eigen potje én in het persoonlijk inzicht, met de omschrijving als regel.
+    const chosen = budgets.filter((b) => form.potjes.includes(String(b.id)))
+    if (chosen.length) {
+      const share = amount / chosen.length
+      chosen.forEach((b) => logSpend(b, share, form.label.trim() || category))
+    }
+    setForm({ label: '', category: '', amount: '', note: '', paymentMethod: '', potjes: [] })
     setOpen(false)
   }
 
@@ -902,31 +906,42 @@ export default function BudgetPage() {
             />
           </div>
 
-          {/* Optioneel op een gezinspotje boeken (bijv. Marielle). */}
+          {/* Optioneel op één of meer potjes boeken; bij meerdere splitst hij automatisch. */}
           {budgets.length > 0 && (
             <div>
               <p className="text-xs font-semibold text-slate-500">
-                Op een potje? <span className="font-normal text-slate-400">(optioneel)</span>
+                Op welke potjes? <span className="font-normal text-slate-400">(optioneel — bij meerdere splitst hij vanzelf)</span>
               </p>
               <div className="mt-1.5 flex flex-wrap gap-1.5">
-                <button type="button" onClick={() => setForm({ ...form, potje: '' })} className={pickChip(form.potje === '')}>
-                  Nee
-                </button>
-                {budgets.map((b) => (
-                  <button
-                    key={b.id}
-                    type="button"
-                    onClick={() => setForm({ ...form, potje: String(b.id) })}
-                    className={pickChip(form.potje === String(b.id))}
-                  >
-                    {b.name}
-                    {b.member ? ` · ${b.member}` : ''}
-                  </button>
-                ))}
+                {budgets.map((b) => {
+                  const on = form.potjes.includes(String(b.id))
+                  return (
+                    <button
+                      key={b.id}
+                      type="button"
+                      onClick={() =>
+                        setForm({
+                          ...form,
+                          potjes: on ? form.potjes.filter((id) => id !== String(b.id)) : [...form.potjes, String(b.id)],
+                        })
+                      }
+                      className={pickChip(on)}
+                    >
+                      {b.name}
+                      {b.member ? ` · ${b.member}` : ''}
+                    </button>
+                  )
+                })}
               </div>
-              {form.potje && (
+              {form.potjes.length === 1 && (
                 <p className="mt-1 text-[11px] text-slate-400">
                   De uitgave wordt ook op dit potje geboekt — met de omschrijving als regel, voor het persoonlijk inzicht.
+                </p>
+              )}
+              {form.potjes.length > 1 && (
+                <p className="mt-1 text-[11px] font-semibold text-brand">
+                  Gesplitst over {form.potjes.length}: €
+                  {((Number(form.amount.replace(',', '.')) || 0) / form.potjes.length).toFixed(2).replace('.', ',')} per potje.
                 </p>
               )}
             </div>
