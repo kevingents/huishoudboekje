@@ -44,6 +44,8 @@ export async function GET() {
     mail,
     familyBudgets,
     outings,
+    aiUsage,
+    hiddenIcalEvents,
   ] = await Promise.all([
     prisma.household.findUnique({ where: { id: hid } }),
     prisma.user.findMany({
@@ -88,6 +90,8 @@ export async function GET() {
     prisma.mailItem.findMany({ where }),
     prisma.familyBudget.findMany({ where }),
     prisma.outing.findMany({ where }),
+    prisma.aiUsage.findMany({ where }),
+    prisma.hiddenIcalEvent.findMany({ where }),
   ])
 
   const data = {
@@ -122,6 +126,12 @@ export async function GET() {
     // AVG-export (anders lekt het alsnog via de JSON-download).
     familyBudgets: familyBudgets.map((b) => (maySeePotjeSavings(b.member, me) ? b : { ...b, savedTotal: null })),
     outings,
+    aiUsage,
+    hiddenIcalEvents,
+    // Bewust NIET geëxporteerd: ReminderLog. Dat is interne idempotentie-/dedup-
+    // boekhouding (sleutels als "periodreview:2026-05") zonder inhoudelijke
+    // betekenis voor de gebruiker. Het wordt bij accountverwijdering wél gewist
+    // (volledige vergetelheid), maar hoort niet thuis in een datakopie.
   }
 
   return new Response(JSON.stringify(data, null, 2), {
