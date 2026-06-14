@@ -23,6 +23,7 @@ import {
   Link2,
 } from 'lucide-react'
 import PricingSection from '@/components/PricingSection'
+import AppDemo from '@/components/AppDemo'
 
 export const metadata: Metadata = {
   title: 'Fam — Eén rustig overzicht voor het hele gezin',
@@ -79,6 +80,7 @@ export default function Landing() {
           </Link>
           <nav className="hidden items-center gap-6 text-sm font-semibold text-slate-600 md:flex">
             <a href="#functies" className="transition-colors hover:text-brand">Functies</a>
+            <a href="#demo" className="transition-colors hover:text-brand">In actie</a>
             <a href="#hoe" className="transition-colors hover:text-brand">Hoe het werkt</a>
             <a href="#pakketten" className="transition-colors hover:text-brand">Pakketten</a>
             <a href="#faq" className="transition-colors hover:text-brand">Vragen</a>
@@ -143,6 +145,44 @@ export default function Landing() {
               <p className="text-sm font-bold text-slate-800">Melk is bijna op</p>
               <p className="text-xs text-slate-500">toegevoegd aan boodschappen</p>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Zie Fam in actie — geanimeerde demo */}
+      <section id="demo" className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
+        <div className="mx-auto max-w-2xl text-center">
+          <span className="pill inline-flex bg-brand-light px-3 py-1 text-xs font-semibold text-brand">Zie Fam in actie</span>
+          <h2 className="mt-4 text-3xl font-extrabold sm:text-4xl">Eén app, je hele gezinsweek</h2>
+          <p className="mt-3 text-slate-500">
+            Kijk mee hoe een dag in Fam eruitziet — van de ochtendagenda tot wat je vandaag nog kunt uitgeven.
+          </p>
+        </div>
+        <div className="mt-10 grid items-center gap-10 lg:grid-cols-2">
+          <ul className="order-2 mx-auto flex max-w-md flex-col gap-3 lg:order-1">
+            {[
+              { t: 'Je dag in één oogopslag', d: 'Afspraken, het weer en wat er speelt — zodra je opent.' },
+              { t: 'Boodschappen die iedereen ziet', d: 'Thuis toevoegen, in de winkel afvinken. Altijd actueel.' },
+              { t: 'Zie wat je vandaag kunt uitgeven', d: 'Je budget per dag, met advies wat je opzij kunt zetten.' },
+              { t: 'Ontdek uitjes in de buurt', d: 'Gratis uitjes en speeltuinen — met één tik in de agenda.' },
+            ].map((s, i) => (
+              <li
+                key={s.t}
+                className="app-demo-label flex items-start gap-3"
+                style={{ animationDelay: ['0s', '4s', '8s', '12s'][i] }}
+              >
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand-light text-sm font-extrabold text-brand">
+                  {i + 1}
+                </span>
+                <div>
+                  <p className="text-base font-bold text-slate-800">{s.t}</p>
+                  <p className="text-sm leading-relaxed text-slate-500">{s.d}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+          <div className="order-1 lg:order-2">
+            <AppDemo />
           </div>
         </div>
       </section>
