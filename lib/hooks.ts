@@ -330,8 +330,18 @@ export function useFamilyBudgets() {
       }),
     updateBudget: (id: number, payload: Partial<FamilyBudgetInput> & { spent?: number }) =>
       c.update(id, payload as Record<string, unknown>),
-    logSpend: (budget: FamilyBudget, amount: number) =>
-      c.update(budget.id, { spent: Math.max(0, budget.spent + amount) }),
+    logSpend: (budget: FamilyBudget, amount: number, label?: string) => {
+      const entry = { label: (label || '').trim() || 'Uitgave', amount, at: new Date().toISOString() }
+      const entries = [entry, ...(budget.entries ?? [])].slice(0, 50)
+      return c.update(budget.id, { spent: Math.max(0, budget.spent + amount), entries })
+    },
+    removeEntry: (budget: FamilyBudget, index: number) => {
+      const list = budget.entries ?? []
+      const e = list[index]
+      if (!e) return
+      const entries = list.filter((_, i) => i !== index)
+      c.update(budget.id, { spent: Math.max(0, budget.spent - e.amount), entries })
+    },
     removeBudget: (id: number) => c.remove(id),
   }
 }

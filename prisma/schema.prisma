@@ -229,6 +229,7 @@ model FamilyBudget {
   spent       Float    @default(0)
   member      String? // naam van het gezinslid (optioneel)
   color       String   @default("emerald")
+  entries     Json? // geschiedenis van geboekte uitgaven: [{ label, amount, at }]
   createdAt   DateTime @default(now())
 
   @@index([householdId])

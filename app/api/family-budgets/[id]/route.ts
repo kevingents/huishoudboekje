@@ -13,6 +13,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   if (body.spend !== undefined) data.spent = { increment: Number(body.spend) }
   if (body.member !== undefined) data.member = body.member ? String(body.member) : null
   if (body.color !== undefined) data.color = String(body.color)
+  if (body.entries !== undefined) data.entries = body.entries
   const result = await prisma.familyBudget.updateMany({ where: { id, householdId: hid }, data })
   if (result.count === 0) return notFound()
   const item = await prisma.familyBudget.findUnique({ where: { id } })

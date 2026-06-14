@@ -28,7 +28,7 @@ const emptyForm = { name: '', limit: '', member: '', color: 'emerald' }
 /** Gezinsbudget = gedeelde "potjes" (envelopes): een maandbudget per onderwerp,
  *  optioneel aan een gezinslid gekoppeld. Uitgaven log je handmatig per potje. */
 export default function GezinsbudgetCard({ className = '' }: { className?: string }) {
-  const { budgets, addBudget, logSpend, removeBudget } = useFamilyBudgets()
+  const { budgets, addBudget, logSpend, removeEntry, removeBudget } = useFamilyBudgets()
   const { members } = useFamily()
   const { incomes } = useIncome()
   const { costs } = useFixedCosts()
@@ -45,6 +45,7 @@ export default function GezinsbudgetCard({ className = '' }: { className?: strin
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState(emptyForm)
   const [drafts, setDrafts] = useState<Record<number, string>>({})
+  const [notes, setNotes] = useState<Record<number, string>>({})
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -62,8 +63,9 @@ export default function GezinsbudgetCard({ className = '' }: { className?: strin
   const doSpend = (b: FamilyBudget) => {
     const v = Number((drafts[b.id] ?? '').replace(',', '.'))
     if (!v) return
-    logSpend(b, v)
+    logSpend(b, v, notes[b.id])
     setDrafts((d) => ({ ...d, [b.id]: '' }))
+    setNotes((n) => ({ ...n, [b.id]: '' }))
   }
 
   return (
@@ -123,32 +125,56 @@ export default function GezinsbudgetCard({ className = '' }: { className?: strin
                     style={{ width: `${pct}%` }}
                   />
                 </div>
-                <div className="mt-1 flex items-center justify-between gap-2">
-                  <span className={`min-w-0 flex-1 truncate text-[11px] font-semibold ${over ? 'text-rose-600 dark:text-rose-400' : 'text-slate-400'}`}>
-                    {over ? `€${euro(-left)} over budget` : `nog €${euro(left)} te besteden`}
-                  </span>
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault()
-                      doSpend(b)
-                    }}
-                    className="flex shrink-0 gap-1.5"
+                <p className={`mt-1 truncate text-[11px] font-semibold ${over ? 'text-rose-600 dark:text-rose-400' : 'text-slate-400'}`}>
+                  {over ? `€${euro(-left)} over budget` : `nog €${euro(left)} te besteden`}
+                </p>
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault()
+                    doSpend(b)
+                  }}
+                  className="mt-1.5 flex gap-1.5"
+                >
+                  <input
+                    value={notes[b.id] ?? ''}
+                    onChange={(e) => setNotes((n) => ({ ...n, [b.id]: e.target.value }))}
+                    placeholder="Bijv. gezichtscreme"
+                    className="min-w-0 flex-1 rounded-full border border-cardborder bg-white px-3 py-1.5 text-xs text-slate-700 outline-none placeholder:text-slate-400 focus:border-brand/40 focus:ring-2 focus:ring-brand/20"
+                  />
+                  <input
+                    inputMode="decimal"
+                    value={drafts[b.id] ?? ''}
+                    onChange={(e) => setDrafts((d) => ({ ...d, [b.id]: e.target.value }))}
+                    placeholder="€"
+                    className="w-16 shrink-0 rounded-full border border-cardborder bg-white px-2.5 py-1.5 text-right text-xs text-slate-700 outline-none placeholder:text-slate-400 focus:border-brand/40 focus:ring-2 focus:ring-brand/20"
+                  />
+                  <button
+                    type="submit"
+                    className="pill shrink-0 bg-white px-3 py-1.5 text-xs text-slate-700 ring-1 ring-cardborder hover:bg-slate-50"
                   >
-                    <input
-                      inputMode="decimal"
-                      value={drafts[b.id] ?? ''}
-                      onChange={(e) => setDrafts((d) => ({ ...d, [b.id]: e.target.value }))}
-                      placeholder="Uitgave €"
-                      className="w-24 rounded-full border border-cardborder bg-white px-3 py-1.5 text-xs text-slate-700 outline-none placeholder:text-slate-400 focus:border-brand/40 focus:ring-2 focus:ring-brand/20"
-                    />
-                    <button
-                      type="submit"
-                      className="pill bg-white px-3 py-1.5 text-xs text-slate-700 ring-1 ring-cardborder hover:bg-slate-50"
-                    >
-                      Boek
-                    </button>
-                  </form>
-                </div>
+                    Boek
+                  </button>
+                </form>
+                {(b.entries?.length ?? 0) > 0 && (
+                  <ul className="mt-1.5 flex flex-col gap-0.5">
+                    {b.entries!.slice(0, 3).map((e, i) => (
+                      <li key={i} className="flex items-center justify-between gap-2 text-[11px] text-slate-400">
+                        <span className="min-w-0 flex-1 truncate">{e.label}</span>
+                        <span className="flex shrink-0 items-center gap-1.5">
+                          €{euro(e.amount)}
+                          <button
+                            type="button"
+                            onClick={() => removeEntry(b, i)}
+                            aria-label={`${e.label} verwijderen`}
+                            className="leading-none text-slate-300 transition-colors hover:text-rose-500"
+                          >
+                            ×
+                          </button>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </li>
             )
           })}

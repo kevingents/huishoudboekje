@@ -136,6 +136,12 @@ export interface SavingsGoal {
   theme?: string | null
 }
 
+export interface BudgetEntry {
+  label: string
+  amount: number
+  at: string
+}
+
 export interface FamilyBudget {
   id: number
   name: string
@@ -143,6 +149,7 @@ export interface FamilyBudget {
   spent: number
   member?: string | null
   color: string
+  entries?: BudgetEntry[] | null
 }
 
 export interface FixedCost {
