@@ -11,7 +11,19 @@ import {
   savingsReservePerMonth,
   allocateBudget,
   loanIsActive,
+  labelMatchesPattern,
 } from '@/lib/budget'
+
+describe('labelMatchesPattern (vaste last herkennen bij import)', () => {
+  it('matcht een bankregel op de naam van een handmatige vaste last', () => {
+    expect(labelMatchesPattern('SEPA INCASSO VATTENFALL KLANTENSERVICE', 'Vattenfall')).toBe(true)
+    expect(labelMatchesPattern('/TRTP/SEPA/NAME/ABN AMRO HYPOTHEEK', 'hypotheek')).toBe(true)
+    expect(labelMatchesPattern('BEA, APPLE PAY ALBERT HEIJN 1353', 'Vattenfall')).toBe(false)
+  })
+  it('negeert te korte/generieke patronen', () => {
+    expect(labelMatchesPattern('VVE BIJDRAGE', 'vv')).toBe(false) // < 3 tekens
+  })
+})
 
 describe('periodKeyOf', () => {
   it('kalendermaand (startDay 1) = jaar-maand van de datum', () => {

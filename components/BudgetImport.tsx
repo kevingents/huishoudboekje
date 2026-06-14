@@ -89,6 +89,7 @@ export default function BudgetImport() {
         incomes: number
         categories: number
         skipped?: number
+        matchedFixed?: number
       }
       await Promise.all([
         mutate('/api/budget/transactions'),
@@ -104,8 +105,9 @@ export default function BudgetImport() {
         const parts: string[] = []
         if (res.expenses) parts.push(`${res.expenses} afschrijvingen`)
         if (res.incomes) parts.push(`${res.incomes} bijschrijvingen`)
-        text = `${parts.join(' en ') || 'Geen nieuwe transacties'}${skip ? `, ${skip} dubbel overgeslagen` : ''}.${
-          res.expenses ? ' Deel de uitgaven nu in onder "Categoriseren".' : ''
+        const fixedNote = res.matchedFixed ? ` ${res.matchedFixed} herkend als vaste last.` : ''
+        text = `${parts.join(' en ') || 'Geen nieuwe transacties'}${skip ? `, ${skip} dubbel overgeslagen` : ''}.${fixedNote}${
+          res.expenses ? ' Deel de overige uitgaven nu in onder "Categoriseren".' : ''
         }`
       } else {
         const parts: string[] = []

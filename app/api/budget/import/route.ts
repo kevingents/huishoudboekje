@@ -2,7 +2,7 @@ import * as XLSX from 'xlsx'
 import { prisma } from '@/lib/db'
 import { requireHousehold } from '@/lib/guard'
 import { parseBankStatement } from '@/lib/bankImport'
-import { classifyWithRules, isSpendingCategory, matchRule, suggestCostCategory } from '@/lib/budget'
+import { classifyWithRules, isSpendingCategory, matchRule, suggestCostCategory, labelMatchesPattern, FIXED_CATEGORY } from '@/lib/budget'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -166,16 +166,26 @@ export async function POST(req: Request) {
 
     // Geleerde regels toepassen: inkomsten/negeren overslaan, vaste lasten doorzetten.
     const rules = await prisma.merchantRule.findMany({ where: { householdId: hid } })
+    // Handmatig ingevoerde vaste lasten: een betaling die hierop matcht boeken we als
+    // 'Vaste lasten' (telt niet als variabele uitgave) en maakt geen dubbele vaste last.
+    const knownFixed = await prisma.fixedCost.findMany({ where: { householdId: hid }, select: { name: true } })
     const toStore: { label: string; category: string; amount: number; date: string }[] = []
     const fixedAgg = new Map<
       string,
       { name: string; sum: number; count: number; category: string; isSub: boolean; months: Set<string> }
     >()
     let skippedKind = 0
+    let matchedFixed = 0
     for (const d of fresh) {
       const { category, kind } = classifyWithRules(d.label, rules, d.category)
       if (kind === 'income' || kind === 'ignore') {
         skippedKind++
+        continue
+      }
+      // Matcht de betaling een bestaande (handmatige) vaste last? Boek als 'Vaste lasten'.
+      if (kind !== 'fixed' && kind !== 'subscription' && knownFixed.some((f) => labelMatchesPattern(d.label, f.name))) {
+        toStore.push({ label: d.label, category: FIXED_CATEGORY, amount: d.amount, date: d.date })
+        matchedFixed++
         continue
       }
       if (kind === 'fixed' || kind === 'subscription') {
@@ -268,6 +278,7 @@ export async function POST(req: Request) {
       skipped,
       skippedKind,
       fixedCreated,
+      matchedFixed,
     })
   }
 
