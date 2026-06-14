@@ -5,6 +5,7 @@ import { Calendar, Plus, Clock, Trash2, Link2, ChevronLeft, ChevronRight, BellRi
 import PageHeader from '@/components/PageHeader'
 import DashboardCard from '@/components/DashboardCard'
 import Modal from '@/components/Modal'
+import TimeSelect from '@/components/TimeSelect'
 import { useAgenda, useFamily, useCoParent, useAuth } from '@/lib/hooks'
 import { eventWho, displayNames, serializeNames } from '@/lib/assignees'
 import type { AgendaEvent } from '@/lib/types'
@@ -454,7 +455,7 @@ export default function AgendaPage() {
               className={`mt-1 ${inputClass}`}
             />
           </label>
-          <div className="flex gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row">
             <label className="min-w-0 flex-1 text-xs font-semibold text-slate-500">
               Datum
               <input
@@ -464,15 +465,10 @@ export default function AgendaPage() {
                 className={`mt-1 ${inputClass}`}
               />
             </label>
-            <label className="min-w-0 flex-1 text-xs font-semibold text-slate-500">
+            <div className="min-w-0 flex-1 text-xs font-semibold text-slate-500">
               Tijd
-              <input
-                value={form.time}
-                onChange={(e) => setForm({ ...form, time: e.target.value })}
-                placeholder="Bijv. 16:00"
-                className={`mt-1 ${inputClass}`}
-              />
-            </label>
+              <TimeSelect value={form.time} onChange={(v) => setForm({ ...form, time: v })} selectClass={inputClass} />
+            </div>
           </div>
           <div className="text-xs font-semibold text-slate-500">
             Voor wie
