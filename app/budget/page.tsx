@@ -14,7 +14,7 @@ import SubscriptionsCard from '@/components/SubscriptionsCard'
 import SpendingExplorer from '@/components/budget/SpendingExplorer'
 import BudgetImport from '@/components/BudgetImport'
 import OverigCleanup from '@/components/OverigCleanup'
-import { useBudget, useSettings, useFixedCosts, useSubscriptions, useHousehold, useIncome, useLoans, useSavings } from '@/lib/hooks'
+import { useBudget, useSettings, useFixedCosts, useSubscriptions, useHousehold, useIncome, useLoans, useSavings, useFamilyBudgets } from '@/lib/hooks'
 import { apiPost } from '@/lib/api'
 import { resolveIcon } from '@/lib/icons'
 import {
@@ -117,6 +117,7 @@ export default function BudgetPage() {
   const { incomes } = useIncome()
   const { loans } = useLoans()
   const { goals } = useSavings()
+  const { budgets, updateBudget } = useFamilyBudgets()
   const { can } = useHousehold()
   const target = typeof settings.budgetTarget === 'number' ? settings.budgetTarget : 500
   // Startdag van de budgetperiode (1 = kalendermaand). Bijv. 25 = van de 25e t/m de 24e.
@@ -644,9 +645,13 @@ export default function BudgetPage() {
           fixedMonthly={fixedTotal + subsMonthly + aflossingenMonthly}
           categories={spendingCats}
           averages={variableForecast}
+          potjes={budgets}
           goals={goals}
-          onApply={async (limits) => {
+          onApplyCategories={async (limits) => {
             await Promise.all(limits.map((l) => updateCategory(l.id, { limit: l.limit })))
+          }}
+          onApplyPotjes={async (limits) => {
+            await Promise.all(limits.map((l) => updateBudget(l.id, { limit: l.limit })))
           }}
         />
 

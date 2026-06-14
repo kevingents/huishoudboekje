@@ -1,12 +1,13 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Scale, Check, PiggyBank, Loader2 } from 'lucide-react'
 import DashboardCard from '@/components/DashboardCard'
 import { allocateBudget, goalReservePerMonth, savingsReservePerMonth } from '@/lib/budget'
 import type { SavingsGoal } from '@/lib/types'
 
 type Cat = { id: number; name: string; color?: string; icon?: string; limit: number }
+type Potje = { id: number; name: string; limit: number; member?: string | null }
 
 const euro = (n: number) => Math.round(n).toLocaleString('nl-NL')
 const fieldClass =
@@ -14,51 +15,73 @@ const fieldClass =
 
 /**
  * Verdeelt het maandelijkse overschot (inkomsten − vaste lasten − spaardoelen)
- * over de variabele categorieën en stelt met één klik de budget-limieten in.
+ * over je categorieën óf je Gezinspotjes, en stelt met één klik de budget-limieten in.
  */
 export default function BudgetAllocator({
   incomeMonthly,
   fixedMonthly,
   categories,
   averages,
+  potjes,
   goals,
-  onApply,
+  onApplyCategories,
+  onApplyPotjes,
 }: {
   incomeMonthly: number
   fixedMonthly: number
   categories: Cat[]
   averages: [string, number][]
+  potjes: Potje[]
   goals: SavingsGoal[]
-  onApply: (limits: { id: number; limit: number }[]) => Promise<void>
+  onApplyCategories: (limits: { id: number; limit: number }[]) => Promise<void>
+  onApplyPotjes: (limits: { id: number; limit: number }[]) => Promise<void>
 }) {
   const [now, setNow] = useState<Date | null>(null)
   useEffect(() => setNow(new Date()), [])
+
+  // Doel: verdelen over categorieën of over de Gezinspotjes. Heb je potjes, dan
+  // is dat de standaard (jouw potjes zijn je budget).
+  const [target, setTarget] = useState<'cat' | 'potje'>('cat')
+  const inited = useRef(false)
+  useEffect(() => {
+    if (!inited.current && potjes.length > 0) {
+      inited.current = true
+      setTarget('potje')
+    }
+  }, [potjes.length])
 
   const [basis, setBasis] = useState<'verhouding' | 'gelijk'>('verhouding')
   const [edits, setEdits] = useState<Record<number, string>>({})
   const [busy, setBusy] = useState(false)
   const [done, setDone] = useState(false)
 
-  const avgMap = useMemo(() => new Map(averages), [averages])
+  const usingPotjes = target === 'potje'
+  const rows = usingPotjes ? potjes : categories
+  const avgMap = useMemo(
+    () => (usingPotjes ? new Map(potjes.map((p) => [p.name, p.limit])) : new Map(averages)),
+    [usingPotjes, potjes, averages],
+  )
+
   const savingsMonthly = now ? savingsReservePerMonth(goals, now) : 0
   const spendable = Math.max(0, Math.round(incomeMonthly - fixedMonthly))
   const pot = Math.max(0, spendable - savingsMonthly)
 
-  const catKeys = categories.map((c) => ({ id: c.id, name: c.name }))
+  const rowKeys = rows.map((r) => ({ id: r.id, name: r.name }))
   const suggested = useMemo(
-    () => allocateBudget(pot, catKeys, avgMap, basis),
+    () => allocateBudget(pot, rowKeys, avgMap, basis),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [pot, basis, avgMap, categories.map((c) => c.id).join(',')],
+    [pot, basis, avgMap, target, rows.map((r) => r.id).join(',')],
   )
 
-  // Bij wijziging van basis of potje: terug naar het verse voorstel.
+  // Bij wisselen van doel/basis/potje: terug naar het verse voorstel.
   useEffect(() => {
     setEdits({})
     setDone(false)
-  }, [basis, pot])
+  }, [basis, pot, target])
 
-  const valueOf = (id: number) => (edits[id] !== undefined ? Number(edits[id].replace(',', '.')) || 0 : suggested.get(id) ?? 0)
-  const allocated = categories.reduce((s, c) => s + valueOf(c.id), 0)
+  const valueOf = (id: number) =>
+    edits[id] !== undefined ? Number(edits[id].replace(',', '.')) || 0 : suggested.get(id) ?? 0
+  const allocated = rows.reduce((s, r) => s + valueOf(r.id), 0)
   const remaining = Math.round(pot - allocated)
 
   const goalReserves = now
@@ -71,7 +94,8 @@ export default function BudgetAllocator({
   const apply = async () => {
     setBusy(true)
     try {
-      await onApply(categories.map((c) => ({ id: c.id, limit: Math.max(0, Math.round(valueOf(c.id))) })))
+      const limits = rows.map((r) => ({ id: r.id, limit: Math.max(0, Math.round(valueOf(r.id))) }))
+      await (usingPotjes ? onApplyPotjes(limits) : onApplyCategories(limits))
       setDone(true)
     } finally {
       setBusy(false)
@@ -85,13 +109,47 @@ export default function BudgetAllocator({
           Vul eerst je <span className="font-semibold">inkomsten</span> in (hieronder), dan kan Fam berekenen wat je
           maandelijks kunt verdelen.
         </p>
-      ) : categories.length === 0 ? (
+      ) : rows.length === 0 ? (
         <p className="text-sm text-slate-600">
-          Je hebt nog geen categorieën. Voeg er een paar toe via <span className="font-semibold">Uitgave toevoegen</span>{' '}
-          (je kunt daar een nieuwe categorie typen), dan verdeelt Fam je budget eroverheen.
+          {usingPotjes ? (
+            <>
+              Je hebt nog geen Gezinspotjes. Maak ze aan bij <span className="font-semibold">Gezinsbudget</span>, dan
+              verdeelt Fam je overschot eroverheen.
+            </>
+          ) : (
+            <>
+              Je hebt nog geen categorieën. Voeg er een paar toe via <span className="font-semibold">Uitgave toevoegen</span>.
+            </>
+          )}
         </p>
       ) : (
         <>
+          {/* Doel: categorieën of potjes */}
+          {potjes.length > 0 && categories.length > 0 && (
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <span className="text-xs font-semibold text-slate-500">Verdeel over:</span>
+              <div className="flex gap-1 rounded-xl bg-slate-100 p-1 dark:bg-white/5">
+                {([
+                  ['potje', 'Gezinspotjes'],
+                  ['cat', 'Categorieën'],
+                ] as const).map(([key, label]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setTarget(key)}
+                    className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+                      target === key
+                        ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-slate-100'
+                        : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Rekensom: inkomsten − vaste lasten − spaardoelen = te verdelen */}
           <div className="flex flex-col gap-1.5 rounded-2xl bg-slate-50 p-3.5 text-sm">
             <div className="flex items-center justify-between">
@@ -109,12 +167,11 @@ export default function BudgetAllocator({
               <span className="font-semibold text-emerald-600 dark:text-emerald-400">−€{euro(savingsMonthly)}</span>
             </div>
             <div className="mt-1 flex items-center justify-between border-t border-cardborder pt-2">
-              <span className="font-bold text-slate-800">Te verdelen over categorieën</span>
+              <span className="font-bold text-slate-800">Te verdelen over {usingPotjes ? 'potjes' : 'categorieën'}</span>
               <span className="text-lg font-extrabold text-brand">€{euro(pot)}</span>
             </div>
           </div>
 
-          {/* Welke spaardoelen worden gereserveerd */}
           {goalReserves.length > 0 && (
             <p className="mt-2 text-[11px] text-slate-400">
               Gereserveerd voor:{' '}
@@ -124,7 +181,7 @@ export default function BudgetAllocator({
                   <span className="font-semibold text-slate-500">{x.g.name}</span> €{euro(x.m)}/mnd
                 </span>
               ))}
-              . Spaardoelen zonder streefdatum reserveren we niet automatisch — geef ze een datum om mee te tellen.
+              .
             </p>
           )}
 
@@ -133,7 +190,7 @@ export default function BudgetAllocator({
             <span className="text-xs font-semibold text-slate-500">Verdeel:</span>
             <div className="flex gap-1 rounded-xl bg-slate-100 p-1 dark:bg-white/5">
               {([
-                ['verhouding', 'Naar je uitgaven'],
+                ['verhouding', usingPotjes ? 'Naar huidige potjes' : 'Naar je uitgaven'],
                 ['gelijk', 'Gelijk'],
               ] as const).map(([key, label]) => (
                 <button
@@ -152,24 +209,24 @@ export default function BudgetAllocator({
             </div>
           </div>
 
-          {/* Per categorie */}
+          {/* Per categorie / potje */}
           <ul className="mt-3 flex flex-col divide-y divide-cardborder">
-            {categories.map((c) => {
-              const avg = avgMap.get(c.name) ?? 0
+            {rows.map((r) => {
+              const sub = usingPotjes ? (r as Potje).member : avgMap.get(r.name) ? `gem. €${euro(avgMap.get(r.name) ?? 0)} p/m` : null
               return (
-                <li key={c.id} className="flex items-center gap-3 py-2">
+                <li key={r.id} className="flex items-center gap-3 py-2">
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-slate-800">{c.name}</p>
-                    {avg > 0 && <p className="text-[11px] text-slate-400">gem. €{euro(avg)} p/m</p>}
+                    <p className="truncate text-sm font-semibold text-slate-800">{r.name}</p>
+                    {sub && <p className="text-[11px] text-slate-400">{usingPotjes ? `voor ${sub}` : sub}</p>}
                   </div>
                   <div className="flex shrink-0 items-center gap-1 text-slate-500">
                     <span className="text-sm">€</span>
                     <input
                       inputMode="numeric"
-                      value={edits[c.id] ?? String(suggested.get(c.id) ?? 0)}
-                      onChange={(e) => setEdits((p) => ({ ...p, [c.id]: e.target.value }))}
+                      value={edits[r.id] ?? String(suggested.get(r.id) ?? 0)}
+                      onChange={(e) => setEdits((p) => ({ ...p, [r.id]: e.target.value }))}
                       className={fieldClass}
-                      aria-label={`Budget voor ${c.name}`}
+                      aria-label={`Budget voor ${r.name}`}
                     />
                   </div>
                 </li>
@@ -211,8 +268,7 @@ export default function BudgetAllocator({
             </button>
           </div>
           <p className="mt-2 text-[11px] text-slate-400">
-            Hiermee zet je de maandlimiet per categorie. Je dagbudget (&ldquo;te besteden&rdquo;) en de
-            voortgangsbalken volgen automatisch. Je spaardoelen blijven er apart van.
+            Hiermee zet je de maandlimiet per {usingPotjes ? 'potje' : 'categorie'}. Je spaardoelen blijven er apart van.
           </p>
         </>
       )}
