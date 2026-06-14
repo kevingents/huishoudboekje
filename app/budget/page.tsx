@@ -41,6 +41,7 @@ import BudgetAllocator from '@/components/budget/BudgetAllocator'
 import RecurringSuggestions from '@/components/budget/RecurringSuggestions'
 import MerchantAvatar from '@/components/MerchantAvatar'
 import BookToPotje from '@/components/budget/BookToPotje'
+import CategoryPicker from '@/components/budget/CategoryPicker'
 import PotjesForecastCard from '@/components/budget/PotjesForecastCard'
 import PersonalInsightsCard from '@/components/budget/PersonalInsightsCard'
 import type { BudgetCategory } from '@/lib/types'
@@ -890,35 +891,15 @@ export default function BudgetPage() {
             </label>
           </div>
 
-          {/* Categorie: typen kan, maar tik bij voorkeur een chip (werkt overal). */}
+          {/* Categorie: eigen keuzelijst met zoeken + expliciet "nieuwe maken". */}
           <div>
-            <p className="text-xs font-semibold text-slate-500">Categorie</p>
-            <input
-              list="budget-categories"
+            <p className="mb-1 text-xs font-semibold text-slate-500">Categorie</p>
+            <CategoryPicker
               value={form.category}
-              onChange={(e) => setForm({ ...form, category: e.target.value })}
-              placeholder={spendingCats.length ? 'Kies hieronder of typ een eigen categorie' : 'Bijv. Verzorging'}
-              className={`mt-1 ${inputClass}`}
+              onChange={(v) => setForm({ ...form, category: v })}
+              categories={spendingCats.map((c) => c.name)}
+              placeholder={spendingCats.length ? 'Kies of typ een categorie' : 'Bijv. Verzorging'}
             />
-            <datalist id="budget-categories">
-              {spendingCats.map((cat) => (
-                <option key={cat.id} value={cat.name} />
-              ))}
-            </datalist>
-            {spendingCats.length > 0 && (
-              <div className="mt-1.5 flex flex-wrap gap-1.5">
-                {spendingCats.slice(0, 10).map((c) => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => setForm({ ...form, category: c.name })}
-                    className={pickChip(form.category.toLowerCase() === c.name.toLowerCase())}
-                  >
-                    {c.name}
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
 
           {/* Optioneel op een gezinspotje boeken (bijv. Marielle). */}
