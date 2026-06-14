@@ -299,6 +299,12 @@ export default function BudgetPage() {
   // categorie-limieten, anders je maandtarget).
   const potjeTotal = budgets.reduce((s, b) => s + (b.limit || 0), 0)
   const effectiveBudget = potjeTotal > 0 ? potjeTotal : budgetRef
+  // Gebruik je Gezinspotjes als budget, dan toont het Overzicht die potjes (met
+  // hun eigen 'geboekte' uitgaven) i.p.v. de categorieën.
+  const usePotjes = potjeTotal > 0
+  const potjeSpent = budgets.reduce((s, b) => s + (b.spent || 0), 0)
+  const overviewSpent = usePotjes ? potjeSpent : currentSpent
+  const overviewProjected = usePotjes ? potjeSpent : projected
 
   // Aflossingen/schulden apart van vaste lasten houden (hypotheek + leningen).
   const isAflossing = (cat?: string) => /afloss|lening|hypothe|schuld|krediet/i.test(cat || '')
@@ -455,7 +461,7 @@ export default function BudgetPage() {
         {tab === 'overzicht' && (
         <>
         {/* Budgetvoortgang — gauge van deze periode */}
-        <BudgetProgressCard spent={currentSpent} budget={effectiveBudget} projected={projected} periodWord={periodWord} />
+        <BudgetProgressCard spent={overviewSpent} budget={effectiveBudget} projected={overviewProjected} periodWord={periodWord} />
 
         {/* Terugblik op de vorige periode + sparen-suggestie (toont zich vanzelf
             zodra er een afgesloten periode met uitgaven is). */}
@@ -463,7 +469,7 @@ export default function BudgetPage() {
 
         {/* Categories */}
         <DashboardCard
-          title="Uitgaven per categorie"
+          title={usePotjes ? 'Per potje' : 'Uitgaven per categorie'}
           headerRight={
             <div className="flex items-center gap-2">
               <span className="hidden text-xs font-medium text-slate-400 sm:inline">
@@ -480,6 +486,42 @@ export default function BudgetPage() {
             </div>
           }
         >
+          {usePotjes ? (
+            <ul className="flex flex-col gap-4">
+              {budgets.map((b) => {
+                const colors = colorClasses[b.color] ?? colorClasses.emerald
+                const pct = b.limit > 0 ? Math.min((b.spent / b.limit) * 100, 100) : 0
+                return (
+                  <li key={b.id}>
+                    <div className="mb-1.5 flex items-center gap-2.5">
+                      <span
+                        className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg text-xs font-bold ${colors.iconBg} ${colors.iconText}`}
+                      >
+                        {b.name.charAt(0).toUpperCase()}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-slate-700 dark:text-slate-200">{b.name}</p>
+                        {b.member && <p className="text-[11px] text-slate-400">voor {b.member}</p>}
+                      </div>
+                      <span className="shrink-0 text-right">
+                        <span className="block text-sm font-bold text-slate-800 dark:text-slate-100">
+                          €{Math.round(b.spent)} <span className="text-slate-400">/ €{Math.round(b.limit)}</span>
+                        </span>
+                        <span className="block text-[11px] text-slate-400">{Math.round(pct)}%</span>
+                      </span>
+                    </div>
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                      <div
+                        className={`h-full rounded-full ${colors.bar} transition-all duration-500`}
+                        style={{ width: `${Math.max(b.spent > 0 ? 4 : 0, pct)}%` }}
+                      />
+                    </div>
+                  </li>
+                )
+              })}
+            </ul>
+          ) : (
+          <>
           <ul className="flex flex-col gap-4">
             {visibleCats.map((cat) => {
               const colors = colorClasses[cat.color] ?? colorClasses.emerald
@@ -551,6 +593,8 @@ export default function BudgetPage() {
             >
               {showAllCats ? 'Minder tonen' : `Toon alle categorieën (${spendingCats.length})`}
             </button>
+          )}
+          </>
           )}
         </DashboardCard>
 
