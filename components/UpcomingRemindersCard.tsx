@@ -1,10 +1,11 @@
 'use client'
 
-import { CalendarClock, Cake, Gift, BadgeCheck, Car, Umbrella, FileText } from 'lucide-react'
+import Link from 'next/link'
+import { CalendarClock, Cake, Gift, BadgeCheck, Car, Umbrella, FileText, SlidersHorizontal } from 'lucide-react'
 import DashboardCard from './DashboardCard'
-import { useDocuments, useFamily } from '@/lib/hooks'
+import { useDocuments, useFamily, useSettings } from '@/lib/hooks'
 import { daysUntil, headsUpWindow } from '@/lib/documents'
-import { parseBirthday, upcomingOccasions, shortDate } from '@/lib/occasions'
+import { parseBirthday, upcomingOccasions, shortDate, type OccasionConfig } from '@/lib/occasions'
 
 type Item = {
   key: string
@@ -36,6 +37,8 @@ const docIcon = (type: string) =>
 export default function UpcomingRemindersCard() {
   const { documents } = useDocuments()
   const { members } = useFamily()
+  const { settings } = useSettings()
+  const occConfig = (settings.occasions ?? {}) as OccasionConfig
   const now = new Date()
 
   const items: Item[] = []
@@ -73,8 +76,8 @@ export default function UpcomingRemindersCard() {
     })
   }
 
-  // Feestdagen & gelegenheden (komende 21 dagen)
-  for (const o of upcomingOccasions(now, 21)) {
+  // Feestdagen & gelegenheden (komende 21 dagen) — door de gebruiker beheerd.
+  for (const o of upcomingOccasions(now, 21, occConfig)) {
     items.push({
       key: `occ-${o.name}-${o.year}`,
       icon: Gift,
@@ -88,7 +91,21 @@ export default function UpcomingRemindersCard() {
   items.sort((a, b) => a.days - b.days)
 
   return (
-    <DashboardCard title="Binnenkort" icon={CalendarClock} iconClassName="text-brand">
+    <DashboardCard
+      title="Binnenkort"
+      icon={CalendarClock}
+      iconClassName="text-brand"
+      headerRight={
+        <Link
+          href="/instellingen"
+          aria-label="Gelegenheden beheren"
+          title="Gelegenheden beheren"
+          className="grid h-8 w-8 place-items-center rounded-full text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-white/10"
+        >
+          <SlidersHorizontal className="h-4 w-4" />
+        </Link>
+      }
+    >
       <ul className="flex flex-col gap-2.5">
         {items.slice(0, 6).map((it) => {
           const Icon = it.icon

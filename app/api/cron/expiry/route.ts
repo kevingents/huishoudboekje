@@ -9,6 +9,7 @@ import {
   occasionMessage,
   dueBirthdayReminder,
   birthdayMessage,
+  type OccasionConfig,
 } from '@/lib/occasions'
 import { periodKeyOf, shiftPeriodKey, spendablePerMonth, isSpendingCategory } from '@/lib/budget'
 import { reviewPeriod } from '@/lib/periodReview'
@@ -108,11 +109,20 @@ export async function GET(req: Request) {
   // Feestdagen & gelegenheden (Vaderdag, Moederdag, Sinterklaas, …): gelden voor
   // elk huishouden, met ruime aanlooptijd voor cadeaudagen.
   const households = await prisma.household.findMany({ select: { id: true } })
-  const occReminders = dueOccasionReminders(now)
+  // Per huishouden de eigen gelegenheden-config (verborgen standaarddagen + eigen dagen).
+  const occSettings = await prisma.setting.findMany({ where: { key: 'occasions' } })
+  const occByHh = new Map<number, OccasionConfig>()
+  for (const s of occSettings) {
+    try {
+      occByHh.set(s.householdId, JSON.parse(s.value) as OccasionConfig)
+    } catch {
+      /* ongeldige config → standaard */
+    }
+  }
   let occasionNotified = 0
-  for (const r of occReminders) {
-    const msg = occasionMessage(r)
-    for (const { id } of households) {
+  for (const { id } of households) {
+    for (const r of dueOccasionReminders(now, occByHh.get(id))) {
+      const msg = occasionMessage(r)
       const sent = await once(id, `occ:${r.name}:${r.year}:b${r.band}`, () =>
         notify({ householdId: id, type: 'gelegenheden', title: msg.title, body: msg.body }),
       )

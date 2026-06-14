@@ -8,10 +8,35 @@ import {
   birthdayMessage,
   bandFor,
   upcomingOccasions,
+  resolveOccasions,
 } from '@/lib/occasions'
 
 // Cron draait 08:00 UTC; we toetsen met een vaste tijd om DST-ruis te vermijden.
 const at = (iso: string) => new Date(`${iso}T08:00:00Z`)
+
+describe('resolveOccasions (config: verbergen + eigen toevoegen)', () => {
+  it('verbergt een standaard-gelegenheid (case-insensitief)', () => {
+    const names = resolveOccasions(2026, { hidden: ['vaderdag'] }).map((o) => o.name)
+    expect(names).not.toContain('Vaderdag')
+    expect(names).toContain('Moederdag')
+  })
+  it('voegt een eigen gelegenheid toe', () => {
+    const list = resolveOccasions(2026, { custom: [{ id: 'x', title: 'Trouwdag', month: 8, day: 3, gift: true }] })
+    const t = list.find((o) => o.name === 'Trouwdag')
+    expect(t).toMatchObject({ name: 'Trouwdag', year: 2026, month: 8, day: 3, gift: true })
+  })
+  it('negeert ongeldige eigen gelegenheden', () => {
+    const list = resolveOccasions(2026, { custom: [{ id: 'x', title: '', month: 0, day: 40 }] })
+    expect(list.length).toBe(occasionsForYear(2026).length)
+  })
+  it('een verborgen gelegenheid geeft geen reminder meer', () => {
+    // Vaderdag 2026 = 21 jun; op 14 jun is dat normaal de 10-dagen-band.
+    const without = dueOccasionReminders(at('2026-06-14'), { hidden: ['Vaderdag'] }).map((r) => r.name)
+    expect(without).not.toContain('Vaderdag')
+    const withIt = dueOccasionReminders(at('2026-06-14')).map((r) => r.name)
+    expect(withIt).toContain('Vaderdag')
+  })
+})
 
 describe('nthSunday via occasionsForYear', () => {
   it('Moederdag = 2e zondag van mei, Vaderdag = 3e zondag van juni', () => {

@@ -41,6 +41,42 @@ export function occasionsForYear(year: number): Occasion[] {
   ]
 }
 
+/** De namen van de standaard-gelegenheden (om aan/uit te zetten in de UI). */
+export const BUILTIN_OCCASIONS: { name: string; gift: boolean }[] = [
+  { name: 'Valentijnsdag', gift: true },
+  { name: 'Moederdag', gift: true },
+  { name: 'Vaderdag', gift: true },
+  { name: 'Koningsdag', gift: false },
+  { name: 'Sinterklaas', gift: true },
+  { name: 'Eerste Kerstdag', gift: true },
+  { name: 'Oudjaarsavond', gift: false },
+]
+
+/** Een zelf toegevoegde gelegenheid (jaarlijks terugkerend op maand/dag). */
+export interface CustomOccasion {
+  id: string
+  title: string
+  month: number // 1-12
+  day: number
+  gift?: boolean
+}
+
+/** Door de gebruiker beheerde gelegenheden: standaard-dagen verbergen + eigen toevoegen. */
+export interface OccasionConfig {
+  hidden?: string[] // namen van standaard-gelegenheden die uit staan
+  custom?: CustomOccasion[]
+}
+
+/** De effectieve gelegenheden voor een jaar: standaard (minus verborgen) + eigen. */
+export function resolveOccasions(year: number, config?: OccasionConfig): Occasion[] {
+  const hidden = new Set((config?.hidden ?? []).map((s) => s.toLowerCase()))
+  const builtins = occasionsForYear(year).filter((o) => !hidden.has(o.name.toLowerCase()))
+  const custom = (config?.custom ?? [])
+    .filter((c) => c.title?.trim() && c.month >= 1 && c.month <= 12 && c.day >= 1 && c.day <= 31)
+    .map((c) => ({ name: c.title.trim(), year, month: c.month, day: c.day, gift: !!c.gift }))
+  return [...builtins, ...custom]
+}
+
 function daysBetweenUTC(from: Date, y: number, m: number, d: number): number {
   const target = Date.UTC(y, m - 1, d)
   const today = Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), from.getUTCDate())
@@ -72,11 +108,11 @@ export interface OccasionReminder {
 }
 
 /** Gelegenheden waarvan vandaag een reminder-band actief is. */
-export function dueOccasionReminders(now: Date): OccasionReminder[] {
+export function dueOccasionReminders(now: Date, config?: OccasionConfig): OccasionReminder[] {
   const out: OccasionReminder[] = []
   // Dit jaar én volgend jaar, zodat eind december een gelegenheid begin volgend
   // jaar ook binnen de aanlooptijd valt. Elk exemplaar draagt zijn eigen jaar.
-  const candidates = [...occasionsForYear(now.getUTCFullYear()), ...occasionsForYear(now.getUTCFullYear() + 1)]
+  const candidates = [...resolveOccasions(now.getUTCFullYear(), config), ...resolveOccasions(now.getUTCFullYear() + 1, config)]
   for (const o of candidates) {
     const d = daysBetweenUTC(now, o.year, o.month, o.day)
     if (d < 0) continue // al voorbij — hoort bij het volgend-jaar-exemplaar
@@ -94,8 +130,8 @@ export function shortDate(day: number, month: number): string {
 
 /** Aankomende gelegenheden binnen `within` dagen (voor het dashboard, niet de
  *  drempel-cron) — gesorteerd op nabijheid, zonder dubbele namen. */
-export function upcomingOccasions(now: Date, within = 21): OccasionReminder[] {
-  const candidates = [...occasionsForYear(now.getUTCFullYear()), ...occasionsForYear(now.getUTCFullYear() + 1)]
+export function upcomingOccasions(now: Date, within = 21, config?: OccasionConfig): OccasionReminder[] {
+  const candidates = [...resolveOccasions(now.getUTCFullYear(), config), ...resolveOccasions(now.getUTCFullYear() + 1, config)]
   const out: OccasionReminder[] = []
   const seen = new Set<string>()
   for (const o of candidates) {
