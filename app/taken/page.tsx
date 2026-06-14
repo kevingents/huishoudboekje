@@ -97,7 +97,7 @@ export default function TakenPage() {
           type="button"
           onClick={() => removeTask(task.id)}
           aria-label="Verwijderen"
-          className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-slate-300 transition-colors hover:bg-rose-50 hover:text-rose-500"
+          className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-slate-300 transition-colors hover:bg-rose-50 hover:text-rose-500"
         >
           <Trash2 className="h-4 w-4" />
         </button>
@@ -116,7 +116,7 @@ export default function TakenPage() {
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className="pill bg-brand px-4 py-2.5 text-white shadow-sm shadow-brand/20 hover:bg-brand-dark"
+            className="pill bg-brand px-4 py-3 text-white shadow-sm shadow-brand/20 hover:bg-brand-dark sm:py-2.5"
           >
             <Plus className="h-4 w-4" />
             Taak toevoegen
@@ -229,7 +229,7 @@ export default function TakenPage() {
             />
           </label>
           <div className="flex gap-3">
-            <label className="flex-1 text-xs font-semibold text-slate-500">
+            <label className="min-w-0 flex-1 text-xs font-semibold text-slate-500">
               Voor wie
               <select
                 value={form.assignedTo}
@@ -260,7 +260,7 @@ export default function TakenPage() {
             gewone taak zonder beloning.
           </p>
           <div className="flex gap-3">
-            <label className="flex-1 text-xs font-semibold text-slate-500">
+            <label className="min-w-0 flex-1 text-xs font-semibold text-slate-500">
               Deadline (optioneel)
               <input
                 type="date"
@@ -269,7 +269,7 @@ export default function TakenPage() {
                 className={`mt-1 ${inputClass}`}
               />
             </label>
-            <label className="flex-1 text-xs font-semibold text-slate-500">
+            <label className="min-w-0 flex-1 text-xs font-semibold text-slate-500">
               Herhaling
               <select
                 value={form.recurrence}

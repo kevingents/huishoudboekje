@@ -301,7 +301,7 @@ export default function Vandaag() {
                     onClick={() => move(i, -1)}
                     disabled={i === 0}
                     aria-label="Omhoog"
-                    className="grid h-7 w-7 place-items-center rounded-full text-slate-400 hover:bg-slate-100 disabled:opacity-30"
+                    className="grid h-10 w-10 place-items-center rounded-full text-slate-400 hover:bg-slate-100 disabled:opacity-30"
                   >
                     <ArrowUp className="h-4 w-4" />
                   </button>
@@ -310,7 +310,7 @@ export default function Vandaag() {
                     onClick={() => move(i, 1)}
                     disabled={i === draft.length - 1}
                     aria-label="Omlaag"
-                    className="grid h-7 w-7 place-items-center rounded-full text-slate-400 hover:bg-slate-100 disabled:opacity-30"
+                    className="grid h-10 w-10 place-items-center rounded-full text-slate-400 hover:bg-slate-100 disabled:opacity-30"
                   >
                     <ArrowDown className="h-4 w-4" />
                   </button>
@@ -318,7 +318,7 @@ export default function Vandaag() {
                     type="button"
                     onClick={() => removeWidget(key)}
                     aria-label="Verbergen"
-                    className="grid h-7 w-7 place-items-center rounded-full text-slate-400 hover:bg-rose-50 hover:text-rose-500"
+                    className="grid h-10 w-10 place-items-center rounded-full text-slate-400 hover:bg-rose-50 hover:text-rose-500"
                   >
                     <EyeOff className="h-4 w-4" />
                   </button>

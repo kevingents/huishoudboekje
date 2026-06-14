@@ -102,7 +102,7 @@ export default function AdsManager() {
                   type="button"
                   onClick={() => startEdit(a)}
                   aria-label={`${a.title} bewerken`}
-                  className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                  className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600 sm:h-9 sm:w-9"
                 >
                   <Pencil className="h-4 w-4" />
                 </button>
@@ -110,7 +110,7 @@ export default function AdsManager() {
                   type="button"
                   onClick={() => removeAd(a.id)}
                   aria-label={`${a.title} verwijderen`}
-                  className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-slate-400 hover:bg-rose-50 hover:text-rose-500"
+                  className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-slate-400 hover:bg-rose-50 hover:text-rose-500 sm:h-9 sm:w-9"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
@@ -124,7 +124,7 @@ export default function AdsManager() {
       <Modal open={open} onClose={() => setOpen(false)} title={editing ? 'Advertentie bewerken' : 'Advertentie toevoegen'}>
         <form onSubmit={submit} className="flex flex-col gap-3">
           <div className="flex gap-3">
-            <label className="flex-1 text-xs font-semibold text-slate-500">
+            <label className="min-w-0 flex-1 text-xs font-semibold text-slate-500">
               Sponsor
               <input
                 autoFocus

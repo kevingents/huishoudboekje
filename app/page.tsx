@@ -207,7 +207,7 @@ export default function Landing() {
             ].map((b) => {
               const Icon = b.icon
               return (
-                <div key={b.label} className="flex w-36 flex-col items-center gap-2 rounded-card border border-cardborder bg-white p-5 text-center shadow-card">
+                <div key={b.label} className="flex w-full flex-col items-center gap-2 rounded-card border border-cardborder bg-white p-5 text-center shadow-card">
                   <span className="grid h-11 w-11 place-items-center rounded-2xl bg-brand-light text-brand">
                     <Icon className="h-6 w-6" strokeWidth={2.1} />
                   </span>

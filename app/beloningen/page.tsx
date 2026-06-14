@@ -163,7 +163,7 @@ export default function BeloningenPage() {
               <button
                 type="button"
                 onClick={() => setAddOpen(true)}
-                className="pill bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-dark"
+                className="pill min-h-[44px] bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-dark"
               >
                 <Plus className="h-3.5 w-3.5" />
                 Beloning
@@ -179,12 +179,12 @@ export default function BeloningenPage() {
               <ul className="flex flex-col">
                 {ownRewards.map((r, i) => (
                   <li key={r.id}>
-                    <div className="group flex items-center gap-3 py-3">
+                    <div className="group flex flex-wrap items-center gap-3 py-3">
                       <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-emerald-100 text-emerald-600">
                         <Gift className="h-5 w-5" />
                       </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-bold text-slate-800">{r.title}</p>
+                      <div className="min-w-0 flex-1 basis-40">
+                        <p className="truncate text-sm font-bold text-slate-800">{r.title}</p>
                         {r.description && <p className="truncate text-xs text-slate-500">{r.description}</p>}
                       </div>
                       {r.cost > 0 && (
@@ -196,7 +196,7 @@ export default function BeloningenPage() {
                         <button
                           type="button"
                           onClick={() => setRedeem(r)}
-                          className="pill shrink-0 bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-dark"
+                          className="pill min-h-[44px] shrink-0 bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-dark"
                         >
                           Wissel in
                         </button>
@@ -205,7 +205,7 @@ export default function BeloningenPage() {
                         type="button"
                         onClick={() => removeReward(r.id)}
                         aria-label={`${r.title} verwijderen`}
-                        className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-slate-300 transition-all hover:bg-rose-50 hover:text-rose-500"
+                        className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-slate-300 transition-all hover:bg-rose-50 hover:text-rose-500"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>

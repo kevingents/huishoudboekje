@@ -114,7 +114,7 @@ export default function PeriodReviewCard() {
                   <select
                     value={selectedGoal?.id ?? ''}
                     onChange={(e) => setGoalId(e.target.value ? Number(e.target.value) : '')}
-                    className="rounded-xl border border-cardborder bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-brand/40 focus:ring-2 focus:ring-brand/20"
+                    className="w-full rounded-xl border border-cardborder bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-brand/40 focus:ring-2 focus:ring-brand/20 sm:w-auto"
                   >
                     {goals.map((g) => (
                       <option key={g.id} value={g.id}>
@@ -127,10 +127,12 @@ export default function PeriodReviewCard() {
                   type="button"
                   disabled={busy}
                   onClick={onDeposit}
-                  className="pill bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-brand/20 hover:bg-brand-dark disabled:opacity-50"
+                  className="pill max-w-full min-w-0 bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-brand/20 hover:bg-brand-dark disabled:opacity-50"
                 >
-                  <PiggyBank className="h-4 w-4" />
-                  {busy ? 'Bezig…' : `€${round(review.surplus)} inleggen bij ${selectedGoal?.name ?? 'spaardoel'}`}
+                  <PiggyBank className="h-4 w-4 shrink-0" />
+                  <span className="truncate">
+                    {busy ? 'Bezig…' : `€${round(review.surplus)} inleggen bij ${selectedGoal?.name ?? 'spaardoel'}`}
+                  </span>
                 </button>
               </div>
             ) : (

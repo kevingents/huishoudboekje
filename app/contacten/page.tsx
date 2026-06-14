@@ -102,7 +102,7 @@ export default function ContactenPage() {
                     <a
                       href={`tel:${c.phone.replace(/\s/g, '')}`}
                       aria-label={`Bel ${c.name}`}
-                      className="pill shrink-0 bg-brand-light px-3 py-2 text-xs font-semibold text-brand hover:bg-emerald-100"
+                      className="pill shrink-0 bg-brand-light px-3 py-3 text-xs font-semibold text-brand hover:bg-emerald-100"
                     >
                       <Phone className="h-4 w-4" />
                       Bel

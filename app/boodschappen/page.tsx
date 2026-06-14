@@ -95,7 +95,7 @@ export default function BoodschappenPage() {
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
             placeholder="Voeg een product toe…"
-            className="flex-1 rounded-full border border-cardborder bg-white px-4 py-2.5 text-sm text-slate-700 outline-none transition-colors placeholder:text-slate-400 focus:border-brand/40 focus:ring-2 focus:ring-brand/20"
+            className="min-w-0 flex-1 rounded-full border border-cardborder bg-white px-4 py-2.5 text-sm text-slate-700 outline-none transition-colors placeholder:text-slate-400 focus:border-brand/40 focus:ring-2 focus:ring-brand/20"
           />
           <button
             type="submit"
@@ -158,7 +158,7 @@ export default function BoodschappenPage() {
                       type="button"
                       onClick={() => removeItem(item.id)}
                       aria-label={`${item.label} verwijderen`}
-                      className="grid h-8 w-8 place-items-center rounded-full text-slate-300 opacity-0 transition-all hover:bg-rose-50 hover:text-rose-500 group-hover:opacity-100"
+                      className="grid h-11 w-11 place-items-center rounded-full text-slate-400 opacity-100 transition-all hover:bg-rose-50 hover:text-rose-500 sm:h-8 sm:w-8 sm:opacity-0 sm:group-hover:opacity-100"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>

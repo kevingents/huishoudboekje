@@ -284,7 +284,7 @@ export default function DocumentenPage() {
       <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Document toevoegen">
         <form onSubmit={submit} className="flex flex-col gap-3">
           <div className="flex gap-3">
-            <label className="flex-1 text-xs font-semibold text-slate-500">
+            <label className="min-w-0 flex-1 text-xs font-semibold text-slate-500">
               Titel
               <input
                 autoFocus
@@ -294,7 +294,7 @@ export default function DocumentenPage() {
                 className={`mt-1 ${inputClass}`}
               />
             </label>
-            <label className="w-36 text-xs font-semibold text-slate-500">
+            <label className="w-36 shrink-0 min-w-0 text-xs font-semibold text-slate-500">
               Soort
               <select
                 value={form.type}
@@ -310,7 +310,7 @@ export default function DocumentenPage() {
             </label>
           </div>
           <div className="flex gap-3">
-            <label className="flex-1 text-xs font-semibold text-slate-500">
+            <label className="min-w-0 flex-1 text-xs font-semibold text-slate-500">
               Van wie (optioneel)
               <input
                 value={form.owner}
@@ -319,7 +319,7 @@ export default function DocumentenPage() {
                 className={`mt-1 ${inputClass}`}
               />
             </label>
-            <label className="flex-1 text-xs font-semibold text-slate-500">
+            <label className="min-w-0 flex-1 text-xs font-semibold text-slate-500">
               Verloopdatum
               <input
                 type="date"

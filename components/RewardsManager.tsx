@@ -124,7 +124,7 @@ export default function RewardsManager() {
                   type="button"
                   onClick={() => startEdit(r)}
                   aria-label={`${r.title} bewerken`}
-                  className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+                  className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 sm:h-8 sm:w-8"
                 >
                   <Pencil className="h-4 w-4" />
                 </button>
@@ -132,7 +132,7 @@ export default function RewardsManager() {
                   type="button"
                   onClick={() => removeReward(r.id)}
                   aria-label={`${r.title} verwijderen`}
-                  className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-500"
+                  className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-500 sm:h-8 sm:w-8"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>

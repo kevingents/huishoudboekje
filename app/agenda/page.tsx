@@ -423,7 +423,7 @@ export default function AgendaPage() {
             />
           </label>
           <div className="flex gap-3">
-            <label className="flex-1 text-xs font-semibold text-slate-500">
+            <label className="min-w-0 flex-1 text-xs font-semibold text-slate-500">
               Datum
               <input
                 type="date"
@@ -432,7 +432,7 @@ export default function AgendaPage() {
                 className={`mt-1 ${inputClass}`}
               />
             </label>
-            <label className="flex-1 text-xs font-semibold text-slate-500">
+            <label className="min-w-0 flex-1 text-xs font-semibold text-slate-500">
               Tijd
               <input
                 value={form.time}

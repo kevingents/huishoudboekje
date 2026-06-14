@@ -103,7 +103,7 @@ export default function NotificationBell() {
                       type="button"
                       onClick={() => remove(n.id)}
                       aria-label="Verwijderen"
-                      className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-slate-300 opacity-0 transition-all hover:bg-rose-50 hover:text-rose-500 group-hover:opacity-100"
+                      className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-slate-300 opacity-100 transition-all hover:bg-rose-50 hover:text-rose-500 lg:h-7 lg:w-7 lg:opacity-0 lg:group-hover:opacity-100"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>

@@ -111,7 +111,7 @@ export default function GezinsbudgetCard({ className = '' }: { className?: strin
                   />
                 </div>
                 <div className="mt-1 flex items-center justify-between gap-2">
-                  <span className={`text-[11px] font-semibold ${over ? 'text-rose-600 dark:text-rose-400' : 'text-slate-400'}`}>
+                  <span className={`min-w-0 flex-1 truncate text-[11px] font-semibold ${over ? 'text-rose-600 dark:text-rose-400' : 'text-slate-400'}`}>
                     {over ? `€${euro(-left)} over budget` : `nog €${euro(left)} te besteden`}
                   </span>
                   <form
@@ -119,7 +119,7 @@ export default function GezinsbudgetCard({ className = '' }: { className?: strin
                       e.preventDefault()
                       doSpend(b)
                     }}
-                    className="flex gap-1.5"
+                    className="flex shrink-0 gap-1.5"
                   >
                     <input
                       inputMode="decimal"
@@ -155,7 +155,7 @@ export default function GezinsbudgetCard({ className = '' }: { className?: strin
             />
           </label>
           <div className="flex gap-3">
-            <label className="flex-1 text-xs font-semibold text-slate-500">
+            <label className="min-w-0 flex-1 text-xs font-semibold text-slate-500">
               Maandbudget (€)
               <input
                 inputMode="decimal"
@@ -165,7 +165,7 @@ export default function GezinsbudgetCard({ className = '' }: { className?: strin
                 className={`mt-1 ${inputClass}`}
               />
             </label>
-            <label className="flex-1 text-xs font-semibold text-slate-500">
+            <label className="min-w-0 flex-1 text-xs font-semibold text-slate-500">
               Gezinslid (optioneel)
               <select
                 value={form.member}

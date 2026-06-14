@@ -43,7 +43,7 @@ export default function SubscriptionsCard() {
     <button
       type="button"
       onClick={() => setOpen(true)}
-      className="pill bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-600 hover:bg-sky-100 dark:text-sky-300"
+      className="pill min-h-[44px] bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-600 hover:bg-sky-100 dark:text-sky-300"
     >
       <Plus className="h-3.5 w-3.5" />
       Abonnement
@@ -104,7 +104,7 @@ export default function SubscriptionsCard() {
                       type="button"
                       onClick={() => removeCost(s.id)}
                       aria-label={`${s.name} verwijderen`}
-                      className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-slate-300 opacity-0 transition-all hover:bg-rose-50 hover:text-rose-500 group-hover:opacity-100"
+                      className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-slate-300 opacity-100 transition-all hover:bg-rose-50 hover:text-rose-500 sm:opacity-0 sm:group-hover:opacity-100"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
@@ -137,7 +137,7 @@ export default function SubscriptionsCard() {
             />
           </label>
           <div className="flex gap-3">
-            <label className="flex-1 text-xs font-semibold text-slate-500">
+            <label className="min-w-0 flex-1 text-xs font-semibold text-slate-500">
               Bedrag {form.interval === '12 months' ? 'per jaar' : 'per maand'} (€)
               <input
                 inputMode="decimal"

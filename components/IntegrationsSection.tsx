@@ -151,7 +151,7 @@ function IcalConfig({
                 type="button"
                 onClick={() => remove(feed.url)}
                 aria-label="Feed verwijderen"
-                className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-slate-400 hover:bg-rose-50 hover:text-rose-500"
+                className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-slate-400 hover:bg-rose-50 hover:text-rose-500 sm:h-6 sm:w-6"
               >
                 <Trash2 className="h-3.5 w-3.5" />
               </button>

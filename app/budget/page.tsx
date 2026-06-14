@@ -397,7 +397,7 @@ export default function BudgetPage() {
           <button
             type="button"
             onClick={openAdd}
-            className="pill bg-brand px-4 py-2.5 text-white shadow-sm shadow-brand/20 hover:bg-brand-dark"
+            className="pill w-full bg-brand px-4 py-3 text-white shadow-sm shadow-brand/20 hover:bg-brand-dark sm:w-auto sm:py-2.5"
           >
             <Plus className="h-4 w-4" />
             Uitgave toevoegen
@@ -419,7 +419,7 @@ export default function BudgetPage() {
             key={key}
             type="button"
             onClick={() => setTab(key)}
-            className={`flex-1 rounded-xl px-2 py-2 text-sm font-semibold transition-colors ${
+            className={`flex-1 rounded-xl px-2 py-2.5 text-sm font-semibold transition-colors ${
               tab === key ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
             }`}
           >
@@ -491,7 +491,7 @@ export default function BudgetPage() {
                       type="button"
                       onClick={() => openEdit(cat)}
                       aria-label={`Limiet ${cat.name} aanpassen`}
-                      className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-slate-300 opacity-0 transition-all hover:bg-slate-100 hover:text-slate-600 group-hover:opacity-100"
+                      className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-slate-300 opacity-100 transition-all hover:bg-slate-100 hover:text-slate-600 sm:opacity-0 sm:group-hover:opacity-100"
                     >
                       <Pencil className="h-3.5 w-3.5" />
                     </button>
@@ -574,7 +574,7 @@ export default function BudgetPage() {
               return (
                 <div key={item.label} className={`rounded-2xl p-3 sm:p-4 ${box}`}>
                   <p className="text-xs text-slate-500">{item.label}</p>
-                  <p className={`text-base font-extrabold sm:text-lg ${txt}`}>
+                  <p className={`text-sm font-extrabold break-words sm:text-lg ${txt}`}>
                     {sign}€{euro(Math.abs(item.value))}
                   </p>
                 </div>
@@ -670,7 +670,7 @@ export default function BudgetPage() {
                       type="button"
                       onClick={() => removeTransaction(tx.id)}
                       aria-label={`${tx.label} verwijderen`}
-                      className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-slate-300 opacity-0 transition-all hover:bg-rose-50 hover:text-rose-500 group-hover:opacity-100"
+                      className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-slate-300 opacity-100 transition-all hover:bg-rose-50 hover:text-rose-500 sm:h-8 sm:w-8 sm:opacity-0 sm:group-hover:opacity-100"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -758,7 +758,7 @@ export default function BudgetPage() {
             />
           </label>
           <div className="flex gap-3">
-            <label className="flex-1 text-xs font-semibold text-slate-500">
+            <label className="min-w-0 flex-1 text-xs font-semibold text-slate-500">
               Categorie
               <select
                 value={form.category}
@@ -772,7 +772,7 @@ export default function BudgetPage() {
                 ))}
               </select>
             </label>
-            <label className="w-32 text-xs font-semibold text-slate-500">
+            <label className="w-32 shrink-0 text-xs font-semibold text-slate-500">
               Bedrag (€)
               <input
                 inputMode="decimal"
@@ -784,7 +784,7 @@ export default function BudgetPage() {
             </label>
           </div>
           <div className="flex gap-3">
-            <label className="w-40 text-xs font-semibold text-slate-500">
+            <label className="w-40 shrink-0 min-w-0 text-xs font-semibold text-slate-500">
               Betaalmethode
               <select
                 value={form.paymentMethod}
@@ -799,7 +799,7 @@ export default function BudgetPage() {
                 <option value="overboeking">Overboeking</option>
               </select>
             </label>
-            <label className="flex-1 text-xs font-semibold text-slate-500">
+            <label className="min-w-0 flex-1 text-xs font-semibold text-slate-500">
               Notitie (optioneel)
               <input
                 value={form.note}

@@ -247,7 +247,7 @@ export default function UitjesPage() {
                         setPlanFor(o)
                         setPlanDate(o.date ?? '')
                       }}
-                      className="pill bg-brand-light px-3 py-1.5 text-xs font-semibold text-brand hover:bg-brand/15"
+                      className="pill bg-brand-light px-3 py-2 text-xs font-semibold text-brand hover:bg-brand/15"
                     >
                       <Calendar className="h-3.5 w-3.5" />
                       {o.status === 'gepland' ? 'Datum wijzigen' : 'Plannen'}
@@ -257,7 +257,7 @@ export default function UitjesPage() {
                     <button
                       type="button"
                       onClick={() => updateOuting(o.id, { status: 'gedaan' })}
-                      className="pill bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
+                      className="pill bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
                     >
                       <Check className="h-3.5 w-3.5" />
                       Gedaan
@@ -267,7 +267,7 @@ export default function UitjesPage() {
                     type="button"
                     onClick={() => removeOuting(o.id)}
                     aria-label={`${o.title} verwijderen`}
-                    className="pill ml-auto px-2.5 py-1.5 text-xs text-slate-400 hover:bg-rose-50 hover:text-rose-500"
+                    className="pill ml-auto min-h-[44px] min-w-[44px] px-2.5 py-1.5 text-xs text-slate-400 hover:bg-rose-50 hover:text-rose-500"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
@@ -323,8 +323,8 @@ export default function UitjesPage() {
               className={`mt-1 ${inputClass}`}
             />
           </label>
-          <div className="flex gap-3">
-            <label className="flex-1 text-xs font-semibold text-slate-500">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <label className="min-w-0 text-xs font-semibold text-slate-500">
               Soort
               <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className={`mt-1 ${inputClass}`}>
                 {Object.entries(CAT).map(([k, v]) => (
@@ -334,7 +334,7 @@ export default function UitjesPage() {
                 ))}
               </select>
             </label>
-            <label className="flex-1 text-xs font-semibold text-slate-500">
+            <label className="min-w-0 text-xs font-semibold text-slate-500">
               Kosten
               <select value={form.cost} onChange={(e) => setForm({ ...form, cost: e.target.value })} className={`mt-1 ${inputClass}`}>
                 <option value="gratis">Gratis</option>
@@ -343,7 +343,7 @@ export default function UitjesPage() {
                 <option value="hoog">€€€ hoog</option>
               </select>
             </label>
-            <label className="flex-1 text-xs font-semibold text-slate-500">
+            <label className="min-w-0 text-xs font-semibold text-slate-500">
               Leeftijd
               <select value={form.ageBand} onChange={(e) => setForm({ ...form, ageBand: e.target.value })} className={`mt-1 ${inputClass}`}>
                 <option value="alle">Alle</option>

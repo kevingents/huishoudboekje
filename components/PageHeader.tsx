@@ -34,7 +34,9 @@ export default function PageHeader({
         </div>
       </div>
 
-      {actions && <div className="flex items-center gap-3 sm:gap-4">{actions}</div>}
+      {actions && (
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-4">{actions}</div>
+      )}
     </header>
   )
 }

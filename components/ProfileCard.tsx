@@ -218,7 +218,7 @@ export default function ProfileCard() {
       <Modal open={editOpen} onClose={() => setEditOpen(false)} title="Profiel bewerken">
         <form onSubmit={saveProfile} className="flex flex-col gap-3">
           <div className="flex gap-3">
-            <label className="flex-1 text-xs font-semibold text-slate-500">
+            <label className="min-w-0 flex-1 text-xs font-semibold text-slate-500">
               Naam
               <input
                 value={form.name}
@@ -226,7 +226,7 @@ export default function ProfileCard() {
                 className={`mt-1 ${inputClass}`}
               />
             </label>
-            <label className="flex-1 text-xs font-semibold text-slate-500">
+            <label className="min-w-0 flex-1 text-xs font-semibold text-slate-500">
               Roepnaam
               <input
                 value={form.nickname}
@@ -246,7 +246,7 @@ export default function ProfileCard() {
             />
           </label>
           <div className="flex gap-3">
-            <label className="flex-1 text-xs font-semibold text-slate-500">
+            <label className="min-w-0 flex-1 text-xs font-semibold text-slate-500">
               Telefoon
               <input
                 value={form.phone}
@@ -255,7 +255,7 @@ export default function ProfileCard() {
                 className={`mt-1 ${inputClass}`}
               />
             </label>
-            <label className="flex-1 text-xs font-semibold text-slate-500">
+            <label className="min-w-0 flex-1 text-xs font-semibold text-slate-500">
               Geboortedatum
               <input
                 value={form.birthday}

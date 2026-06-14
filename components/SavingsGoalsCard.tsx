@@ -68,7 +68,7 @@ export default function SavingsGoalsCard({ className = '' }: { className?: strin
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="pill bg-brand-light px-3 py-1.5 text-xs text-brand hover:bg-emerald-100"
+          className="pill min-h-[44px] bg-brand-light px-3 py-1.5 text-xs text-brand hover:bg-emerald-100"
         >
           <Plus className="h-3.5 w-3.5" />
           Doel
@@ -107,7 +107,7 @@ export default function SavingsGoalsCard({ className = '' }: { className?: strin
                     type="button"
                     onClick={() => removeGoal(g.id)}
                     aria-label={`${g.name} verwijderen`}
-                    className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-slate-300 transition-colors hover:bg-rose-50 hover:text-rose-500"
+                    className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-slate-300 transition-colors hover:bg-rose-50 hover:text-rose-500"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
@@ -137,11 +137,11 @@ export default function SavingsGoalsCard({ className = '' }: { className?: strin
                     value={drafts[g.id] ?? ''}
                     onChange={(e) => setDrafts((d) => ({ ...d, [g.id]: e.target.value }))}
                     placeholder="Inleg €"
-                    className="w-28 rounded-full border border-cardborder bg-white px-3 py-1.5 text-xs text-slate-700 outline-none placeholder:text-slate-400 focus:border-brand/40 focus:ring-2 focus:ring-brand/20"
+                    className="min-w-0 flex-1 rounded-full border border-cardborder bg-white px-3 py-2.5 text-sm text-slate-700 outline-none placeholder:text-slate-400 focus:border-brand/40 focus:ring-2 focus:ring-brand/20"
                   />
                   <button
                     type="submit"
-                    className="pill bg-white px-3 py-1.5 text-xs text-slate-700 ring-1 ring-cardborder hover:bg-slate-50"
+                    className="pill shrink-0 bg-white px-3 py-2.5 text-sm text-slate-700 ring-1 ring-cardborder hover:bg-slate-50"
                   >
                     Inleggen
                   </button>
@@ -165,7 +165,7 @@ export default function SavingsGoalsCard({ className = '' }: { className?: strin
             />
           </label>
           <div className="flex gap-3">
-            <label className="flex-1 text-xs font-semibold text-slate-500">
+            <label className="min-w-0 flex-1 text-xs font-semibold text-slate-500">
               Doelbedrag (€)
               <input
                 inputMode="decimal"
@@ -175,7 +175,7 @@ export default function SavingsGoalsCard({ className = '' }: { className?: strin
                 className={`mt-1 ${inputClass}`}
               />
             </label>
-            <label className="flex-1 text-xs font-semibold text-slate-500">
+            <label className="min-w-0 flex-1 text-xs font-semibold text-slate-500">
               Streefdatum (optioneel)
               <input
                 type="date"

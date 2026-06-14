@@ -216,7 +216,7 @@ function MailRow({
           {href && (
             <Link
               href={href}
-              className="inline-flex items-center gap-1 text-xs font-semibold text-brand hover:underline"
+              className="-my-1 inline-flex items-center gap-1 px-2 py-1.5 text-xs font-semibold text-brand hover:underline"
             >
               Bekijken
               <ArrowRight className="h-3 w-3" />
@@ -227,7 +227,7 @@ function MailRow({
               href={item.attachmentUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-slate-700"
+              className="-my-1 inline-flex items-center gap-1 px-2 py-1.5 text-xs font-semibold text-slate-500 hover:text-slate-700"
             >
               <Paperclip className="h-3 w-3" />
               {item.attachmentName || 'Bijlage'}
@@ -238,7 +238,7 @@ function MailRow({
               type="button"
               onClick={doReprocess}
               disabled={busy}
-              className="inline-flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-brand disabled:opacity-50"
+              className="-my-1 inline-flex items-center gap-1 px-2 py-1.5 text-xs font-semibold text-slate-500 hover:text-brand disabled:opacity-50"
             >
               <RefreshCw className={`h-3 w-3 ${busy ? 'animate-spin' : ''}`} />
               {busy ? 'Bezig…' : 'Verwerk opnieuw'}
@@ -248,7 +248,7 @@ function MailRow({
             <button
               type="button"
               onClick={() => onStatus(item.id, 'verwerkt')}
-              className="inline-flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-brand"
+              className="-my-1 inline-flex items-center gap-1 px-2 py-1.5 text-xs font-semibold text-slate-500 hover:text-brand"
             >
               <Check className="h-3 w-3" />
               Markeer verwerkt
@@ -258,7 +258,7 @@ function MailRow({
             <button
               type="button"
               onClick={() => onStatus(item.id, 'nieuw')}
-              className="text-xs font-semibold text-slate-400 hover:text-slate-600"
+              className="-my-1 inline-flex items-center px-2 py-1.5 text-xs font-semibold text-slate-400 hover:text-slate-600"
             >
               Terugzetten
             </button>
@@ -266,7 +266,7 @@ function MailRow({
             <button
               type="button"
               onClick={() => onStatus(item.id, 'genegeerd')}
-              className="text-xs font-semibold text-slate-400 hover:text-slate-600"
+              className="-my-1 inline-flex items-center px-2 py-1.5 text-xs font-semibold text-slate-400 hover:text-slate-600"
             >
               Negeer
             </button>

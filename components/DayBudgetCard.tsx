@@ -153,7 +153,7 @@ export default function DayBudgetCard() {
             <span>
               deze periode al uit: €{round(result.spentInPeriod)} van €{round(spendablePerMonth)}
             </span>
-            <button type="button" onClick={openSettings} className="font-semibold text-brand hover:underline">
+            <button type="button" onClick={openSettings} className="-m-1 inline-flex items-center p-1 font-semibold text-brand hover:underline">
               periode vanaf de {periodDay}e · wijzig
             </button>
           </div>

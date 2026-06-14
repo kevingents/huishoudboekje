@@ -149,7 +149,7 @@ export default function NearbyExplorer() {
           onClick={() => scan(cat, radius)}
           disabled={loading}
           aria-label="Opnieuw zoeken"
-          className="grid h-8 w-8 place-items-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600 disabled:opacity-50"
+          className="grid h-11 w-11 place-items-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600 disabled:opacity-50"
         >
           <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
         </button>
@@ -167,7 +167,7 @@ export default function NearbyExplorer() {
             wantGps.current = true
             geo.request()
           }}
-          className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 font-semibold text-slate-600 hover:bg-slate-200"
+          className="inline-flex min-h-[40px] items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 font-semibold text-slate-600 hover:bg-slate-200"
         >
           <Navigation className={`h-3 w-3 ${geo.status === 'loading' ? 'animate-pulse' : ''}`} />
           Hier
@@ -175,7 +175,7 @@ export default function NearbyExplorer() {
         <button
           type="button"
           onClick={() => setShowPlace((s) => !s)}
-          className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 font-semibold text-slate-600 hover:bg-slate-200"
+          className="inline-flex min-h-[40px] items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 font-semibold text-slate-600 hover:bg-slate-200"
         >
           <Search className="h-3 w-3" />
           Andere plaats
@@ -184,7 +184,7 @@ export default function NearbyExplorer() {
           <button
             type="button"
             onClick={() => applyOverride(null)}
-            className="inline-flex items-center gap-1 rounded-full bg-brand-light px-2.5 py-1 font-semibold text-brand hover:bg-brand/15"
+            className="inline-flex min-h-[40px] items-center gap-1 rounded-full bg-brand-light px-2.5 py-1 font-semibold text-brand hover:bg-brand/15"
           >
             <Home className="h-3 w-3" />
             Thuis

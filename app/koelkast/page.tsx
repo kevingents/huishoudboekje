@@ -169,7 +169,7 @@ export default function KoelkastPage() {
                     onClick={() => addToShopping(ing)}
                     disabled={added.has(ing)}
                     className={[
-                      'pill border px-3 py-1.5 text-sm',
+                      'pill border px-3 py-2.5 text-sm',
                       added.has(ing)
                         ? 'border-brand/30 bg-brand-light text-brand'
                         : 'border-cardborder bg-white text-slate-600 hover:border-brand/40 hover:text-brand',
@@ -198,7 +198,7 @@ export default function KoelkastPage() {
                       onClick={() => addToShopping(m.item)}
                       disabled={added.has(m.item)}
                       className={[
-                        'pill shrink-0 border px-3 py-1.5 text-xs',
+                        'pill shrink-0 border px-3.5 py-2.5 text-sm',
                         added.has(m.item)
                           ? 'border-brand/30 bg-brand-light text-brand'
                           : 'border-cardborder bg-white text-slate-600 hover:border-brand/40 hover:text-brand',

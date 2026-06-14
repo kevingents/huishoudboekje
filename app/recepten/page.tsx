@@ -169,7 +169,7 @@ export default function ReceptenPage() {
                   type="button"
                   onClick={() => removeRecipe(recipe.id)}
                   aria-label={`${recipe.title} verwijderen`}
-                  className="absolute left-3 top-3 grid h-9 w-9 place-items-center rounded-full bg-white/90 text-slate-400 opacity-0 backdrop-blur transition-all hover:text-rose-500 group-hover:opacity-100"
+                  className="absolute left-3 top-3 grid h-9 w-9 place-items-center rounded-full bg-white/90 text-slate-400 opacity-100 backdrop-blur transition-all hover:text-rose-500 sm:opacity-0 sm:group-hover:opacity-100"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
@@ -272,7 +272,7 @@ export default function ReceptenPage() {
             />
           </label>
           <div className="flex gap-3">
-            <label className="flex-1 text-xs font-semibold text-slate-500">
+            <label className="min-w-0 flex-1 text-xs font-semibold text-slate-500">
               Bereidingstijd
               <input
                 value={form.time}
@@ -281,7 +281,7 @@ export default function ReceptenPage() {
                 className={`mt-1 ${inputClass}`}
               />
             </label>
-            <label className="flex-1 text-xs font-semibold text-slate-500">
+            <label className="min-w-0 flex-1 text-xs font-semibold text-slate-500">
               Porties
               <input
                 value={form.servings}

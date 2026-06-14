@@ -101,7 +101,7 @@ export default function FixedCostsCard({ className = '' }: { className?: string 
         <button
           type="button"
           onClick={openAdd}
-          className="pill bg-sky-50 px-3 py-1.5 text-xs text-sky-600 hover:bg-sky-100 dark:text-sky-300"
+          className="pill min-h-[44px] bg-sky-50 px-3 py-1.5 text-xs text-sky-600 hover:bg-sky-100 dark:text-sky-300"
         >
           <Plus className="h-3.5 w-3.5" />
           Vaste last
@@ -144,7 +144,7 @@ export default function FixedCostsCard({ className = '' }: { className?: string 
                   type="button"
                   onClick={() => removeCost(c.id)}
                   aria-label={`${c.name} verwijderen`}
-                  className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-slate-300 opacity-0 transition-all hover:bg-rose-50 hover:text-rose-500 group-hover:opacity-100"
+                  className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-slate-300 opacity-100 transition-all hover:bg-rose-50 hover:text-rose-500 sm:opacity-0 sm:group-hover:opacity-100"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
