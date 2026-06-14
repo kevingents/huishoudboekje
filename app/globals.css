@@ -88,8 +88,10 @@ html.dark body {
   color: #e2e8f0;
 }
 
-/* Oppervlakken */
-html.dark .bg-white {
+/* Oppervlakken. Formuliervelden (input/select/textarea) uitsluiten: die hebben
+   ook vaak `bg-white` maar horen het eigen, donkerdere veld-vlak te krijgen —
+   anders vloeit een <select> samen met de modal-/kaartachtergrond. */
+html.dark .bg-white:not(input):not(select):not(textarea) {
   background-color: #1e293b !important;
 }
 html.dark .bg-canvas {
@@ -170,6 +172,22 @@ html.dark textarea {
 html.dark input::placeholder,
 html.dark textarea::placeholder {
   color: #64748b !important;
+}
+/* Native datum-/tijdvelden: zorg dat de getoonde waarde én de lege placeholder
+   zichtbaar zijn en het kalender-icoon licht is op het donkere veld (iOS toont
+   anders een leeg/zwart vak omdat de interne pseudo-elementen de `color` niet
+   erven). */
+html.dark input[type='date']::-webkit-datetime-edit,
+html.dark input[type='time']::-webkit-datetime-edit,
+html.dark input[type='datetime-local']::-webkit-datetime-edit,
+html.dark input[type='date']::-webkit-date-and-time-value,
+html.dark input[type='time']::-webkit-date-and-time-value {
+  color: #e2e8f0 !important;
+}
+html.dark input[type='date']::-webkit-calendar-picker-indicator,
+html.dark input[type='time']::-webkit-calendar-picker-indicator,
+html.dark input[type='datetime-local']::-webkit-calendar-picker-indicator {
+  filter: invert(1) brightness(0.85);
 }
 
 /* Hover-achtergronden */
