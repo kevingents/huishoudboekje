@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
+import { fastModel } from '@/lib/aiModels'
 import { prisma } from '@/lib/db'
 import { requireHousehold } from '@/lib/guard'
 import { RULE_KINDS } from '@/lib/budget'
@@ -57,7 +58,7 @@ export async function POST(req: Request) {
     const client = new Anthropic()
     const listText = items.map((g, i) => `${i + 1}. "${g.key}" (voorbeeld: ${g.example})`).join('\n')
     const params = {
-      model: process.env.ANTHROPIC_MODEL || 'claude-opus-4-8',
+      model: fastModel(),
       max_tokens: 2500,
       thinking: { type: 'adaptive' },
       system:

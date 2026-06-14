@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
+import { chatModel } from '@/lib/aiModels'
 import { prisma } from '@/lib/db'
 import { requireHousehold } from '@/lib/guard'
 import { proceduralCrest, sanitizeCrestSvg } from '@/lib/crest'
@@ -11,7 +12,7 @@ async function aiCrest(description: string): Promise<string | null> {
   try {
     const client = new Anthropic()
     const res = await client.messages.create({
-      model: process.env.ANTHROPIC_MODEL || 'claude-opus-4-8',
+      model: chatModel(),
       max_tokens: 2000,
       system:
         'Je ontwerpt een familiewapen als moderne, platte, vriendelijke SVG die past bij een gezins-app. ' +

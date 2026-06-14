@@ -1,5 +1,6 @@
 import crypto from 'crypto'
 import Anthropic from '@anthropic-ai/sdk'
+import { fastModel } from './aiModels'
 import { prisma } from './db'
 import { describeDate } from './date'
 
@@ -217,7 +218,7 @@ export async function classifyMail(input: {
   try {
     const client = new Anthropic()
     const params = {
-      model: process.env.ANTHROPIC_MODEL || 'claude-opus-4-8',
+      model: fastModel(),
       max_tokens: 1024,
       system,
       messages: [

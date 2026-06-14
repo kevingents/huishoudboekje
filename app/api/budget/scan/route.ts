@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
+import { fastModel } from '@/lib/aiModels'
 import { prisma } from '@/lib/db'
 import { requireModule } from '@/lib/guard'
 
@@ -73,7 +74,7 @@ export async function POST(req: Request) {
   try {
     const client = new Anthropic()
     const params = {
-      model: process.env.ANTHROPIC_MODEL || 'claude-opus-4-8',
+      model: fastModel(),
       max_tokens: 1500,
       system:
         'Je leest een kassabon of factuur. Haal de winkel/leverancier, de datum (yyyy-mm-dd), het ' +

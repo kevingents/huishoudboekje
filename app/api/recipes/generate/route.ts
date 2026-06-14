@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
+import { chatModel } from '@/lib/aiModels'
 import { prisma } from '@/lib/db'
 import { serializeRecipe, tagsToString } from '@/lib/serialize'
 import { requireModule } from '@/lib/guard'
@@ -67,7 +68,7 @@ export async function POST(req: Request) {
     const client = new Anthropic()
     // output_config (structured outputs) is nog niet getypt in deze SDK-versie.
     const params = {
-      model: process.env.ANTHROPIC_MODEL || 'claude-opus-4-8',
+      model: chatModel(),
       max_tokens: 1024,
       system:
         'Je bent een kok die makkelijke, gezinsvriendelijke Nederlandse recepten bedenkt. ' +

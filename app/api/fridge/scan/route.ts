@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
+import { fastModel } from '@/lib/aiModels'
 import { requireModule } from '@/lib/guard'
 
 export const dynamic = 'force-dynamic'
@@ -71,7 +72,7 @@ export async function POST(req: Request) {
   try {
     const client = new Anthropic()
     const params = {
-      model: process.env.ANTHROPIC_MODEL || 'claude-opus-4-8',
+      model: fastModel(),
       max_tokens: 1024,
       system:
         'Je bekijkt een foto van een koelkast of voorraadkast. Noem de zichtbare, eetbare ' +

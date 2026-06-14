@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
+import { chatModel } from '@/lib/aiModels'
 import { prisma } from '@/lib/db'
 import { requireHousehold, requireModule } from '@/lib/guard'
 import { getCurrentUser } from '@/lib/auth'
@@ -156,7 +157,7 @@ async function generateReply(householdId: number, system: string): Promise<strin
     while (apiMessages.length && apiMessages[0].role !== 'user') apiMessages.shift()
 
     const response = await client.messages.create({
-      model: process.env.ANTHROPIC_MODEL || 'claude-opus-4-8',
+      model: chatModel(),
       max_tokens: 1024,
       system,
       messages: apiMessages,

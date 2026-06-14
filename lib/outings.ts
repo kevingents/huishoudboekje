@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
+import { chatModel } from './aiModels'
 import { prisma } from './db'
 
 const SEASONS = ['winter', 'winter', 'lente', 'lente', 'lente', 'zomer', 'zomer', 'zomer', 'herfst', 'herfst', 'herfst', 'winter']
@@ -68,7 +69,7 @@ export async function generateOutings(householdId: number, count = 10): Promise<
 
   const client = new Anthropic()
   const params = {
-    model: process.env.ANTHROPIC_MODEL || 'claude-opus-4-8',
+    model: chatModel(),
     max_tokens: 2048,
     system:
       'Je bedenkt leuke, concrete dingen om met het gezin (ouders + kinderen) te doen. ' +
