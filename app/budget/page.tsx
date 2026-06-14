@@ -28,6 +28,7 @@ import {
   periodKeyOf,
   txPeriodKey,
   periodRangeOf,
+  suggestLineCategory,
 } from '@/lib/budget'
 import BudgetProgressCard from '@/components/budget/BudgetProgressCard'
 import AutoCategorizeSteps from '@/components/budget/AutoCategorizeSteps'
@@ -136,6 +137,16 @@ export default function BudgetPage() {
 
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState({ label: '', category: '', amount: '', note: '', paymentMethod: '', potjes: [] as string[] })
+  // Splitsen: één bon → meerdere regels, elk met een eigen categorie + potje.
+  type ExpenseLine = { id: string; label: string; amount: string; category: string; potje: string }
+  const [split, setSplit] = useState(false)
+  const [lines, setLines] = useState<ExpenseLine[]>([])
+  const newLine = (): ExpenseLine => ({ id: `l-${Date.now()}-${Math.round(Math.random() * 1e6)}`, label: '', amount: '', category: '', potje: '' })
+  const addLine = () => setLines((ls) => [...ls, newLine()])
+  const removeLine = (id: string) => setLines((ls) => ls.filter((l) => l.id !== id))
+  const updateLine = (id: string, patch: Partial<ExpenseLine>) =>
+    setLines((ls) => ls.map((l) => (l.id === id ? { ...l, ...patch } : l)))
+  const linesTotal = lines.reduce((s, l) => s + (Number(l.amount.replace(',', '.')) || 0), 0)
   const [showAllCats, setShowAllCats] = useState(false)
   const [tab, setTab] = useState<'overzicht' | 'uitgaven' | 'plannen' | 'importeren'>('overzicht')
   const currentMonthLabel = (() => {
@@ -150,8 +161,33 @@ export default function BudgetPage() {
   const [scanError, setScanError] = useState<string | null>(null)
   const [scanResult, setScanResult] = useState<{ items: ScanItem[]; advice: string } | null>(null)
 
-  const openAdd = () => {
+  const resetForm = () => {
     setForm({ label: '', category: '', amount: '', note: '', paymentMethod: '', potjes: [] })
+    setSplit(false)
+    setLines([])
+  }
+
+  // "Splitsen" aan/uit. Bij aanzetten vullen we de regels uit een gescande bon
+  // (met een categorie-suggestie per post), anders met één lege regel.
+  const toggleSplit = () => {
+    const next = !split
+    if (next && lines.length === 0) {
+      const seed = (scanResult?.items ?? [])
+        .filter((it) => it.price)
+        .map((it) => ({
+          id: `l-${Date.now()}-${Math.round(Math.random() * 1e6)}`,
+          label: it.name,
+          amount: String(it.price).replace('.', ','),
+          category: suggestLineCategory(it.name),
+          potje: '',
+        }))
+      setLines(seed.length ? seed : [newLine()])
+    }
+    setSplit(next)
+  }
+
+  const openAdd = () => {
+    resetForm()
     setScanResult(null)
     setScanError(null)
     setOpen(true)
@@ -402,20 +438,35 @@ export default function BudgetPage() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    // Gesplitst: elke regel wordt een eigen transactie (met eigen categorie),
+    // optioneel op een potje. De winkel/bon-naam (omschrijving) komt als notitie mee.
+    if (split) {
+      const valid = lines
+        .map((l) => ({ ...l, amt: Number(l.amount.replace(',', '.')) || 0 }))
+        .filter((l) => l.label.trim() && l.amt)
+      if (!valid.length) return
+      const store = form.label.trim()
+      for (const l of valid) {
+        const category = await ensureCategory(l.category)
+        await addTransaction({
+          label: l.label.trim(),
+          category,
+          amount: l.amt,
+          note: store || form.note.trim() || null,
+          paymentMethod: form.paymentMethod || null,
+        })
+        const potje = l.potje ? budgets.find((b) => b.id === Number(l.potje)) : null
+        if (potje) logSpend(potje, l.amt, l.label.trim())
+      }
+      resetForm()
+      setOpen(false)
+      return
+    }
+
     const amount = Number(form.amount.replace(',', '.'))
     if (!form.label.trim() || !amount) return
-    // Categorie: gekozen uit de lijst of zelf getypt. Een nieuwe naam maken we
-    // aan als budgetcategorie, zodat hij meteen in het budget meetelt.
-    const typed = form.category.trim()
-    const existing = categories.find((c) => c.name.toLowerCase() === typed.toLowerCase())
-    const category = existing?.name || typed || categories[0]?.name || 'Overig'
-    if (typed && !existing) {
-      try {
-        await addCategory({ name: category })
-      } catch {
-        // Lukt het aanmaken niet, dan slaan we de transactie alsnog op met deze categorie.
-      }
-    }
+    const category = await ensureCategory(form.category)
     await addTransaction({
       label: form.label,
       category,
@@ -423,16 +474,29 @@ export default function BudgetPage() {
       note: form.note.trim() || null,
       paymentMethod: form.paymentMethod || null,
     })
-    // Optioneel op één of meer gezinspotjes boeken (bijv. Marielle + Kevin). Bij
-    // meerdere potjes splitsen we het bedrag gelijk — zo telt ieders deel mee in het
-    // eigen potje én in het persoonlijk inzicht, met de omschrijving als regel.
+    // Optioneel op één of meer gezinspotjes boeken; bij meerdere splitsen we gelijk.
     const chosen = budgets.filter((b) => form.potjes.includes(String(b.id)))
     if (chosen.length) {
       const share = amount / chosen.length
       chosen.forEach((b) => logSpend(b, share, form.label.trim() || category))
     }
-    setForm({ label: '', category: '', amount: '', note: '', paymentMethod: '', potjes: [] })
+    resetForm()
     setOpen(false)
+  }
+
+  // Maakt een (nieuwe) categorie aan indien getypt en nog niet bestaand; geeft de naam terug.
+  const ensureCategory = async (typed: string): Promise<string> => {
+    const t = typed.trim()
+    const existing = categories.find((c) => c.name.toLowerCase() === t.toLowerCase())
+    const category = existing?.name || t || categories[0]?.name || 'Overig'
+    if (t && !existing) {
+      try {
+        await addCategory({ name: category })
+      } catch {
+        /* lukt aanmaken niet → alsnog opslaan met deze categorie */
+      }
+    }
+    return category
   }
 
   // Chip-stijl voor de keuze van categorie / potje in de uitgave-modal.
@@ -874,76 +938,172 @@ export default function BudgetPage() {
 
           <div className="flex gap-3">
             <label className="min-w-0 flex-1 text-xs font-semibold text-slate-500">
-              Omschrijving
+              {split ? 'Winkel / bon' : 'Omschrijving'}
               <input
                 autoFocus
                 value={form.label}
                 onChange={(e) => setForm({ ...form, label: e.target.value })}
-                placeholder="Bijv. Albert Heijn of Gezichtscreme"
+                placeholder={split ? 'Bijv. Action' : 'Bijv. Albert Heijn of Gezichtscreme'}
                 className={`mt-1 ${inputClass}`}
               />
             </label>
-            <label className="w-28 shrink-0 text-xs font-semibold text-slate-500">
-              Bedrag (€)
-              <input
-                inputMode="decimal"
-                value={form.amount}
-                onChange={(e) => setForm({ ...form, amount: e.target.value })}
-                placeholder="0,00"
-                className={`mt-1 ${inputClass}`}
-              />
-            </label>
+            {!split && (
+              <label className="w-28 shrink-0 text-xs font-semibold text-slate-500">
+                Bedrag (€)
+                <input
+                  inputMode="decimal"
+                  value={form.amount}
+                  onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                  placeholder="0,00"
+                  className={`mt-1 ${inputClass}`}
+                />
+              </label>
+            )}
           </div>
 
-          {/* Categorie: eigen keuzelijst met zoeken + expliciet "nieuwe maken". */}
-          <div>
-            <p className="mb-1 text-xs font-semibold text-slate-500">Categorie</p>
-            <CategoryPicker
-              value={form.category}
-              onChange={(v) => setForm({ ...form, category: v })}
-              categories={spendingCats.map((c) => c.name)}
-              placeholder={spendingCats.length ? 'Kies of typ een categorie' : 'Bijv. Verzorging'}
-            />
-          </div>
+          {/* Splitsen in regels: één bon met meerdere categorieën/potjes. */}
+          <label className="flex items-center justify-between gap-3 rounded-2xl bg-slate-50 px-3 py-2 dark:bg-white/5">
+            <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+              Splitsen in regels
+              <span className="block text-[11px] font-normal text-slate-400">
+                Eén bon met meerdere categorieën/potjes (bijv. Action: koptelefoon + wc-papier)
+              </span>
+            </span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={split}
+              onClick={toggleSplit}
+              className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${split ? 'bg-brand' : 'bg-slate-200 dark:bg-white/10'}`}
+            >
+              <span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow-sm transition-all ${split ? 'left-6' : 'left-1'}`} />
+            </button>
+          </label>
 
-          {/* Optioneel op één of meer potjes boeken; bij meerdere splitst hij automatisch. */}
-          {budgets.length > 0 && (
-            <div>
-              <p className="text-xs font-semibold text-slate-500">
-                Op welke potjes? <span className="font-normal text-slate-400">(optioneel — bij meerdere splitst hij vanzelf)</span>
-              </p>
-              <div className="mt-1.5 flex flex-wrap gap-1.5">
-                {budgets.map((b) => {
-                  const on = form.potjes.includes(String(b.id))
-                  return (
-                    <button
-                      key={b.id}
-                      type="button"
-                      onClick={() =>
-                        setForm({
-                          ...form,
-                          potjes: on ? form.potjes.filter((id) => id !== String(b.id)) : [...form.potjes, String(b.id)],
-                        })
-                      }
-                      className={pickChip(on)}
-                    >
-                      {b.name}
-                      {b.member ? ` · ${b.member}` : ''}
-                    </button>
-                  )
-                })}
+          {!split ? (
+            <>
+              {/* Categorie: eigen keuzelijst met zoeken + expliciet "nieuwe maken". */}
+              <div>
+                <p className="mb-1 text-xs font-semibold text-slate-500">Categorie</p>
+                <CategoryPicker
+                  value={form.category}
+                  onChange={(v) => setForm({ ...form, category: v })}
+                  categories={spendingCats.map((c) => c.name)}
+                  placeholder={spendingCats.length ? 'Kies of typ een categorie' : 'Bijv. Verzorging'}
+                />
               </div>
-              {form.potjes.length === 1 && (
-                <p className="mt-1 text-[11px] text-slate-400">
-                  De uitgave wordt ook op dit potje geboekt — met de omschrijving als regel, voor het persoonlijk inzicht.
-                </p>
+
+              {/* Optioneel op één of meer potjes boeken; bij meerdere splitst hij automatisch. */}
+              {budgets.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-slate-500">
+                    Op welke potjes? <span className="font-normal text-slate-400">(optioneel — bij meerdere splitst hij vanzelf)</span>
+                  </p>
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    {budgets.map((b) => {
+                      const on = form.potjes.includes(String(b.id))
+                      return (
+                        <button
+                          key={b.id}
+                          type="button"
+                          onClick={() =>
+                            setForm({
+                              ...form,
+                              potjes: on ? form.potjes.filter((id) => id !== String(b.id)) : [...form.potjes, String(b.id)],
+                            })
+                          }
+                          className={pickChip(on)}
+                        >
+                          {b.name}
+                          {b.member ? ` · ${b.member}` : ''}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  {form.potjes.length === 1 && (
+                    <p className="mt-1 text-[11px] text-slate-400">
+                      De uitgave wordt ook op dit potje geboekt — met de omschrijving als regel, voor het persoonlijk inzicht.
+                    </p>
+                  )}
+                  {form.potjes.length > 1 && (
+                    <p className="mt-1 text-[11px] font-semibold text-brand">
+                      Gesplitst over {form.potjes.length}: €
+                      {((Number(form.amount.replace(',', '.')) || 0) / form.potjes.length).toFixed(2).replace('.', ',')} per potje.
+                    </p>
+                  )}
+                </div>
               )}
-              {form.potjes.length > 1 && (
-                <p className="mt-1 text-[11px] font-semibold text-brand">
-                  Gesplitst over {form.potjes.length}: €
-                  {((Number(form.amount.replace(',', '.')) || 0) / form.potjes.length).toFixed(2).replace('.', ',')} per potje.
-                </p>
-              )}
+            </>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold text-slate-500">Regels — elk met eigen categorie + potje</p>
+                <span className="text-[11px] font-medium text-slate-400">Totaal: €{linesTotal.toFixed(2).replace('.', ',')}</span>
+              </div>
+              {lines.map((l) => (
+                <div key={l.id} className="rounded-2xl border border-cardborder p-2.5">
+                  <div className="flex gap-2">
+                    <input
+                      value={l.label}
+                      onChange={(e) => updateLine(l.id, { label: e.target.value })}
+                      onBlur={() => {
+                        if (!l.category) updateLine(l.id, { category: suggestLineCategory(l.label) })
+                      }}
+                      placeholder="Bijv. Koptelefoon"
+                      className="min-w-0 flex-1 rounded-xl border border-cardborder bg-white px-3 py-2 text-sm text-slate-700 outline-none placeholder:text-slate-400 focus:border-brand/40 focus:ring-2 focus:ring-brand/20 dark:bg-slate-900 dark:text-slate-100"
+                    />
+                    <input
+                      inputMode="decimal"
+                      value={l.amount}
+                      onChange={(e) => updateLine(l.id, { amount: e.target.value })}
+                      placeholder="€"
+                      className="w-20 shrink-0 rounded-xl border border-cardborder bg-white px-2.5 py-2 text-right text-sm text-slate-700 outline-none placeholder:text-slate-400 focus:border-brand/40 focus:ring-2 focus:ring-brand/20 dark:bg-slate-900 dark:text-slate-100"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeLine(l.id)}
+                      aria-label="Regel verwijderen"
+                      className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-slate-300 transition-colors hover:bg-rose-50 hover:text-rose-500"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <div className="mt-2">
+                    <CategoryPicker
+                      value={l.category}
+                      onChange={(v) => updateLine(l.id, { category: v })}
+                      categories={spendingCats.map((c) => c.name)}
+                      placeholder="Categorie (suggestie — pas gerust aan)"
+                    />
+                  </div>
+                  {budgets.length > 0 && (
+                    <div className="mt-1.5 flex flex-wrap gap-1">
+                      <button type="button" onClick={() => updateLine(l.id, { potje: '' })} className={pickChip(l.potje === '')}>
+                        Geen potje
+                      </button>
+                      {budgets.map((b) => (
+                        <button
+                          key={b.id}
+                          type="button"
+                          onClick={() => updateLine(l.id, { potje: String(b.id) })}
+                          className={pickChip(l.potje === String(b.id))}
+                        >
+                          {b.name}
+                          {b.member ? ` · ${b.member}` : ''}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={addLine}
+                className="pill self-start bg-white px-3 py-1.5 text-xs font-semibold text-brand ring-1 ring-brand/30 hover:bg-brand-light"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Regel toevoegen
+              </button>
             </div>
           )}
 

@@ -12,7 +12,21 @@ import {
   allocateBudget,
   loanIsActive,
   labelMatchesPattern,
+  suggestLineCategory,
 } from '@/lib/budget'
+
+describe('suggestLineCategory (bonpost → categorie-suggestie)', () => {
+  it('herkent gangbare posten zoals de gebruiker ze indeelt', () => {
+    expect(suggestLineCategory('Koptelefoon')).toBe('Elektronica')
+    expect(suggestLineCategory('Wc-papier 8 rollen')).toBe('Boodschappen')
+    expect(suggestLineCategory('Watjes')).toBe('Verzorging')
+    expect(suggestLineCategory('Afwasmiddel')).toBe('Huishouden')
+  })
+  it('leeg bij onbekend, zodat de gebruiker zelf kiest', () => {
+    expect(suggestLineCategory('Onbekend ding')).toBe('')
+    expect(suggestLineCategory('')).toBe('')
+  })
+})
 
 describe('labelMatchesPattern (vaste last herkennen bij import)', () => {
   it('matcht een bankregel op de naam van een handmatige vaste last', () => {

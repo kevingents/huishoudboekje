@@ -36,6 +36,29 @@ export function suggestCostCategory(name: string): string {
   return 'Overig'
 }
 
+// Trefwoord → categorie-SUGGESTIE voor een losse bonpost (bij "splitsen in regels").
+// Bewust een suggestie: "wat is een boodschap" is persoonlijk, dus altijd te
+// corrigeren. Volgorde telt: specifieker eerst (zeep = verzorging, niet boodschap).
+const LINE_CATEGORY_RULES: [RegExp, string][] = [
+  [/koptelefoon|oortjes|oordopjes|oplader|kabel|batterij|adapter|usb|hdmi|muis|toetsenbord|powerbank|elektronica|televisie|tv|speaker|telefoon/i, 'Elektronica'],
+  [/shampoo|tandpasta|tandenborstel|deo|wattenstaafjes|watten|watjes|luier|maandverband|scheermes|zeep|cr[eè]me|drogist|verzorging|make-?up/i, 'Verzorging'],
+  [/schoonmaak|afwas|wasmiddel|allesreiniger|vuilniszak|spons|toiletblok|wasverzachter|huishoud/i, 'Huishouden'],
+  [/wc-?papier|toiletpapier|keukenrol|melk|brood|kaas|groente|fruit|vlees|kip|vis|yoghurt|pasta|rijst|koffie|thee|eieren|boter|saus|chips|snoep|koek|frisdrank|water|bier|wijn|pizza|maaltijd|boodschap/i, 'Boodschappen'],
+  [/shirt|broek|jas|trui|jurk|schoen|sok|ondergoed|kleding/i, 'Kleding'],
+  [/speelgoed|lego|knuffel|puzzel|spel/i, 'Speelgoed'],
+]
+
+/** Voorgestelde categorie voor een bonpost — alleen een suggestie (corrigeerbaar);
+ *  leeg als we het niet weten, dan kiest de gebruiker zelf. */
+export function suggestLineCategory(label: string): string {
+  const s = (label || '').toLowerCase().trim()
+  if (!s) return ''
+  for (const [re, cat] of LINE_CATEGORY_RULES) {
+    if (re.test(s)) return cat
+  }
+  return ''
+}
+
 /* -------------------------------------------------------------------------- */
 /*  Categorisatie met geheugen (geleerde regels) + uitgesloten categorieën     */
 /* -------------------------------------------------------------------------- */
