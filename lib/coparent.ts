@@ -10,20 +10,12 @@ export interface CoParenting {
   enabled?: boolean
   parentA?: string
   parentB?: string
-  /** Wie de 'wissel'-dagen in EVEN ISO-weken heeft (de andere ouder in oneven weken). */
+  /** Wie de 'wissel'-dagen in de "even" weken heeft (de andere ouder de week erop);
+   *  doorlopend om-en-om, ook over jaargrenzen heen. */
   evenWeekParent?: 'A' | 'B'
   /** 7-daags schema, index = JS getDay() (0=zo … 6=za). Afwezig = alle dagen 'wissel'
    *  (= klassiek om-en-om hele weken; backward compatible met oude config). */
   days?: DayAssign[]
-}
-
-/** ISO-weeknummer (1-53). Constant binnen een ma–zo-week, dus 'wissel' is hele week gelijk. */
-export function isoWeek(d: Date): number {
-  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()))
-  const dayNum = date.getUTCDay() || 7
-  date.setUTCDate(date.getUTCDate() + 4 - dayNum)
-  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1))
-  return Math.ceil(((date.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7)
 }
 
 export function readCoParenting(value: unknown): CoParenting {
@@ -32,6 +24,19 @@ export function readCoParenting(value: unknown): CoParenting {
 }
 
 const ALL_WISSEL: DayAssign[] = ['wissel', 'wissel', 'wissel', 'wissel', 'wissel', 'wissel', 'wissel']
+
+const WEEK_MS = 7 * 86_400_000
+// Vaste ankermaandag (UTC) voor de om-en-om-telling: 1 jan 2024 = maandag.
+const ANCHOR_MONDAY = Date.UTC(2024, 0, 1)
+
+/** Doorlopende week-index t.o.v. de ankermaandag — telt continu door over élke
+ *  jaargrens (in tegenstelling tot het ISO-weeknummer, dat bij 53-weken-jaren
+ *  een pariteitssprong maakt en de om-en-om-alternatie zou breken). */
+function weekIndex(d: Date): number {
+  const monday = new Date(d.getFullYear(), d.getMonth(), d.getDate() - ((d.getDay() + 6) % 7))
+  const mondayUTC = Date.UTC(monday.getFullYear(), monday.getMonth(), monday.getDate())
+  return Math.floor((mondayUTC - ANCHOR_MONDAY) / WEEK_MS)
+}
 
 /** Het 7-daags schema (index = getDay 0=zo..6=za); standaard alles 'wissel'. */
 export function scheduleDays(cp: CoParenting): DayAssign[] {
@@ -49,7 +54,7 @@ function resolveAssign(a: DayAssign, isEvenWeek: boolean, evenParent: 'A' | 'B')
 export function coParentToday(cp: CoParenting, now: Date): { parent: string; which: 'A' | 'B' } | null {
   if (!cp.enabled || !cp.parentA || !cp.parentB) return null
   const days = scheduleDays(cp)
-  const which = resolveAssign(days[now.getDay()], isoWeek(now) % 2 === 0, cp.evenWeekParent ?? 'A')
+  const which = resolveAssign(days[now.getDay()], weekIndex(now) % 2 === 0, cp.evenWeekParent ?? 'A')
   return { parent: which === 'A' ? cp.parentA : cp.parentB, which }
 }
 
@@ -74,7 +79,7 @@ export function coParentWeek(cp: CoParenting, now: Date): CoParentDay[] {
   const out: CoParentDay[] = []
   for (let i = 0; i < 7; i++) {
     const d = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i)
-    const which = resolveAssign(days[d.getDay()], isoWeek(d) % 2 === 0, evenParent)
+    const which = resolveAssign(days[d.getDay()], weekIndex(d) % 2 === 0, evenParent)
     out.push({
       label: WD_SHORT[d.getDay()],
       dayNum: d.getDate(),

@@ -39,6 +39,9 @@ export default function CoParentCard() {
   // Datum pas na mount (geen hydratie-mismatch).
   const [now, setNow] = useState<Date | null>(null)
   useEffect(() => setNow(new Date()), [])
+  // Naam-inputs in sync houden met opgeslagen settings (SWR laadt async; anders
+  // blijft de lokale state leeg en zou een save de namen overschrijven).
+  useEffect(() => setNames({ parentA: cp.parentA ?? '', parentB: cp.parentB ?? '' }), [cp.parentA, cp.parentB])
 
   const copy = async () => {
     try {
@@ -52,8 +55,10 @@ export default function CoParentCard() {
   const save = (next: CoParenting) => setSetting('coParenting', next)
   const base: CoParenting = {
     enabled: cp.enabled ?? false,
-    parentA: names.parentA,
-    parentB: names.parentB,
+    // Nooit een opgeslagen naam met lege state overschrijven (bv. een per-dag-save
+    // vlak na het laden, vóór de naam-sync): val terug op de opgeslagen waarde.
+    parentA: names.parentA || cp.parentA || '',
+    parentB: names.parentB || cp.parentB || '',
     evenWeekParent: cp.evenWeekParent ?? 'A',
     days: scheduleDays(cp),
   }
@@ -68,10 +73,10 @@ export default function CoParentCard() {
     (which === 'A' ? names.parentA : names.parentB).trim().charAt(0).toUpperCase() || which
   const assignStyle = (v: DayAssign) =>
     v === 'A'
-      ? 'bg-violet-100 text-violet-700'
+      ? 'bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300'
       : v === 'B'
-        ? 'bg-sky-100 text-sky-700'
-        : 'bg-slate-100 text-slate-400'
+        ? 'bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300'
+        : 'bg-slate-100 text-slate-400 dark:bg-white/10 dark:text-slate-300'
 
   const today = now ? coParentToday(base, now) : null
   const week = now ? coParentWeek(base, now) : []
@@ -178,7 +183,7 @@ export default function CoParentCard() {
           {week.length > 0 && (
             <>
               {today && (
-                <p className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-violet-50 px-3 py-1.5 text-sm font-semibold text-violet-700">
+                <p className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-violet-50 px-3 py-1.5 text-sm font-semibold text-violet-700 dark:bg-violet-500/15 dark:text-violet-300">
                   <CalendarRange className="h-4 w-4" />
                   Vandaag bij {today.parent}
                 </p>
@@ -188,7 +193,9 @@ export default function CoParentCard() {
                   <div
                     key={`${d.label}-${d.dayNum}`}
                     className={`flex flex-col items-center rounded-lg px-1 py-1.5 ${
-                      d.which === 'A' ? 'bg-violet-50 text-violet-700' : 'bg-sky-50 text-sky-700'
+                      d.which === 'A'
+                        ? 'bg-violet-50 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300'
+                        : 'bg-sky-50 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300'
                     } ${d.isToday ? 'ring-2 ring-brand' : ''}`}
                   >
                     <span className="text-[10px] font-semibold">{d.label}</span>
